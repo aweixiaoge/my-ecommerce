@@ -1,0 +1,19 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+.turbo/
+.vercel/
+
+.env
+.env.local
+.env.*.local
+
+*.log
+.DS_Store
+
+# tdd-guardian generated artifacts
+.claude/tdd-guardian/state.json
+.claude/tdd-guardian/receipts.json

@@ -1,0 +1,7 @@
+{
+  "enabledPlugins": {
+    "nlpm@claude-community": true,
+    "tdd-guardian@xiaolai": true,
+    "cc-suite@claude-community": true
+  }
+}

@@ -1,0 +1,12 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# pnpm 12 blocks dependency build scripts by default and ERRORS on any package
+# it has no decision for. Every package with a build script must be listed here
+# explicitly — allowed or denied. An omission is a failed install, not a warning.
+allowBuilds:
+  # Native file watcher; needs its compiled binary for dev-mode watching.
+  "@parcel/watcher": true
+  sharp: false
+  unrs-resolver: false
