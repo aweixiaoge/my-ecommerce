@@ -14,6 +14,12 @@ coverage/
 *.log
 .DS_Store
 
+# Playwright MCP scratch output (page snapshots, console logs, screenshots)
+.playwright-mcp/
+# Root-level screenshots only — NOT *.png, which would silently swallow real
+# image assets added under apps/web/public.
+/*.png
+
 # tdd-guardian generated artifacts
 .claude/tdd-guardian/state.json
 .claude/tdd-guardian/receipts.json

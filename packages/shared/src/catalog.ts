@@ -74,7 +74,14 @@ export const ProductSummarySchema = z.object({
   id: z.string(),
   slug: z.string(),
   name: z.string(),
+  /**
+   * `price` is the LOWEST purchasable price; `priceMax` is the highest, and is
+   * null when every variant costs the same. Cards render a range only when the
+   * two differ — the home design shows "$18.00 – $21.00" for a product whose
+   * variants span that spread, and a single figure for one that does not.
+   */
   price: MoneySchema,
+  priceMax: MoneySchema.nullable(),
   compareAtPrice: MoneySchema.nullable(),
   image: MediaSchema.nullable(),
   inStock: z.boolean(),

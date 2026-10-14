@@ -1,16 +1,55 @@
 @import "tailwindcss";
 
-@theme inline {
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/*
+ * Tokens resolved from the Figma file (kA4iT3KfstvmU1sPqrxbRw, page
+ * "design-b2c-website", frame "Home - Smart Mall").
+ *
+ * The file's variables are color/ink (#000000) and color/paper (#FFFFFF);
+ * the remaining values are resolved from the layers that use them.
+ */
+@theme {
+  --color-ink: #000000;
+  --color-paper: #ffffff;
+  --color-mist: #f2f5f7;
+  --color-line: #e1e8ed;
+
+  /*
+   * The design sets secondary copy as black at reduced alpha rather than as
+   * grey hexes. Keeping the alpha keeps it correct over any surface.
+   */
+  --color-ink-55: rgb(0 0 0 / 0.55);
+  --color-ink-60: rgb(0 0 0 / 0.6);
+  --color-ink-62: rgb(0 0 0 / 0.62);
+
+  --radius-card: 12px;
+  --radius-control: 3px;
+
+  /*
+   * The design is set in SF Pro. That is Apple's system font: it has no web
+   * licence and is not on Google Fonts. This stack renders the exact design
+   * on Apple platforms and the closest available face elsewhere, at zero
+   * download cost. Swap the whole stack for a licensed webfont if
+   * cross-platform consistency matters more than matching the comp on a Mac.
+   */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
 }
 
 /*
- * Light only for now. A store should follow an explicit design decision about
- * dark mode rather than the OS preference — the scaffold's prefers-color-scheme
- * block would silently invert the storefront on a user's machine.
+ * The design's content column.
+ *
+ * 1338px is 1290 + 24 + 24 on purpose: the design's 1290 is pure CONTENT
+ * width, with the 24px gutters sitting outside it. A 1290 max-width with
+ * padding on top would yield only 1242 of usable column, 48px narrow.
  */
-
-body {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+.container-content {
+  width: 100%;
+  max-width: 1338px;
+  margin-inline: auto;
+  padding-inline: 24px;
 }

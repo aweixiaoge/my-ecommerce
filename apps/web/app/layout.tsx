@@ -1,40 +1,28 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SiteHeader } from "@/components/site-header";
-import { SiteFooter } from "@/components/site-footer";
-import { getCategories } from "@/lib/mock/catalog";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: {
-    default: "Store",
-    template: "%s · Store",
+    default: "Smart Mall",
+    template: "%s · Smart Mall",
   },
-  description: "A small store.",
+  description:
+    "Hand-tested audio gear — earbuds, earphones and headphones, tested by our own team before they reach your cart.",
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const categories = await getCategories();
-
+/**
+ * Only what is genuinely global to every route lives here — the document, the
+ * stylesheet, and the metadata that is the *default* for the whole site.
+ *
+ * The storefront's header and footer are NOT here: they would wrap the admin
+ * too, and no nested layout can take them back off. They live in
+ * `app/(storefront)/layout.tsx` instead.
+ */
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="flex min-h-full flex-col bg-white text-neutral-900">
-        <SiteHeader categories={categories} />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
+    <html lang="en" className="h-full antialiased">
+      <body className="flex min-h-full flex-col bg-paper text-ink">
+        {children}
       </body>
     </html>
   );

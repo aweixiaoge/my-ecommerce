@@ -1,185 +1,264 @@
 import type {
   Category,
-  Media,
   Money,
   Product,
   ProductSummary,
+  Variant,
 } from "@my-ecommerce/shared";
 
 /**
- * Mock catalog.
+ * Mock catalog for the Smart Mall storefront.
  *
  * Every value is typed against `@my-ecommerce/shared`, so if the contract
- * changes, this file fails to typecheck — the mock cannot quietly drift from
- * the API it is standing in for.
+ * changes this file fails to typecheck — the mock cannot quietly drift from
+ * the API it stands in for.
  *
- * The getters are async on purpose: they have the same signatures the real
- * API client will have, so replacing them is a swap, not a rewrite.
+ * The getters are async on purpose: they have the same signatures the real API
+ * client will have, so replacing them is a swap, not a rewrite.
  */
 
 const USD = (amount: string): Money => ({ amount, currency: "USD" });
 
-const noImage: Media | null = null;
+const SIZES = [
+  { id: "val_s", name: "S" },
+  { id: "val_m", name: "M" },
+  { id: "val_l", name: "L" },
+];
+
+const SIZE_VARIANTS = (sku: string, prices: [string, string, string]): Variant[] =>
+  SIZES.map((size, i) => ({
+    id: `var_${sku}_${size.name.toLowerCase()}`,
+    sku: `${sku}-${size.name}`,
+    price: USD(prices[i]),
+    compareAtPrice: null,
+    stock: [4, 0, 11][i],
+    inStock: [true, false, true][i],
+    optionValues: [size],
+  }));
+
+const SIZE_OPTION = {
+  id: "opt_size",
+  name: "Size",
+  position: 0,
+  values: SIZES,
+};
+
+/** One photo stands in for all eight cards, as it does in the design. */
+function productImage(alt: string) {
+  return {
+    id: "media_earbuds",
+    url: "/images/product-earbuds.jpg",
+    alt,
+    width: 300,
+    height: 300,
+    position: 0,
+  };
+}
 
 const categories: Category[] = [
   {
-    id: "cat_outerwear",
-    slug: "outerwear",
-    name: "Outerwear",
-    description: "Jackets and coats built for weather.",
-    image: noImage,
+    id: "cat_earbuds",
+    slug: "earbuds",
+    name: "Earbuds",
+    description: "In-ear and true wireless.",
+    image: null,
     parent: null,
     children: [],
-    metaTitle: "Outerwear",
-    metaDescription: "Jackets and coats built for weather.",
+    metaTitle: "Earbuds",
+    metaDescription: "In-ear and true wireless earbuds.",
   },
   {
-    id: "cat_bags",
-    slug: "bags",
-    name: "Bags",
-    description: "Carry things properly.",
-    image: noImage,
+    id: "cat_headphones",
+    slug: "headphones",
+    name: "Headphones",
+    description: "On-ear and over-ear.",
+    image: null,
     parent: null,
     children: [],
-    metaTitle: "Bags",
-    metaDescription: "Carry things properly.",
+    metaTitle: "Headphones",
+    metaDescription: "On-ear and over-ear headphones.",
+  },
+  {
+    id: "cat_accessories",
+    slug: "accessories",
+    name: "Accessories",
+    description: "The bits that make the gear last.",
+    image: null,
+    parent: null,
+    children: [],
+    metaTitle: "Accessories",
+    metaDescription: "Cases, cushions, adapters and cables.",
   },
 ];
 
-const products: Product[] = [
+type Seed = {
+  slug: string;
+  name: string;
+  description: string;
+  shortDescription: string;
+  category: Category;
+  variants: Variant[];
+  options: Product["options"];
+  compareAtPrice?: Money;
+};
+
+const seeds: Seed[] = [
   {
-    id: "prod_raincoat",
-    slug: "storm-raincoat",
-    name: "Storm Raincoat",
+    slug: "earbud-wireless-bluetooth",
+    name: "Earbud Wireless Bluetooth",
     description:
-      "A fully seam-sealed raincoat with a storm flap and a hood that actually stays up. Cut long enough to cover a backpack, light enough to fold into its own pocket.",
-    shortDescription: "Seam-sealed, packable, genuinely waterproof.",
-    price: USD("189.00"),
-    compareAtPrice: USD("240.00"),
-    image: noImage,
-    inStock: true,
-    categories: [categories[0]],
-    images: [],
-    options: [
-      {
-        id: "opt_size",
-        name: "Size",
-        position: 0,
-        values: [
-          { id: "val_s", name: "S" },
-          { id: "val_m", name: "M" },
-          { id: "val_l", name: "L" },
-        ],
-      },
-    ],
-    variants: [
-      {
-        id: "var_raincoat_s",
-        sku: "RC-STORM-S",
-        price: USD("189.00"),
-        compareAtPrice: USD("240.00"),
-        stock: 4,
-        inStock: true,
-        optionValues: [{ id: "val_s", name: "S" }],
-      },
-      {
-        id: "var_raincoat_m",
-        sku: "RC-STORM-M",
-        price: USD("189.00"),
-        compareAtPrice: USD("240.00"),
-        stock: 0,
-        inStock: false,
-        optionValues: [{ id: "val_m", name: "M" }],
-      },
-      {
-        id: "var_raincoat_l",
-        sku: "RC-STORM-L",
-        price: USD("189.00"),
-        compareAtPrice: USD("240.00"),
-        stock: 11,
-        inStock: true,
-        optionValues: [{ id: "val_l", name: "L" }],
-      },
-    ],
-    metaTitle: "Storm Raincoat",
-    metaDescription: "A fully seam-sealed, packable raincoat.",
+      "Six hours on a charge, another eighteen in the case. The tips come in three sizes because the seal is what the bass depends on.",
+    shortDescription: "Six hours on a charge, eighteen more in the case.",
+    category: categories[0],
+    options: [SIZE_OPTION],
+    variants: SIZE_VARIANTS("EWB", ["18.00", "19.00", "21.00"]),
   },
   {
-    id: "prod_tote",
-    slug: "field-tote",
-    name: "Field Tote",
+    slug: "studio-over-ear",
+    name: "Studio Over-Ear Headphones",
     description:
-      "Waxed canvas, leather base, and a strap that does not cut into your shoulder when it is full. Two internal pockets, one of which is actually big enough for a laptop.",
-    shortDescription: "Waxed canvas with a leather base.",
-    price: USD("145.00"),
-    compareAtPrice: null,
-    image: noImage,
-    inStock: true,
-    categories: [categories[1]],
-    images: [],
-    options: [
-      {
-        id: "opt_colour",
-        name: "Colour",
-        position: 0,
-        values: [
-          { id: "val_olive", name: "Olive" },
-          { id: "val_black", name: "Black" },
-        ],
-      },
-    ],
-    variants: [
-      {
-        id: "var_tote_olive",
-        sku: "FT-OLIVE",
-        price: USD("145.00"),
-        compareAtPrice: null,
-        stock: 7,
-        inStock: true,
-        optionValues: [{ id: "val_olive", name: "Olive" }],
-      },
-      {
-        id: "var_tote_black",
-        sku: "FT-BLACK",
-        price: USD("145.00"),
-        compareAtPrice: null,
-        stock: 2,
-        inStock: true,
-        optionValues: [{ id: "val_black", name: "Black" }],
-      },
-    ],
-    metaTitle: "Field Tote",
-    metaDescription: "Waxed canvas tote with a leather base.",
-  },
-  {
-    id: "prod_beanie",
-    slug: "merino-beanie",
-    name: "Merino Beanie",
-    description:
-      "Fine-gauge merino, doubled at the brim so it holds its shape. Warm without the itch.",
-    shortDescription: "Fine-gauge merino, doubled brim.",
-    price: USD("45.00"),
-    compareAtPrice: null,
-    image: noImage,
-    inStock: true,
-    categories: [categories[0]],
-    images: [],
+      "Closed-back, flat response, replaceable everything. Built for long sessions rather than short commutes.",
+    shortDescription: "Closed-back with a flat response.",
+    category: categories[1],
     options: [],
     variants: [
       {
-        id: "var_beanie_std",
-        sku: "MB-STD",
-        price: USD("45.00"),
-        compareAtPrice: null,
-        stock: 23,
+        id: "var_studio",
+        sku: "ST-OVER",
+        price: USD("89.00"),
+        compareAtPrice: USD("109.00"),
+        stock: 7,
         inStock: true,
         optionValues: [],
       },
     ],
-    metaTitle: "Merino Beanie",
-    metaDescription: "Fine-gauge merino beanie.",
+    compareAtPrice: USD("109.00"),
+  },
+  {
+    slug: "sport-in-ear-buds",
+    name: "Sport In-Ear Buds",
+    description:
+      "Sweat-sealed hooks that stay put through a run. Rated IPX5, which is more than most people will ever test.",
+    shortDescription: "Sweat-sealed hooks rated IPX5.",
+    category: categories[0],
+    options: [SIZE_OPTION],
+    variants: SIZE_VARIANTS("SPT", ["34.00", "37.00", "39.00"]),
+  },
+  {
+    slug: "noise-cancelling-headphones",
+    name: "Noise-Cancelling Headphones",
+    description:
+      "Active cancellation with a transparency mode you will actually use. Thirty hours with it on.",
+    shortDescription: "Active cancellation, thirty hours.",
+    category: categories[1],
+    options: [SIZE_OPTION],
+    variants: SIZE_VARIANTS("ANC", ["149.00", "165.00", "179.00"]),
+  },
+  {
+    slug: "wired-earphones",
+    name: "Wired Earphones",
+    description:
+      "No battery, no pairing, no latency. Still the right answer for a desk.",
+    shortDescription: "No battery, no pairing, no latency.",
+    category: categories[0],
+    options: [],
+    variants: [
+      {
+        id: "var_wired",
+        sku: "WR-EAR",
+        price: USD("12.00"),
+        compareAtPrice: null,
+        stock: 40,
+        inStock: true,
+        optionValues: [],
+      },
+    ],
+  },
+  {
+    slug: "portable-bluetooth-speaker",
+    name: "Portable Bluetooth Speaker",
+    description:
+      "Loud enough for a kitchen, small enough for a bag. Floats, which we did not expect either.",
+    shortDescription: "Loud enough for a kitchen. Floats.",
+    category: categories[2],
+    options: [],
+    variants: [
+      {
+        id: "var_speaker",
+        sku: "SPK-PORT",
+        price: USD("59.00"),
+        compareAtPrice: null,
+        stock: 5,
+        inStock: true,
+        optionValues: [],
+      },
+    ],
+  },
+  {
+    slug: "usb-c-audio-adapter",
+    name: "USB-C Audio Adapter",
+    description:
+      "A DAC in a plug the size of your thumbnail. Fixes the headphone jack problem properly.",
+    shortDescription: "A DAC the size of your thumbnail.",
+    category: categories[2],
+    options: [],
+    variants: [
+      {
+        id: "var_adapter",
+        sku: "ADP-USBC",
+        price: USD("9.00"),
+        compareAtPrice: null,
+        stock: 0,
+        inStock: false,
+        optionValues: [],
+      },
+    ],
+  },
+  {
+    slug: "replacement-ear-cushions",
+    name: "Replacement Ear Cushions",
+    description:
+      "Memory foam, protein leather, and a fit designed to be taken off and put back on without tearing.",
+    shortDescription: "Memory foam and protein leather.",
+    category: categories[2],
+    options: [SIZE_OPTION],
+    variants: SIZE_VARIANTS("CUSH", ["15.00", "17.00", "19.00"]),
   },
 ];
+
+const products: Product[] = seeds.map((seed) => {
+  const stock = seed.variants.reduce((n, v) => n + v.stock, 0);
+  const prices = seed.variants.map((v) => v.price).sort(byAmount);
+  const min = prices[0];
+  const max = prices[prices.length - 1];
+
+  return {
+    id: `prod_${seed.slug}`,
+    slug: seed.slug,
+    name: seed.name,
+    description: seed.description,
+    shortDescription: seed.shortDescription,
+    price: min,
+    priceMax: max.amount === min.amount ? null : max,
+    compareAtPrice: seed.compareAtPrice ?? null,
+    image: productImage(seed.name),
+    inStock: stock > 0,
+    categories: [seed.category],
+    images: [productImage(seed.name)],
+    options: seed.options,
+    variants: seed.variants,
+    metaTitle: seed.name,
+    metaDescription: seed.shortDescription,
+  };
+});
+
+/**
+ * Ordering only. The amounts themselves are never converted — no money value
+ * passes through a float here, and the real API computes min/max in Decimal.
+ */
+function byAmount(a: Money, b: Money): number {
+  return Number(a.amount) - Number(b.amount);
+}
 
 function toSummary(product: Product): ProductSummary {
   return {
@@ -187,6 +266,7 @@ function toSummary(product: Product): ProductSummary {
     slug: product.slug,
     name: product.name,
     price: product.price,
+    priceMax: product.priceMax,
     compareAtPrice: product.compareAtPrice,
     image: product.image,
     inStock: product.inStock,
