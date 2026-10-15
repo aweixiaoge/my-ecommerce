@@ -44,7 +44,7 @@ export function ShopProductCard({
               src={product.image.url}
               alt={product.image.alt ?? product.name}
               fill
-              sizes="(min-width: 1024px) 300px, (min-width: 640px) 50vw, 100vw"
+              sizes="(min-width: 768px) 25vw, (min-width: 640px) 50vw, 100vw"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
               priority={priority}
             />

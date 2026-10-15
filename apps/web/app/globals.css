@@ -25,20 +25,40 @@
   --radius-control: 3px;
 
   /*
-   * The width at which the header's seven nav items fit in the bar on their
-   * own. A measured value rather than a device class: the wordmark is 126px,
-   * the actions cluster 170px, the gutters 48px, and the items 478px *once
-   * the two switchers the nav also carries at `lg` have moved back into the
-   * actions cluster* — where they sit at every width below this one anyway.
-   * From 880 up, all seven routes stay in the bar; below it, the nav
-   * collapses into the panel. Generates the `bar:` variant.
+   * The line a window stops being a narrow one at — what every section
+   * switches its composition on, and what the header puts its seven routes
+   * back in the bar at. Generates the `bar:` variant.
+   *
+   * 768 rather than a larger measured value, because a laptop window is a
+   * desktop window at every width it is actually used at. A 13" MacBook
+   * shows Chrome at well under 1024, so a design that only assembles above
+   * `lg` is a design its owner never sees; the previous 880 put the bar —
+   * and with it the hero, the grids and the rest — out of reach of the
+   * window the site was being reviewed in. Below 768 the window is
+   * phone- or tablet-portrait-narrow, and the stacked composition with the
+   * collapsed nav is the right answer.
+   *
+   * The header is what holds this floor up. Its row wants ~842px of viewport
+   * at the design's own spacing — the arithmetic is in the header's note —
+   * so between here and `wide` the links tighten and the cart sheds its
+   * amount to close the gap. Measured, not guessed.
    *
    * Written in rem to match the default scale it sorts among. A px value here
    * kept `bar:` out of that ordering, and the utilities it compiles to were
    * emitted *before* `sm:` — so `sm:grid-cols-2` silently beat
    * `bar:grid-cols-4` on the sections below, at every width.
    */
-  --breakpoint-bar: 55rem;
+  --breakpoint-bar: 48rem;
+
+  /*
+   * Where the bar has room for the design's own spacing again: the 12.5px of
+   * side padding on each nav link, and the cart's amount. Only the header
+   * uses it — it is a measurement of what the bar's content needs, not a
+   * second opinion about what counts as a desktop window. Note it sorts
+   * between `bar` and `lg`, so `lg:` still overrides it; the two switchers
+   * depend on that.
+   */
+  --breakpoint-wide: 55rem;
 
   /*
    * The design is set in SF Pro. That is Apple's system font: it has no web

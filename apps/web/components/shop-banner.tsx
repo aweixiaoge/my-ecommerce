@@ -46,7 +46,7 @@ export function ShopBanner() {
               src="/images/why-buy.jpg"
               alt="A pair of headphones on a ridged surface"
               fill
-              sizes="(min-width: 1024px) 722px, 100vw"
+              sizes="(min-width: 768px) 56vw, 100vw"
               className="object-cover"
               priority
             />
@@ -55,8 +55,8 @@ export function ShopBanner() {
           {/*
             8% is the design's own 45.405px expressed as a share of the 567.607
             column it sits in, which is what makes it the right number at the
-            design's width *and* the right number at 880, where a fixed 45.405
-            each side would eat a quarter of the column.
+            design's width *and* the right number at `bar`, where a fixed
+            45.405 each side would eat a quarter of the column.
           */}
           <div className="bar:px-[8%]">
             <h2 className="text-[32px] leading-[48px] font-bold tracking-[0.40625px] text-ink">

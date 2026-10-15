@@ -17,7 +17,7 @@ export function WhyBuy() {
             src="/images/why-buy.jpg"
             alt="A pair of headphones on a ridged surface"
             fill
-            sizes="(min-width: 1024px) 588px, 100vw"
+            sizes="(min-width: 768px) 46vw, 100vw"
             className="object-cover"
           />
         </div>

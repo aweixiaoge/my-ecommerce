@@ -56,7 +56,7 @@ export function Hero() {
             src="/images/hero-audio.jpg"
             alt="Wireless over-ear headphones on a shoreline"
             fill
-            sizes="(min-width: 1024px) 588px, 100vw"
+            sizes="(min-width: 768px) 46vw, 100vw"
             className="object-cover"
             priority
           />

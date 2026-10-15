@@ -13,19 +13,40 @@ import { NAV } from "@/lib/nav";
  * whole component is small enough that splitting the toggle out on its own
  * would cost more than it saves.
  *
- * One width decides the header's shape, and it is not a device class but a
- * measurement. The nav cannot simply be squeezed: its seven items plus the two
- * switchers measure ~609px, and with the wordmark and the actions cluster the
- * three-column row needs ~953px of viewport before the columns even meet. So:
+ * Two widths decide the header's shape, and neither is a device class — both
+ * are measurements of what the bar holds.
  *
- * - From `bar` (880px) up, all seven routes fit in the bar — but only without
- *   the two switchers, the 144px there is no room for. Those stay out in the
- *   actions cluster, where the second pair already sits at every width below
- *   `lg`; the nav picks its own pair back up once `lg` gives it the room.
- * - Below `bar` the nav collapses into a panel and a toggle takes its place,
- *   so the seven routes stay reachable at every window size. The switchers do
- *   not go into that panel: they are the only control for either setting, so
- *   they stay in the bar rather than behind a tap.
+ * `bar` (768px) is where the seven routes come back into the bar and stay
+ * there. It is the storefront's line between a narrow window and a desktop
+ * one, not a header local: the hero's two columns, the product grids and the
+ * rest of the compositions turn on the same query, because a header that
+ * says "desktop" over a page that says "phone" is worse than either.
+ *
+ * `wide` (880px) is where the bar has room for the design's own spacing
+ * again — the links back to 12.5px a side, the cart back to showing its
+ * amount. Together those are what pull the row out to 779.23px of content:
+ * 126.14 of wordmark, 483.49 of nav, 169.6 of actions. Add the 48px gutters
+ * and the scrollbar and the bar wants ~842px of viewport to seat it with the
+ * design's spacing intact, which is what 880 is for.
+ *
+ * At 768 the window offers the row 705px. The difference is closed rather
+ * than conceded:
+ *
+ * - The links tighten to 8px of side padding between `bar` and `wide`. That
+ *   is 63px back — the seven routes stay in the bar instead of moving behind
+ *   a tap.
+ * - The cart sheds its amount, 44px more, and picks it up again at `wide`.
+ *   An icon-only cart is the same trade the phone widths already make.
+ * - The two switchers stay out of the nav below `lg` — the 144px they cost is
+ *   the one saving not worth making, since the actions cluster carries a pair
+ *   at every width under `lg` anyway. The nav takes its own pair back at `lg`.
+ *
+ * That is 671.33px of content against 705, so the row seats with ~34px in
+ * hand rather than being fitted to the last pixel.
+ *
+ * Below `bar` the nav collapses into a panel and a toggle takes its place.
+ * The switchers do not go into that panel: they are the only control for
+ * either setting, so they stay in the bar rather than behind a tap.
  */
 export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -41,7 +62,7 @@ export function SiteHeader() {
     // Mirrors `--breakpoint-bar` in globals.css, which is what every `bar:`
     // utility below compiles to. If the two drift, the panel survives a resize
     // into a bar that already shows the same links.
-    const mql = window.matchMedia("(min-width: 880px)");
+    const mql = window.matchMedia("(min-width: 768px)");
     const closeOnDesktop = (event: MediaQueryListEvent) => {
       if (event.matches) setMenuOpen(false);
     };
@@ -82,7 +103,7 @@ export function SiteHeader() {
               key={item.label}
               href={item.href}
               prefetch={false}
-              className="px-[12.5px] text-[13px] font-bold leading-[16.9px] tracking-[-0.076px] whitespace-nowrap text-ink"
+              className="px-[8px] text-[13px] font-bold leading-[16.9px] tracking-[-0.076px] whitespace-nowrap text-ink wide:px-[12.5px]"
             >
               {item.label}
             </Link>
@@ -147,14 +168,16 @@ export function SiteHeader() {
 
           <Link href="/cart" className="flex items-center gap-2 pl-2.5">
             {/*
-              The amount goes below `sm`. The wordmark needs 126px to hold one
-              line and the logo column gets whatever the actions leave of the
-              row, so keeping the amount puts that break-even at ~371px of
-              viewport — above every 320 and 360 phone, where "Smart Mall"
-              would stack over two lines. An icon-only cart is the usual
-              treatment at that size.
+              The amount is the cheapest thing in the row to give up, so it is
+              part of what pays for the nav staying in the bar: gone from
+              `bar` to `wide`, back above it. Keeping it would put the row
+              11.23px over what 768 offers even with the links tightened, and
+              74.23px over at the design's spacing. Below `bar` the cart is
+              icon-only for the older reason too — there the wordmark has to
+              hold one line in the 126px it needs, and the amount would push
+              "Smart Mall" over two.
             */}
-            <span className="hidden text-[13px] font-semibold leading-[21.45px] tracking-[-0.076px] text-ink sm:inline">
+            <span className="hidden text-[13px] font-semibold leading-[21.45px] tracking-[-0.076px] text-ink wide:inline">
               $0.00
             </span>
             <Image src="/icons/cart.svg" alt="Cart" width={15} height={14} />

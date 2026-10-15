@@ -174,6 +174,20 @@ describe("SiteHeader — desktop nav", () => {
     }
   });
 
+  it("holds the design's spacing on the links only from `wide` up", () => {
+    // `bar` is 768 because that is the narrowest a laptop window gets used
+    // at — but the design's own 12.5px of link padding wants ~797px of
+    // viewport, so at 768 the bar is short by it. The padding is where the
+    // difference is found. Dropping `wide:px-[12.5px]` would leave the links
+    // tight at every width; dropping `px-[8px]` would put the row back over
+    // and collapse the nav at the width this breakpoint exists to serve.
+    for (const item of NAV) {
+      const classes = link(desktopNav(), item.label).className.split(/\s+/);
+      expect(classes).toContain("px-[8px]");
+      expect(classes).toContain("wide:px-[12.5px]");
+    }
+  });
+
   it("pins the toggle to the sizes where the nav is collapsed", () => {
     const classes = toggle().className.split(/\s+/);
     // `bar:hidden` alone hides the toggle from `bar` up. A bare `hidden` next
@@ -187,9 +201,9 @@ describe("SiteHeader — desktop nav", () => {
     await click(toggle());
     // The classes above and this query are two spellings of one decision: the
     // utility compiles from `--breakpoint-bar` in globals.css, the query is
-    // written out here. 880 appearing in both is the point — if they drift,
+    // written out here. 768 appearing in both is the point — if they drift,
     // the panel is live at a width whose bar already shows the same links.
-    expect(mediaStubs.some((stub) => stub.media === "(min-width: 880px)")).toBe(
+    expect(mediaStubs.some((stub) => stub.media === "(min-width: 768px)")).toBe(
       true,
     );
   });
@@ -264,6 +278,23 @@ describe("SiteHeader — the row's columns", () => {
     const classes = row().className.split(/\s+/);
     expect(classes).toContain("grid-cols-[1fr_auto]");
     expect(classes).toContain("bar:grid-cols-[1fr_auto_1fr]");
+  });
+});
+
+describe("SiteHeader — what the 768 floor costs", () => {
+  it("sheds the cart's amount between bar and wide", () => {
+    const cart = header().querySelector<HTMLAnchorElement>('a[href="/cart"]')!;
+    const amount = [...cart.querySelectorAll("span")].find(
+      (span) => name(span) === "$0.00",
+    )!;
+
+    const classes = amount.className.split(/\s+/);
+    // The 44px this buys is most of what 768 is short by. It is `wide`, not
+    // `sm`: at `sm` the amount would be back on screen at 640, where the bar
+    // is 190px short and the nav is behind a tap anyway.
+    expect(classes).toContain("wide:inline");
+    expect(classes).not.toContain("sm:inline");
+    expect(classes).toContain("hidden");
   });
 });
 
