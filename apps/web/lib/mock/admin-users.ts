@@ -15,7 +15,7 @@ import type { AdminRole } from "@my-ecommerce/shared";
  * have no meaning anywhere else. They must not survive contact with a real
  * deployment; the whole file goes when the API lands.
  *
- *   name: admin   password: admin-dev-password   (owner)
+ *   name: admin   password: 111111   (owner)
  *   name: staff   password: staff-dev-password   (staff)
  *
  * The hashes are real scrypt output, generated once with the same parameters
@@ -62,7 +62,7 @@ const ADMIN_USERS: AdminUserRecord[] = [
     id: "adm_01",
     name: "admin",
     passwordHash:
-      "nzw2NKftOrZM14Ipycm3eQ==:9QogaAySS2Cwk41U06Ng+SNPES1VcaIyOywfm61zlo6PeVtPotxxJuIwFo3l+gRg4oUY2dI0EEqVoB2wI9OlOw==",
+      "alpPsdgwBlnMa77r/2fwzQ==:OkbOsq8LW96/ylHOIR/+NcDeAFihRdOQKYpD0gqJ1vyiIMroSYtE0hwYxWhxZs2b0zaNPRd9BaFfU1Ec44hukQ==",
     role: "owner",
   },
   {

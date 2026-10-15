@@ -36,7 +36,7 @@ describe("findAdminByName", () => {
     // password ever appears here, it will be committed.
     const user = await findAdminByName("admin");
     expect(user).not.toBeNull();
-    expect(user!.passwordHash).not.toContain("admin-dev-password");
+    expect(user!.passwordHash).not.toContain("111111");
     expect(user!.passwordHash).toMatch(/^[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+$/);
   });
 });

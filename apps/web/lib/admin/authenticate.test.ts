@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 import { authenticateLogin } from "./authenticate";
 
 const NAME = "admin";
-const PASSWORD = "admin-dev-password";
+
+/**
+ * The credential documented in `lib/mock/admin-users.ts`, spelled out rather
+ * than imported: it exists here so that changing the stored hash without
+ * updating the documentation — or the other way round — fails this file.
+ */
+const PASSWORD = "111111";
 
 describe("authenticateLogin", () => {
   it("returns the signed-in admin for correct credentials", async () => {
