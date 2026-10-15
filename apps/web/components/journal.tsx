@@ -14,7 +14,7 @@ export async function Journal() {
           linkHref="/journal"
         />
 
-        <div className="mt-8 grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid grid-cols-1 gap-12 md:grid-cols-2 bar:grid-cols-3">
           {posts.map((post) => (
             <article key={post.id}>
               <p className="text-[13px] font-semibold tracking-[1.364px] uppercase leading-[21.45px] text-ink underline">

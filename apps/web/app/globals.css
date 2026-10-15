@@ -25,6 +25,22 @@
   --radius-control: 3px;
 
   /*
+   * The width at which the header's seven nav items fit in the bar on their
+   * own. A measured value rather than a device class: the wordmark is 126px,
+   * the actions cluster 170px, the gutters 48px, and the items 478px *once
+   * the two switchers the nav also carries at `lg` have moved back into the
+   * actions cluster* — where they sit at every width below this one anyway.
+   * From 880 up, all seven routes stay in the bar; below it, the nav
+   * collapses into the panel. Generates the `bar:` variant.
+   *
+   * Written in rem to match the default scale it sorts among. A px value here
+   * kept `bar:` out of that ordering, and the utilities it compiles to were
+   * emitted *before* `sm:` — so `sm:grid-cols-2` silently beat
+   * `bar:grid-cols-4` on the sections below, at every width.
+   */
+  --breakpoint-bar: 55rem;
+
+  /*
    * The design is set in SF Pro. That is Apple's system font: it has no web
    * licence and is not on Google Fonts. This stack renders the exact design
    * on Apple platforms and the closest available face elsewhere, at zero

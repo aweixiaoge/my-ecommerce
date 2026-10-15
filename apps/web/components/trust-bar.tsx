@@ -21,7 +21,7 @@ export function TrustBar() {
   return (
     <section className="border-y-[0.909px] border-line">
       {/* Four equal columns on the design's 1290 column with a 40px gap. */}
-      <div className="container-content grid grid-cols-1 gap-8 py-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-10">
+      <div className="container-content grid grid-cols-1 gap-8 py-10 sm:grid-cols-2 bar:grid-cols-4 bar:gap-10">
         {ITEMS.map((item) => (
           <div key={item.title}>
             <p className="text-[15px] font-semibold leading-[24.75px] tracking-[-0.234px] text-ink">
