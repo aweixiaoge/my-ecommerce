@@ -1,9 +1,16 @@
 import { ProductCard } from "@/components/product-card";
 import { SectionHeading } from "@/components/section-heading";
-import { getProducts } from "@/lib/mock/catalog";
+import { getNewArrivals } from "@/lib/mock/catalog";
+
+/**
+ * The home design's grid is two rows of four, and stays two rows of four —
+ * it is a window onto the catalogue, not the catalogue. Everything beyond it
+ * is what the Shop page's grid and pager exist for.
+ */
+const HOME_GRID_SIZE = 8;
 
 export async function NewArrivals() {
-  const products = await getProducts();
+  const products = await getNewArrivals(HOME_GRID_SIZE);
 
   return (
     <section className="pt-[72px] pb-[80px]">

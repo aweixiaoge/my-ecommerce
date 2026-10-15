@@ -1,10 +1,18 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   resolve: {
-    // Mirrors the `@/*` path in apps/web/tsconfig.json so component tests
-    // import the way the app does.
-    alias: { "@": new URL("./apps/web", import.meta.url).pathname },
+    /*
+     * Mirrors the `@/*` path in apps/web/tsconfig.json so component tests
+     * import the way the app does — vitest does not read tsconfig, and without
+     * this a tested module importing through the alias cannot resolve.
+     *
+     * `fileURLToPath` rather than the shorter `.pathname`: pathname comes back
+     * percent-encoded, so a checkout under a path containing a space would
+     * alias to a directory that does not exist.
+     */
+    alias: { "@": fileURLToPath(new URL("./apps/web", import.meta.url)) },
   },
 
   test: {
