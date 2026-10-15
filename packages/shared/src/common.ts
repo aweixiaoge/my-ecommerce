@@ -26,38 +26,6 @@ export function paginated<T extends z.ZodTypeAny>(item: T) {
   });
 }
 
-/** The unwrapped type of `paginated(item)`, for code that has already validated. */
-export type Paginated<T> = {
-  items: T[];
-  pagination: Pagination;
-};
-
-/**
- * Slices a full list into one page and builds the envelope around it.
- *
- * `page` is clamped, never rejected. `?page=99` on a two-page list is a stale
- * link or a hand-edited URL — a shopper following it should land on the last
- * page, not on an error or a blank grid. The returned `pagination.page` is the
- * page actually served, which is what the pager must mark as current.
- *
- * An empty list is one empty page with `totalPages: 0`: the UI still has a page
- * number to render, and arithmetic on `totalPages` never divides by zero.
- */
-export function paginate<T>(all: T[], page: number, perPage: number): Paginated<T> {
-  const total = all.length;
-  const totalPages = Math.ceil(total / perPage);
-  const lastPage = Math.max(totalPages, 1);
-
-  const requested = Number.isFinite(page) ? Math.trunc(page) : 1;
-  const current = Math.min(Math.max(requested, 1), lastPage);
-  const start = (current - 1) * perPage;
-
-  return {
-    items: all.slice(start, start + perPage),
-    pagination: { page: current, perPage, total, totalPages },
-  };
-}
-
 /**
  * Locale and currency travel differently on purpose.
  *

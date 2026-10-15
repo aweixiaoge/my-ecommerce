@@ -1,15 +1,10 @@
 import type {
   Category,
   Money,
-  Paginated,
   Product,
-  ProductRating,
-  ProductSort,
   ProductSummary,
   Variant,
 } from "@my-ecommerce/shared";
-import { compareMoney, paginate } from "@my-ecommerce/shared";
-import { SHOP_PAGE_SIZE, sortProducts } from "@/lib/shop";
 
 /**
  * Mock catalog for the Smart Mall storefront.
@@ -105,13 +100,6 @@ type Seed = {
   variants: Variant[];
   options: Product["options"];
   compareAtPrice?: Money;
-  /**
-   * [average, count]. Every product here has been reviewed — the shop card
-   * renders a star row for each, as the design shows. A product with no
-   * reviews carries `null` and renders no stars at all; the contract and the
-   * card both handle that, there is just none in the fixture.
-   */
-  rating: [number, number];
 };
 
 const seeds: Seed[] = [
@@ -124,7 +112,6 @@ const seeds: Seed[] = [
     category: categories[0],
     options: [SIZE_OPTION],
     variants: SIZE_VARIANTS("EWB", ["18.00", "19.00", "21.00"]),
-    rating: [4.4, 128],
   },
   {
     slug: "studio-over-ear",
@@ -146,7 +133,6 @@ const seeds: Seed[] = [
       },
     ],
     compareAtPrice: USD("109.00"),
-    rating: [4.3, 64],
   },
   {
     slug: "sport-in-ear-buds",
@@ -157,7 +143,6 @@ const seeds: Seed[] = [
     category: categories[0],
     options: [SIZE_OPTION],
     variants: SIZE_VARIANTS("SPT", ["34.00", "37.00", "39.00"]),
-    rating: [4.2, 91],
   },
   {
     slug: "noise-cancelling-headphones",
@@ -168,7 +153,6 @@ const seeds: Seed[] = [
     category: categories[1],
     options: [SIZE_OPTION],
     variants: SIZE_VARIANTS("ANC", ["149.00", "165.00", "179.00"]),
-    rating: [4.1, 37],
   },
   {
     slug: "wired-earphones",
@@ -189,7 +173,6 @@ const seeds: Seed[] = [
         optionValues: [],
       },
     ],
-    rating: [4.4, 212],
   },
   {
     slug: "portable-bluetooth-speaker",
@@ -210,7 +193,6 @@ const seeds: Seed[] = [
         optionValues: [],
       },
     ],
-    rating: [4.2, 48],
   },
   {
     slug: "usb-c-audio-adapter",
@@ -231,7 +213,6 @@ const seeds: Seed[] = [
         optionValues: [],
       },
     ],
-    rating: [4.3, 156],
   },
   {
     slug: "replacement-ear-cushions",
@@ -242,119 +223,12 @@ const seeds: Seed[] = [
     category: categories[2],
     options: [SIZE_OPTION],
     variants: SIZE_VARIANTS("CUSH", ["15.00", "17.00", "19.00"]),
-    rating: [4.1, 73],
-  },
-  {
-    slug: "bone-conduction-headphones",
-    name: "Bone Conduction Headphones",
-    description:
-      "Sits on your cheekbone and leaves both ears open, so you hear the road as well as the podcast. The trade is bass: there is none to speak of.",
-    shortDescription: "Open-ear, with nothing in your ear canal.",
-    category: categories[1],
-    options: [],
-    variants: [
-      {
-        id: "var_bone",
-        sku: "BONE-OC",
-        price: USD("119.00"),
-        compareAtPrice: null,
-        stock: 9,
-        inStock: true,
-        optionValues: [],
-      },
-    ],
-    rating: [4.2, 29],
-  },
-  {
-    slug: "open-ear-sport-earphones",
-    name: "Open-Ear Sport Earphones",
-    description:
-      "A hook over the ear rather than a plug in it. Stays on through a sprint, washes down under a tap.",
-    shortDescription: "Hook-over fit that stays on through a sprint.",
-    category: categories[0],
-    options: [],
-    variants: [
-      {
-        id: "var_openea",
-        sku: "OE-SPT",
-        price: USD("47.00"),
-        compareAtPrice: USD("55.00"),
-        stock: 14,
-        inStock: true,
-        optionValues: [],
-      },
-    ],
-    compareAtPrice: USD("55.00"),
-    rating: [4.3, 56],
-  },
-  {
-    slug: "wooden-headphone-stand",
-    name: "Wooden Headphone Stand",
-    description:
-      "Solid ash with a felt cradle, so the headband rests instead of creasing. Heavy enough not to follow the cable off the desk.",
-    shortDescription: "Solid ash with a felt cradle.",
-    category: categories[2],
-    options: [],
-    variants: [
-      {
-        id: "var_stand",
-        sku: "STD-WOOD",
-        price: USD("32.00"),
-        compareAtPrice: null,
-        stock: 22,
-        inStock: true,
-        optionValues: [],
-      },
-    ],
-    rating: [4.4, 41],
-  },
-  {
-    slug: "braided-replacement-cable",
-    name: "Braided Replacement Cable",
-    description:
-      "Two metres of braided cable with gold-plated jacks at both ends. The strain relief is the part that usually fails, so it is the part that is overbuilt.",
-    shortDescription: "Two metres, braided, overbuilt strain relief.",
-    category: categories[2],
-    options: [],
-    variants: [
-      {
-        id: "var_cable",
-        sku: "CBL-BR2",
-        price: USD("14.00"),
-        compareAtPrice: null,
-        stock: 60,
-        inStock: true,
-        optionValues: [],
-      },
-    ],
-    rating: [4.2, 187],
-  },
-  {
-    slug: "travel-carry-case",
-    name: "Travel Carry Case",
-    description:
-      "Moulded shell, zip pull you can find by feel, and a pocket sized for a cable and an adapter. Fits the over-ears folded flat.",
-    shortDescription: "Moulded shell with a cable pocket.",
-    category: categories[2],
-    options: [],
-    variants: [
-      {
-        id: "var_case",
-        sku: "CSE-TRVL",
-        price: USD("24.00"),
-        compareAtPrice: null,
-        stock: 3,
-        inStock: true,
-        optionValues: [],
-      },
-    ],
-    rating: [4.1, 95],
   },
 ];
 
 const products: Product[] = seeds.map((seed) => {
   const stock = seed.variants.reduce((n, v) => n + v.stock, 0);
-  const prices = seed.variants.map((v) => v.price).sort(compareMoney);
+  const prices = seed.variants.map((v) => v.price).sort(byAmount);
   const min = prices[0];
   const max = prices[prices.length - 1];
 
@@ -373,15 +247,17 @@ const products: Product[] = seeds.map((seed) => {
     images: [productImage(seed.name)],
     options: seed.options,
     variants: seed.variants,
-    rating: toRating(seed.rating),
     metaTitle: seed.name,
     metaDescription: seed.shortDescription,
   };
 });
 
-/** Seeds carry the pair so the fixture stays one line per product. */
-function toRating([average, count]: [number, number]): ProductRating {
-  return { average, count };
+/**
+ * Ordering only. The amounts themselves are never converted — no money value
+ * passes through a float here, and the real API computes min/max in Decimal.
+ */
+function byAmount(a: Money, b: Money): number {
+  return Number(a.amount) - Number(b.amount);
 }
 
 function toSummary(product: Product): ProductSummary {
@@ -395,32 +271,11 @@ function toSummary(product: Product): ProductSummary {
     image: product.image,
     inStock: product.inStock,
     categories: product.categories,
-    rating: product.rating,
   };
 }
 
 export async function getProducts(): Promise<ProductSummary[]> {
   return products.map(toSummary);
-}
-
-/**
- * One page of the shop listing, ordered and paginated the way the API will.
- *
- * Sorting and slicing live here rather than in the page because they are the
- * server's job: `?page=` and `?sort=` are query parameters, and a client that
- * filtered its own copy of the catalogue could not be paginated, crawled, or
- * trusted. The day this is swapped for `fetch`, nothing above it changes.
- */
-export async function getShopProducts(query: {
-  page: number;
-  sort: ProductSort;
-}): Promise<Paginated<ProductSummary>> {
-  return paginate(sortProducts(products.map(toSummary), query.sort), query.page, SHOP_PAGE_SIZE);
-}
-
-/** How many products the home page's "New arrivals" grid shows. */
-export async function getNewArrivals(limit: number): Promise<ProductSummary[]> {
-  return products.slice(0, limit).map(toSummary);
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {

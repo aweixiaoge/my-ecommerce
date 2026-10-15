@@ -69,34 +69,6 @@ export const VariantSchema = z.object({
 
 export type Variant = z.infer<typeof VariantSchema>;
 
-/**
- * The aggregate review score a listing card renders as stars.
- *
- * Null is "no reviews yet", which is NOT the same as an average of 0 — an
- * unreviewed product must render no stars at all rather than one out of five.
- * The figure is denormalised from `product_review_stats`; reviews themselves
- * land in Phase 5.
- */
-export const ProductRatingSchema = z.object({
-  average: z.number().min(0).max(5),
-  count: z.number().int().nonnegative(),
-});
-
-export type ProductRating = z.infer<typeof ProductRatingSchema>;
-
-/**
- * The orders a product list accepts. A closed set, shared with the API, so the
- * URL, the query, and the SQL `ORDER BY` cannot drift into three vocabularies.
- */
-export const ProductSortSchema = z.enum([
-  "default",
-  "price-asc",
-  "price-desc",
-  "name-asc",
-]);
-
-export type ProductSort = z.infer<typeof ProductSortSchema>;
-
 /** Listing view — everything a product card needs, and nothing more. */
 export const ProductSummarySchema = z.object({
   id: z.string(),
@@ -114,7 +86,6 @@ export const ProductSummarySchema = z.object({
   image: MediaSchema.nullable(),
   inStock: z.boolean(),
   categories: z.array(CategoryRefSchema),
-  rating: ProductRatingSchema.nullable(),
 });
 
 export type ProductSummary = z.infer<typeof ProductSummarySchema>;
