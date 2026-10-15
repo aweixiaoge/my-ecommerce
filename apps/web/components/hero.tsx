@@ -4,8 +4,22 @@ import Link from "next/link";
 export function Hero() {
   return (
     <section className="bg-mist">
-      <div className="container-content flex flex-col gap-10 py-[72px] lg:flex-row lg:items-center lg:gap-16">
-        <div className="lg:w-[637.52px] lg:shrink-0">
+      {/*
+        Side by side from `bar` — the width at which the header puts its own
+        nav back in the bar, so the two decide together what counts as a
+        desktop window. Below it the copy sits over the image.
+
+        The two columns are the design's widths — 637.52 and 588.48 either side
+        of a 64px gap, which is the 1290px the container is built to hold. They
+        add up to more than that below a ~1338px viewport, and both are allowed
+        to shrink so the row gives way instead of pushing the page sideways:
+        neither column carries `shrink-0`, so the shortfall is split 52:48 and
+        the pair keeps the design's proportions at every width from `bar` up.
+        The image keeps its aspect ratio as it narrows, and at a full 1290 the
+        two of them are back at the design's exact pixels.
+      */}
+      <div className="container-content flex flex-col gap-10 py-[72px] bar:flex-row bar:items-center bar:gap-16">
+        <div className="bar:w-[637.52px]">
           <p className="text-[13px] font-semibold tracking-[1.744px] uppercase leading-[21.45px] text-ink-55">
             Hand-tested audio gear
           </p>
@@ -37,12 +51,12 @@ export function Hero() {
           </div>
         </div>
 
-        <div className="relative aspect-[889/500] w-full overflow-hidden rounded-card lg:w-[588.48px] lg:shrink-0">
+        <div className="relative aspect-[889/500] w-full overflow-hidden rounded-card bar:w-[588.48px]">
           <Image
             src="/images/hero-audio.jpg"
             alt="Wireless over-ear headphones on a shoreline"
             fill
-            sizes="(min-width: 1024px) 588px, 100vw"
+            sizes="(min-width: 768px) 46vw, 100vw"
             className="object-cover"
             priority
           />
