@@ -55,8 +55,12 @@ async function ShopResults({ searchParams }: { searchParams: ShopSearchParams })
     <>
       <ShopToolbar pagination={pagination} sort={query.sort} />
 
-      {/* The design's List:margin — 25px above the grid. */}
-      <div className="grid grid-cols-1 gap-[30px] pt-[25px] sm:grid-cols-2 lg:grid-cols-4">
+      {/*
+        The design's List:margin — 25px above the grid — and its four columns
+        from `bar`, which is where the rest of the storefront decides a window
+        is a desktop one. See `--breakpoint-bar` in globals.css.
+      */}
+      <div className="grid grid-cols-1 gap-[30px] pt-[25px] sm:grid-cols-2 bar:grid-cols-4">
         {items.map((product, index) => (
           <ShopProductCard key={product.id} product={product} priority={index === 0} />
         ))}
@@ -80,7 +84,7 @@ function ShopResultsFallback() {
         <div className="h-10 w-[202.727px] rounded-[3px] border-[0.909px] border-line" />
       </div>
 
-      <div className="grid grid-cols-1 gap-[30px] pt-[25px] sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-[30px] pt-[25px] sm:grid-cols-2 bar:grid-cols-4">
         {Array.from({ length: 12 }, (_, index) => (
           <div key={index} className={`${PRODUCT_CARD_HEIGHT} rounded-[3px] bg-mist`} />
         ))}
