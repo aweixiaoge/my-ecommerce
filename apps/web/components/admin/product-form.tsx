@@ -1,8 +1,31 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
-import { createProductAction } from "@/app/admin/(shell)/products/actions";
+import {
+  ACCEPTED_IMAGE_TYPES,
+  IMAGES_PER_VARIANT_MAX,
+} from "@my-ecommerce/shared";
+import {
+  createProductAction,
+  updateProductAction,
+  uploadProductMediaAction,
+  type ProductFormState,
+} from "@/app/admin/(shell)/products/actions";
+import { toFormAttributes, toFormDrafts } from "@/lib/admin/product-edit";
+import { mediaUrl, planUploads } from "@/lib/admin/product-media";
+import type { ProductForEdit } from "@/lib/admin/products-repo";
+import {
+  addMediaId,
+  colorKey,
+  draftFor,
+  draftProblems,
+  hasProblems,
+  moveMediaId,
+  removeMediaId,
+  serializeVariants,
+  type FormColorDraft,
+} from "@/lib/admin/product-variants";
 import {
   ATTRIBUTE_LABELS,
   ATTRIBUTE_PLACEHOLDERS,
@@ -12,39 +35,106 @@ import {
   serializeAttributes,
   type FormAttribute,
 } from "@/lib/admin/product-form";
-import { MarkdownPreview } from "./markdown-preview";
+import { DescriptionEditor } from "./description-editor";
+import { FieldErrors, inputClass, LABEL } from "./form-controls";
 
-const TABS = [
-  { id: "write", label: "Write" },
-  { id: "preview", label: "Preview" },
-] as const;
+/** What is happening to one colour's images right now. */
+interface UploadState {
+  /** Uploads still in flight, so the row can say so rather than look stuck. */
+  pending: number;
+  problems: string[];
+}
 
-type TabId = (typeof TABS)[number]["id"];
+const NO_UPLOADS: UploadState = { pending: 0, problems: [] };
 
 /**
- * The create-product form.
+ * What is happening to a colour's images, blank if nothing ever has.
  *
- * A Client Component because the description editor and the attribute rows are
- * interactive before anything is submitted — a preview that needs a round trip
- * to the server would show the author their copy a second late, and an
- * attribute list is edited long before the form is sent. The rules are all
- * elsewhere: the shared schema decides what is valid, `lib/admin/product-form`
- * decides what is typed, and this file decides where it sits on the screen.
+ * `Object.hasOwn` for the same reason `draftFor` uses it: the key is a colour
+ * someone typed, and `uploads["constructor"]` on a plain object finds an
+ * inherited value rather than nothing.
  */
-export function ProductForm() {
-  const [state, formAction, pending] = useActionState(
-    createProductAction,
-    undefined,
+function uploadStateFor(
+  uploads: Record<string, UploadState>,
+  color: string,
+): UploadState {
+  const key = colorKey(color);
+  return Object.hasOwn(uploads, key) ? uploads[key]! : NO_UPLOADS;
+}
+
+/**
+ * The product form — the same one for creating and for editing.
+ *
+ * A Client Component because the description editor, the attribute rows and the
+ * per-colour rows are all interactive before anything is submitted — a preview
+ * that needs a round trip to the server would show the author their copy a
+ * second late, and a list of colours is edited long before the form is sent.
+ * The rules are all elsewhere: the shared schema decides what is valid,
+ * `lib/admin/product-form` decides what is typed, `lib/admin/product-variants`
+ * decides what a colour's price and stock mean, and this file decides where it
+ * sits on the screen.
+ *
+ * Handed a product, it edits it. That is the whole difference: the same fields
+ * in the same order, seeded from `lib/admin/product-edit`, posting to the action
+ * that writes over a row instead of the one that makes a new one. A second
+ * screen with its own layout would be a second screen to keep in step, and the
+ * first thing to fall out of step would be the fields it forgot to show.
+ */
+export function ProductForm({ product }: { product?: ProductForEdit } = {}) {
+  const [state, formAction, pending] = useActionState<
+    ProductFormState | undefined,
+    FormData
+  >(product ? updateProductAction : createProductAction, undefined);
+
+  const [description, setDescription] = useState(product?.description ?? "");
+  const [attributes, setAttributes] = useState<FormAttribute[]>(() =>
+    product ? toFormAttributes(product.attributes) : [],
+  );
+  const [drafts, setDrafts] = useState<Record<string, FormColorDraft>>(() =>
+    product ? toFormDrafts(product.variants) : {},
+  );
+  const [uploads, setUploads] = useState<Record<string, UploadState>>({});
+
+  /*
+   * Every field on this form is controlled, including the two plain ones.
+   *
+   * The tempting alternative — leave them uncontrolled and let the DOM hold
+   * them — does not survive a failed submit. React 19 calls `form.reset()` when
+   * a form action resolves, so an uncontrolled Name comes back empty; and
+   * because it is `required`, the browser then refuses the next submit without
+   * firing one, so the button reads as broken and the copy is gone. Keeping the
+   * value in React state is the only version where a refused submission leaves
+   * the form as it was.
+   */
+  const [name, setName] = useState(product?.name ?? "");
+  const [shortDescription, setShortDescription] = useState(
+    product?.shortDescription ?? "",
+  );
+  const nextKind = nextAvailableKind(attributes);
+  const editing = product !== undefined;
+
+  const colors = parseAttributeValues(
+    attributes.find((attribute) => attribute.kind === "color")?.values ?? "",
   );
 
-  const [description, setDescription] = useState("");
-  const [tab, setTab] = useState<TabId>("write");
-  const [attributes, setAttributes] = useState<FormAttribute[]>([]);
+  /**
+   * Whether every declared colour's row says something sensible.
+   *
+   * The submit button reads this. A price of "abc" is not sent and not stored —
+   * it is refused before the request, next to the box it was typed into, which
+   * is the only place a person can act on it.
+   */
+  const blocked = hasProblems(drafts, colors);
 
-  // The form's own inputs are uncontrolled so a failed submit keeps what was
-  // typed — React restores them from the DOM, and the only field that has to be
-  // state is the one something else reads (the preview).
-  const nextKind = nextAvailableKind(attributes);
+  /**
+   * Whether an image is still on its way.
+   *
+   * The hidden field is built from state, so submitting mid-upload would send
+   * the ids that had arrived and none of the others — and the product would be
+   * saved, and the page changed, before anyone could tell. Waiting is the
+   * honest option: the ids are not known yet.
+   */
+  const uploading = Object.values(uploads).some((upload) => upload.pending > 0);
 
   function addAttribute() {
     if (!nextKind) return;
@@ -63,8 +153,111 @@ export function ProductForm() {
     setAttributes((current) => current.filter((_, i) => i !== index));
   }
 
+  function patchDraft(color: string, patch: Partial<FormColorDraft>) {
+    setDrafts((current) => {
+      const key = colorKey(color);
+      return { ...current, [key]: { ...draftFor(current, color), ...patch } };
+    });
+  }
+
+  function setUploadState(color: string, patch: Partial<UploadState>) {
+    setUploads((current) => {
+      const key = colorKey(color);
+      return {
+        ...current,
+        [key]: { ...uploadStateFor(current, color), ...patch },
+      };
+    });
+  }
+
+  /** Counts an upload in or out, so the row can say how many are still going. */
+  function bumpPending(color: string, delta: number) {
+    setUploads((current) => {
+      const key = colorKey(color);
+      const upload = uploadStateFor(current, color);
+      return {
+        ...current,
+        [key]: { ...upload, pending: Math.max(0, upload.pending + delta) },
+      };
+    });
+  }
+
+  function addUploadProblem(color: string, problem: string) {
+    setUploads((current) => {
+      const key = colorKey(color);
+      const upload = uploadStateFor(current, color);
+      return {
+        ...current,
+        [key]: { ...upload, problems: [...upload.problems, problem] },
+      };
+    });
+  }
+
+  /**
+   * Uploads the files that were chosen, one request each.
+   *
+   * Sequentially rather than all at once: a batch of photographs is bounded by
+   * the connection, and firing six requests at a dev server to watch them
+   * arrive in a different order than they were picked is worse than waiting.
+   * Each id is appended as it comes back, so the order in the row is the order
+   * the files were chosen.
+   */
+  async function addImages(color: string, files: File[]) {
+    // Still-in-flight uploads count against the cap, because the ids they will
+    // bring back are already spoken for. Counting only what has arrived lets a
+    // second selection take the row past the limit, and the refusal then lands
+    // on the submit button rather than on the file that was one too many.
+    const room =
+      IMAGES_PER_VARIANT_MAX -
+      draftFor(drafts, color).mediaIds.length -
+      uploadStateFor(uploads, color).pending;
+    const { accepted, problems } = planUploads(files, room);
+
+    // Replaced, not appended: what is shown is about the selection just made,
+    // and yesterday's rejection is not news.
+    setUploadState(color, { problems });
+
+    if (accepted.length === 0) return;
+
+    bumpPending(color, accepted.length);
+
+    for (const file of accepted) {
+      try {
+        const result = await uploadProductMediaAction(file);
+
+        if (result.ok) {
+          setDrafts((current) => {
+            const draft = draftFor(current, color);
+            return {
+              ...current,
+              [colorKey(color)]: {
+                ...draft,
+                mediaIds: addMediaId(draft.mediaIds, result.media.id),
+              },
+            };
+          });
+        } else {
+          addUploadProblem(color, result.message);
+        }
+      } catch {
+        // A request that never came back — the dev server restarted, the
+        // connection dropped — is still a file that did not upload. The action
+        // returns its refusals as messages precisely so this path is rare; the
+        // catch is here so that when it happens the row says so instead of
+        // sitting on "Uploading…" for the rest of the session.
+        addUploadProblem(color, "That upload did not finish. Try again.");
+      } finally {
+        bumpPending(color, -1);
+      }
+    }
+  }
+
   return (
     <form action={formAction} className="flex max-w-[640px] flex-col gap-8">
+      {/* Which product is being written over. Absent when this is a create, and
+          its absence is what the action checks before it looks for a row. */}
+      {product && <input type="hidden" name="id" value={product.id} />}
+
       {state?.message && (
         <p
           role="alert"
@@ -85,6 +278,8 @@ export function ProductForm() {
           type="text"
           required
           autoFocus
+          value={name}
+          onChange={(event) => setName(event.target.value)}
           aria-invalid={state?.errors?.name ? true : undefined}
           aria-describedby={state?.errors?.name ? "name-error" : undefined}
           className={inputClass(Boolean(state?.errors?.name))}
@@ -100,6 +295,8 @@ export function ProductForm() {
           id="shortDescription"
           name="shortDescription"
           type="text"
+          value={shortDescription}
+          onChange={(event) => setShortDescription(event.target.value)}
           aria-invalid={state?.errors?.shortDescription ? true : undefined}
           aria-describedby={
             state?.errors?.shortDescription ? "short-description-error" : undefined
@@ -189,7 +386,34 @@ export function ProductForm() {
                   </button>
                 </div>
 
-                <ValueChips values={parseAttributeValues(attribute.values)} />
+                {attribute.kind === "color" ? (
+                  <ColorRows
+                    colors={parseAttributeValues(attribute.values)}
+                    drafts={drafts}
+                    uploads={uploads}
+                    onPatch={patchDraft}
+                    onPickFiles={(color, files) => void addImages(color, files)}
+                    onMove={(color, id, delta) =>
+                      patchDraft(color, {
+                        mediaIds: moveMediaId(
+                          draftFor(drafts, color).mediaIds,
+                          id,
+                          delta,
+                        ),
+                      })
+                    }
+                    onRemove={(color, id) =>
+                      patchDraft(color, {
+                        mediaIds: removeMediaId(
+                          draftFor(drafts, color).mediaIds,
+                          id,
+                        ),
+                      })
+                    }
+                  />
+                ) : (
+                  <ValueChips values={parseAttributeValues(attribute.values)} />
+                )}
               </li>
             ))}
           </ul>
@@ -204,88 +428,49 @@ export function ProductForm() {
         />
 
         {/*
-          The one field the form assembles rather than the browser: attributes
-          are structured, and a form can only send strings. It is the same list
-          the chips above are drawn from, so what is submitted is what is on
-          screen.
+          The two fields the form assembles rather than the browser: attributes
+          and the colour rows under them are structured, and a form can only
+          send strings. Both are drawn from the same state the screen is, so
+          what is submitted is what is on show.
         */}
         <input
           type="hidden"
           name="attributes"
           value={serializeAttributes(attributes)}
         />
-      </section>
+        <input
+          type="hidden"
+          name="variants"
+          value={serializeVariants(drafts, colors)}
+        />
 
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className={LABEL}>Description</h2>
-
-          <div
-            role="tablist"
-            aria-label="Description editor"
-            className="flex gap-1 rounded-control border border-line p-0.5"
-          >
-            {TABS.map((entry, index) => (
-              <Tab
-                key={entry.id}
-                entry={entry}
-                index={index}
-                selected={tab === entry.id}
-                onSelect={setTab}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div
-          role="tabpanel"
-          aria-labelledby={`description-tab-${tab}`}
-          className="rounded-card border border-line"
-        >
-          {tab === "write" ? (
-            <textarea
-              id="description"
-              name="description"
-              rows={14}
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder={"## Materials\n\n- Recycled aluminium\n- **Memory** foam"}
-              className="w-full resize-y rounded-card bg-paper p-3 font-mono text-[13px] leading-[21.45px] text-ink outline-none focus:ring-2 focus:ring-ink/15"
-            />
-          ) : (
-            <div className="p-4">
-              <MarkdownPreview source={description} />
-            </div>
-          )}
-        </div>
-
-        {/*
-          The textarea is unmounted while the preview is showing, so on that
-          tab nothing would send the description — submitting from the preview
-          would save a product with no copy. The value travels in a hidden
-          field instead, so the description is submitted from either tab.
-        */}
-        {tab !== "write" && (
-          <input type="hidden" name="description" value={description} />
-        )}
-
-        <p className="text-[12px] leading-[19.8px] text-ink-55">
-          Markdown: # headings, - lists, **bold**, *italic*, `code` and [links](https://example.com).
-        </p>
         <FieldErrors
-          id="description-error"
-          messages={state?.errors?.description}
+          id="variants-error"
+          messages={state?.errors?.variants}
+          announce
         />
       </section>
+
+      <DescriptionEditor
+        value={description}
+        onChange={setDescription}
+        messages={state?.errors?.description}
+      />
 
       <div className="flex items-center gap-3">
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || blocked || uploading}
           className="h-11 rounded-control bg-ink px-5 text-[14px] font-medium text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {pending ? "Creating…" : "Create product"}
+          {editing ? (pending ? "Saving…" : "Save changes") : pending ? "Creating…" : "Create product"}
         </button>
+
+        {uploading && (
+          <p aria-live="polite" className="text-[12px] leading-[19.8px] text-ink-55">
+            Waiting for the images to finish uploading.
+          </p>
+        )}
 
         <Link
           href="/admin/products"
@@ -298,58 +483,249 @@ export function ProductForm() {
   );
 }
 
-function Tab({
-  entry,
-  index,
-  selected,
-  onSelect,
+/**
+ * One row per colour, with what that colour ships as.
+ *
+ * The colour's own name is the row's legend rather than a label on a field:
+ * there is nothing to fill in about the name here — it comes from the box above
+ * — and repeating it as an input would offer a second place to spell it, which
+ * is a second place for the two to disagree.
+ */
+function ColorRows({
+  colors,
+  drafts,
+  uploads,
+  onPatch,
+  onPickFiles,
+  onMove,
+  onRemove,
 }: {
-  entry: (typeof TABS)[number];
-  index: number;
-  selected: boolean;
-  onSelect: (id: TabId) => void;
+  colors: string[];
+  drafts: Record<string, FormColorDraft>;
+  uploads: Record<string, UploadState>;
+  onPatch: (color: string, patch: Partial<FormColorDraft>) => void;
+  onPickFiles: (color: string, files: File[]) => void;
+  onMove: (color: string, id: string, delta: number) => void;
+  onRemove: (color: string, id: string) => void;
 }) {
-  const ref = useRef<HTMLButtonElement>(null);
-
-  /**
-   * Arrow keys move between tabs and take the focus with them — the behaviour
-   * a tablist is expected to have, and the reason only the selected tab is in
-   * the tab order (`tabIndex` below): one stop for the pair, not two.
-   */
-  function onKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
-    const next =
-      event.key === "ArrowRight"
-        ? (index + 1) % TABS.length
-        : event.key === "ArrowLeft"
-          ? (index - 1 + TABS.length) % TABS.length
-          : event.key === "Home"
-            ? 0
-            : event.key === "End"
-              ? TABS.length - 1
-              : null;
-
-    if (next === null) return;
-
-    event.preventDefault();
-    onSelect(TABS[next]!.id);
-    ref.current?.parentElement?.querySelectorAll("button")[next]?.focus();
+  if (colors.length === 0) {
+    return (
+      <p className="text-[12px] leading-[19.8px] text-ink-55">
+        Separate values with commas — each colour gets its own images, price,
+        stock and SKU.
+      </p>
+    );
   }
 
   return (
+    <ul className="flex flex-col gap-3">
+      {colors.map((color) => {
+        const draft = draftFor(drafts, color);
+        const upload = uploadStateFor(uploads, color);
+        const problems = draftProblems(draft);
+        const full = draft.mediaIds.length >= IMAGES_PER_VARIANT_MAX;
+
+        return (
+          <li key={colorKey(color)}>
+            <fieldset className="flex flex-col gap-3 rounded-card bg-mist/40 p-3">
+              <legend className="px-1 text-[12px] font-bold leading-[19.8px] text-ink">
+                {color}
+              </legend>
+
+              <div className="flex flex-wrap gap-3">
+                <ColorField
+                  id={`${colorKey(color)}-price`}
+                  label="Price"
+                  value={draft.price}
+                  problem={problems.price}
+                  className="w-[110px]"
+                  onChange={(price) => onPatch(color, { price })}
+                />
+                <ColorField
+                  id={`${colorKey(color)}-stock`}
+                  label="Stock"
+                  value={draft.stock}
+                  problem={problems.stock}
+                  className="w-[110px]"
+                  onChange={(stock) => onPatch(color, { stock })}
+                />
+                <ColorField
+                  id={`${colorKey(color)}-sku`}
+                  label="SKU"
+                  value={draft.sku}
+                  className="min-w-[160px] flex-1"
+                  onChange={(sku) => onPatch(color, { sku })}
+                />
+              </div>
+
+              {draft.mediaIds.length > 0 && (
+                <ul className="flex flex-wrap gap-2">
+                  {draft.mediaIds.map((id, index) => (
+                    <li key={id} className="w-[104px]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={mediaUrl(id)}
+                        // Empty and decorative: the colour's name is already
+                        // the legend, and describing the same photograph six
+                        // times helps nobody.
+                        alt=""
+                        className="h-[72px] w-[104px] rounded-control border border-line object-cover"
+                      />
+
+                      <div className="mt-1 flex items-center gap-1">
+                        <ImageButton
+                          label={`Move ${color} image ${index + 1} earlier`}
+                          disabled={index === 0}
+                          onClick={() => onMove(color, id, -1)}
+                        >
+                          ←
+                        </ImageButton>
+                        <ImageButton
+                          label={`Move ${color} image ${index + 1} later`}
+                          disabled={index === draft.mediaIds.length - 1}
+                          onClick={() => onMove(color, id, 1)}
+                        >
+                          →
+                        </ImageButton>
+                        <ImageButton
+                          label={`Remove ${color} image ${index + 1}`}
+                          onClick={() => onRemove(color, id)}
+                        >
+                          ×
+                        </ImageButton>
+                        {index === 0 && (
+                          <span className="ml-auto text-[11px] leading-[18.15px] text-ink-55">
+                            Main
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor={`${colorKey(color)}-images`}
+                  className="text-[12px] leading-[19.8px] text-ink-62"
+                >
+                  Images
+                </label>
+                <input
+                  id={`${colorKey(color)}-images`}
+                  type="file"
+                  multiple
+                  accept={ACCEPTED_IMAGE_TYPES.join(",")}
+                  disabled={full}
+                  // Deliberately nameless: a named file input would have React
+                  // copy the chosen Files into the submitted form *as well as*
+                  // the ids below, which is the whole payload this design avoids.
+                  onChange={(event) => {
+                    const files = [...(event.target.files ?? [])];
+                    // Cleared so choosing the same file again still fires a
+                    // change — a file input that keeps its value reports
+                    // nothing the second time.
+                    event.target.value = "";
+                    onPickFiles(color, files);
+                  }}
+                  className="text-[12px] leading-[19.8px] text-ink-62 file:mr-2 file:h-8 file:rounded-control file:border file:border-line file:bg-paper file:px-3 file:text-[12px] file:font-medium file:text-ink hover:file:bg-mist disabled:opacity-50"
+                />
+
+                {full && (
+                  <p className="text-[12px] leading-[19.8px] text-ink-55">
+                    {IMAGES_PER_VARIANT_MAX} images is the limit — remove one to
+                    add another.
+                  </p>
+                )}
+                {upload.pending > 0 && (
+                  <p
+                    aria-live="polite"
+                    className="text-[12px] leading-[19.8px] text-ink-55"
+                  >
+                    Uploading {upload.pending}…
+                  </p>
+                )}
+                {upload.problems.length > 0 && (
+                  <ul
+                    role="alert"
+                    className="text-[12px] leading-[19.8px] text-red-600"
+                  >
+                    {upload.problems.map((problem) => (
+                      <li key={problem}>{problem}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </fieldset>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function ColorField({
+  id,
+  label,
+  value,
+  problem,
+  className,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  problem?: string;
+  className: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+      <label htmlFor={id} className="text-[12px] leading-[19.8px] text-ink-62">
+        {label}
+      </label>
+      <input
+        id={id}
+        type="text"
+        // Controlled, unlike the fields at the top of the form: React resets a
+        // form when its action resolves, and an uncontrolled box would come
+        // back empty exactly when a failed submit most needs to keep what was
+        // typed. The state is also what gets serialised, so there is one copy.
+        value={value}
+        aria-invalid={problem ? true : undefined}
+        aria-describedby={problem ? `${id}-error` : undefined}
+        onChange={(event) => onChange(event.target.value)}
+        className={`h-9 w-full ${inputClass(Boolean(problem))}`}
+      />
+      {problem && (
+        <p id={`${id}-error`} className="text-[11px] leading-[18.15px] text-red-600">
+          {problem}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ImageButton({
+  label,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string;
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
     <button
-      ref={ref}
       type="button"
-      role="tab"
-      id={`description-tab-${entry.id}`}
-      aria-selected={selected}
-      tabIndex={selected ? 0 : -1}
-      onKeyDown={onKeyDown}
-      onClick={() => onSelect(entry.id)}
-      className={`h-7 rounded-[3px] px-3 text-[12px] font-medium transition-colors ${
-        selected ? "bg-mist text-ink" : "text-ink-62 hover:text-ink"
-      }`}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="h-6 w-6 rounded-[3px] border border-line bg-paper text-[12px] leading-none text-ink transition-colors hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
     >
-      {entry.label}
+      {children}
     </button>
   );
 }
@@ -378,37 +754,3 @@ function ValueChips({ values }: { values: string[] }) {
   );
 }
 
-function FieldErrors({
-  id,
-  messages,
-  announce = false,
-}: {
-  id: string;
-  messages?: string[];
-  announce?: boolean;
-}) {
-  if (!messages || messages.length === 0) return null;
-
-  return (
-    <ul
-      id={id}
-      role={announce ? "alert" : undefined}
-      className="text-[12px] leading-[19.8px] text-red-600"
-    >
-      {messages.map((message) => (
-        <li key={message}>{message}</li>
-      ))}
-    </ul>
-  );
-}
-
-const LABEL =
-  "text-[13px] font-bold leading-[16.9px] tracking-[-0.076px] text-ink";
-
-function inputClass(invalid: boolean): string {
-  return `rounded-control border bg-paper px-3 text-[14px] text-ink transition-colors outline-none focus:ring-2 ${
-    invalid
-      ? "border-red-500 focus:border-red-500 focus:ring-red-500/15"
-      : "border-line focus:border-ink focus:ring-ink/15"
-  }`;
-}

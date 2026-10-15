@@ -32,8 +32,9 @@ export default function AdminNewProductPage() {
           New product
         </h1>
         <p className="mt-1 text-[14px] leading-[23.1px] tracking-[-0.15px] text-ink-60">
-          Saved as a draft. Price and stock belong to variants, so this becomes
-          something you can sell once its variants exist.
+          Saved as a draft. Price and stock belong to the variant a colour is
+          sold as, so give each colour its images and figures here — and leave
+          any of them blank for now if you have not settled on them yet.
         </p>
       </div>
 

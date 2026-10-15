@@ -1,0 +1,89 @@
+import {
+  ACCEPTED_IMAGE_TYPES,
+  IMAGES_PER_VARIANT_MAX,
+  MAX_IMAGE_BYTES,
+} from "@my-ecommerce/shared";
+
+/**
+ * The upload rules, as sentences.
+ *
+ * The browser has to check a file before it spends a request on it, and the
+ * person has to be told why the file they chose was refused. Both of those are
+ * decisions, so they live here where vitest can reach them rather than inside
+ * an event handler in the component.
+ *
+ * The same bounds are checked again on the server, by the upload action — a
+ * Server Action is reachable by direct POST, so what happens here is feedback,
+ * not enforcement. Both read the numbers from the shared schema, so the
+ * feedback and the enforcement cannot drift.
+ */
+
+/**
+ * What the route handler serves an image at.
+ *
+ * One definition, because two places need to agree: the upload action hands
+ * this URL back, and the form renders its thumbnails by turning the ids it
+ * holds into URLs again — which is the path a reload takes, and the reason a
+ * thumbnail that works right after uploading but not after a refresh is a bug
+ * this shape cannot have.
+ */
+export function mediaUrl(id: string): string {
+  return `/admin/media/${id}`;
+}
+
+const MAX_IMAGE_MB = MAX_IMAGE_BYTES / (1024 * 1024);
+
+/** What is wrong with this file, or null when nothing is. */
+export function fileProblem(file: File): string | null {
+  if (!(ACCEPTED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
+    return `${file.name} is not an image we can store — PNG, JPEG, WebP, GIF or AVIF.`;
+  }
+
+  if (file.size > MAX_IMAGE_BYTES) {
+    return `${file.name} is over the ${MAX_IMAGE_MB} MB limit.`;
+  }
+
+  return null;
+}
+
+/**
+ * The files worth uploading, and what to say about the rest.
+ *
+ * `room` is how many more images the colour can hold. A file that is the wrong
+ * type or too large is a problem with that file; a file that does not fit is a
+ * problem with the list, and saying so once is clearer than naming each of the
+ * files that would not have fitted anyway.
+ */
+export function planUploads(
+  files: readonly File[],
+  room: number,
+): { accepted: File[]; problems: string[] } {
+  const accepted: File[] = [];
+  const problems: string[] = [];
+  let overflowed = 0;
+
+  for (const file of files) {
+    const problem = fileProblem(file);
+    if (problem) {
+      problems.push(problem);
+      continue;
+    }
+
+    if (accepted.length >= room) {
+      overflowed += 1;
+      continue;
+    }
+
+    accepted.push(file);
+  }
+
+  if (overflowed > 0) {
+    problems.push(
+      overflowed === 1
+        ? `1 image was not uploaded — a colour holds at most ${IMAGES_PER_VARIANT_MAX}.`
+        : `${overflowed} images were not uploaded — a colour holds at most ${IMAGES_PER_VARIANT_MAX}.`,
+    );
+  }
+
+  return { accepted, problems };
+}

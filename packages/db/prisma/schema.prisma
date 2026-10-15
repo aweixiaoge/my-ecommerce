@@ -1,0 +1,215 @@
+// The catalogue, as `docs/plan.md` describes it.
+//
+// Two things about the shape are decisions rather than defaults:
+//
+//   * Every user-facing text field lives in a `(entity_id, locale)` side table
+//     (decision 1). Nothing here holds an English string in a column of its
+//     own, so adding a language is inserting rows rather than migrating a
+//     table. That is why a product is not one row and creating one is a
+//     transaction.
+//   * Money is a `Decimal` and a currency code (decision 3), never a float and
+//     never a bare number. `price_currency` sits next to `price_amount` so the
+//     row means something on its own.
+//
+// Deliberately absent: `categories`, `category_translations`,
+// `product_categories`, `media_translations` and every table from Phase 2
+// onwards. They arrive with the screens that write them; a table nothing can
+// populate is a table that has to be kept migrated for no reason.
+
+generator client {
+  provider = "prisma-client"
+  // Generated into the package's source tree rather than node_modules. The
+  // `prisma-client` generator emits TypeScript, and `apps/web` transpiles it
+  // through the workspace the same way it does `@my-ecommerce/shared`.
+  output   = "../src/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProductStatus {
+  draft
+  active
+  archived
+}
+
+/// What an option *is*, as opposed to what it is called.
+///
+/// plan.md's first decision is that a kind is stored and its name is a
+/// translation of it — "Color" is English for `color`, and a second language
+/// would not change the column. Without this the only record of what an option
+/// is is the English word in its translation row, which means the admin cannot
+/// offer to add an option without reading English back out of the database, and
+/// "one option per kind" becomes a rule about a string rather than about the
+/// thing.
+enum AttributeKind {
+  color
+  size
+}
+
+model Product {
+  id        String        @id @default(cuid())
+  status    ProductStatus @default(draft)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  translations ProductTranslation[]
+  options      ProductOption[]
+  variants     ProductVariant[]
+  media        Media[]
+
+  @@map("products")
+}
+
+/// Name, slug and copy, one row per language. The slug lives here rather than
+/// on `products` because German pages get German URLs (decision 2), and it is
+/// unique within a locale rather than globally.
+model ProductTranslation {
+  id              String  @id @default(cuid())
+  productId       String  @map("product_id")
+  locale          String
+  name            String
+  slug            String
+  description     String  @default("")
+  /// The one-line blurb cards and listings show. The plan's column list says
+  /// "key columns" rather than all of them, and the storefront's own
+  /// `ProductSchema` carries this field — so it belongs here rather than in a
+  /// column of its own on `products`, which would be an English string outside
+  /// the translation tables.
+  shortDescription String @default("") @map("short_description")
+  metaTitle       String? @map("meta_title")
+  metaDescription String? @map("meta_description")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, locale])
+  @@unique([locale, slug])
+  @@map("product_translations")
+}
+
+/// "Colour", "Size". `position` is the order they are offered in, which is the
+/// order the person typed them.
+model ProductOption {
+  id        String        @id @default(cuid())
+  productId String        @map("product_id")
+  kind      AttributeKind
+  position  Int
+
+  product      Product                    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  translations ProductOptionTranslation[]
+  values       ProductOptionValue[]
+
+  @@index([productId])
+  @@map("product_options")
+}
+
+model ProductOptionTranslation {
+  id       String @id @default(cuid())
+  optionId String @map("option_id")
+  locale   String
+  name     String
+
+  option ProductOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@unique([optionId, locale])
+  @@map("product_option_translations")
+}
+
+/// "Black", "Sand".
+model ProductOptionValue {
+  id       String @id @default(cuid())
+  optionId String @map("option_id")
+  position Int
+
+  option       ProductOption                   @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  translations ProductOptionValueTranslation[]
+  variants     VariantOptionValue[]
+
+  @@index([optionId])
+  @@map("product_option_values")
+}
+
+model ProductOptionValueTranslation {
+  id      String @id @default(cuid())
+  valueId String @map("value_id")
+  locale  String
+  name    String
+
+  value ProductOptionValue @relation(fields: [valueId], references: [id], onDelete: Cascade)
+
+  @@unique([valueId, locale])
+  @@map("product_option_value_translations")
+}
+
+/// What a product is actually sold as.
+///
+/// Three columns are nullable, and all three for the same reason: the admin
+/// form creates DRAFTS, and a colour added a minute ago has no SKU, no price
+/// and nobody to decide them yet. Fabricating values to keep the columns
+/// non-null would put numbers in the catalogue that no one typed. `sku` and
+/// the price pair become required when a product is activated, which is a rule
+/// for the code that activates one.
+///
+/// `weight` is the plan's column and nothing writes it yet — nullable, so the
+/// table matches the plan rather than needing a migration the first time
+/// shipping rates want it.
+model ProductVariant {
+  id            String        @id @default(cuid())
+  productId     String        @map("product_id")
+  sku           String?       @unique
+  priceAmount   Decimal?      @map("price_amount") @db.Decimal(10, 2)
+  priceCurrency String?       @map("price_currency") @db.Char(3)
+  stock         Int           @default(0)
+  weight        Decimal?      @db.Decimal(10, 3)
+  status        ProductStatus @default(draft)
+
+  product      Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  optionValues VariantOptionValue[]
+  media        Media[]
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+/// Which option values select a variant. Colour × Size makes one variant per
+/// pair, and this is the table that says which pair.
+model VariantOptionValue {
+  variantId     String @map("variant_id")
+  optionValueId String @map("option_value_id")
+
+  variant     ProductVariant     @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  optionValue ProductOptionValue @relation(fields: [optionValueId], references: [id], onDelete: Cascade)
+
+  @@id([variantId, optionValueId])
+  @@map("variant_option_values")
+}
+
+/// An image.
+///
+/// Two columns beyond the plan's `id, product_id, variant_id, url, position`,
+/// and both are because there is no object storage to put a file in: `data`
+/// holds the bytes and `mime_type` says what they are, so the route handler can
+/// serve them back with a content type it chose rather than one the upload
+/// claimed. When a bucket exists, the bytes move out and `url` is what is left.
+///
+/// Both links are nullable, and that is not laziness: an image is uploaded
+/// while the form is still being filled in, so there is no product and no
+/// variant to attach it to yet. The create action claims them by id.
+model Media {
+  id        String  @id @default(cuid())
+  productId String? @map("product_id")
+  variantId String? @map("variant_id")
+  url       String
+  position  Int     @default(0)
+
+  data     Bytes?
+  mimeType String? @map("mime_type")
+
+  product Product?        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([variantId])
+  @@map("media")
+}

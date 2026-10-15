@@ -1,21 +1,29 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { ATTRIBUTE_LABELS } from "@/lib/admin/product-form";
+import type { Money } from "@my-ecommerce/shared";
+import { compareMoney } from "@my-ecommerce/shared";
+import { setProductStatusAction } from "./actions";
+import { priceRange } from "@/lib/admin/product-variants";
+import { listProducts } from "@/lib/admin/products-repo";
 import { formatMoney } from "@/lib/format";
-import { listCreatedProducts } from "@/lib/mock/admin-products";
-import { getProducts } from "@/lib/mock/catalog";
 
 /**
  * The product list.
  *
- * Two sources, one list: the seeded catalogue the storefront reads, and the
- * drafts the create form has written. Anything else would be a lie in one
- * direction or the other — a list that hid the shop's real products, or one
- * that hid what you just created.
+ * One source: the `products` table. It used to be two — this and the fixture in
+ * `lib/mock/catalog.ts` that the storefront reads — and the page's own comment
+ * admitted the problem with that: a list built from two places is a lie in one
+ * direction or the other, and it was the seeded half that lied, showing rows
+ * nobody could edit through the admin.
  *
- * It reads the product store at request time, which the shell layout has
- * already allowed for the whole admin area.
+ * What that means in practice: a product the storefront displays but the
+ * database has never been told about is not in this list. The fixture is
+ * storefront demo data, and until it is loaded into the database it is not part
+ * of the catalogue this screen manages.
+ *
+ * It reads the database at request time, which the shell layout has already
+ * allowed for the whole admin area.
  */
 export const metadata: Metadata = {
   title: "Product",
@@ -37,55 +45,46 @@ interface Row {
   name: string;
   price: string;
   attributes: string;
-  status: "Draft" | "Active";
+  status: "Draft" | "Active" | "Archived";
 }
 
 export default async function AdminProductsPage() {
   /**
-   * The draft list lives in this process's memory, so it only means anything
-   * at request time. Left prerenderable, the build would render this page and
-   * bake in whatever the store held then — nothing — and a production build
-   * would trip the mock store's guard on the way out. `connection()` is the
-   * marker for "prerendering stops here"; `dynamic = "force-dynamic"` was
-   * removed from Next for Cache Components apps, so this is the mechanism now.
+   * The products are a database read, so this page only means anything at
+   * request time. Left prerenderable, the build would render it and bake the
+   * catalogue as it stood then into the output — and a list of what was saved a
+   * moment ago is the whole point of the screen. `connection()` is the marker
+   * for "prerendering stops here"; `dynamic = "force-dynamic"` was removed from
+   * Next for Cache Components apps, so this is the mechanism now.
    */
   await connection();
 
-  const [seeded, created] = await Promise.all([
-    getProducts(),
-    listCreatedProducts(),
-  ]);
+  const products = await listProducts();
 
-  const rows: Row[] = [
-    // Drafts first: the thing you just made is the thing you are looking for.
-    ...created.map((product) => ({
-      id: product.id,
-      name: product.name,
-      // No variants, so no price — and no price is the honest answer, not
-      // "$0.00", which reads as free.
-      price: "—",
-      attributes: product.attributes
-        .map(
-          (attribute) =>
-            `${ATTRIBUTE_LABELS[attribute.kind]}: ${attribute.values.join(", ")}`,
-        )
+  const rows: Row[] = products.map((product) => ({
+    id: product.id,
+    name: product.name,
+    price: priceLabel(product.prices),
+    attributes: [
+      // "Color: Black, Sand", with the option names the database holds — the
+      // row's own word for them, already resolved to this locale rather than
+      // looked up from the kind here.
+      product.options
+        .map((option) => `${option.name}: ${option.values.join(", ")}`)
         .join(" · "),
-      status: "Draft" as const,
-    })),
-    ...seeded.map((product) => ({
-      id: product.id,
-      name: product.name,
-      price:
-        product.priceMax === null
-          ? formatMoney(product.price)
-          : `${formatMoney(product.price)} – ${formatMoney(product.priceMax)}`,
-      // `ProductSummary` — the shape a list endpoint returns — carries no
-      // options, so a seeded product cannot show them without a second request
-      // per row. The real list API either includes them or this column goes.
-      attributes: "",
-      status: "Active" as const,
-    })),
-  ];
+      // The count rather than the images themselves: a list is not a gallery,
+      // and what a person wants to know here is whether any were attached.
+      imageLabel(product.imageCount),
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    status:
+      product.status === "draft"
+        ? ("Draft" as const)
+        : product.status === "active"
+          ? ("Active" as const)
+          : ("Archived" as const),
+  }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -109,7 +108,7 @@ export default async function AdminProductsPage() {
 
       <table className="w-full border-collapse text-left">
         <caption className="sr-only">
-          Products, newest draft first, then the seeded catalogue.
+          Every product in the catalogue, newest first.
         </caption>
 
         <thead>
@@ -118,6 +117,7 @@ export default async function AdminProductsPage() {
             <Th>Price</Th>
             <Th>Attributes</Th>
             <Th>Status</Th>
+            <Th>Actions</Th>
           </tr>
         </thead>
 
@@ -136,12 +136,39 @@ export default async function AdminProductsPage() {
               <td className="py-3">
                 <StatusBadge status={row.status} />
               </td>
+              <td className="py-3">
+                <RowActions id={row.id} name={row.name} status={row.status} />
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   );
+}
+
+/**
+ * What a product costs, as the list shows it.
+ *
+ * One figure when every variant costs the same, a range when they differ, and a
+ * dash when nothing is priced yet. A dash is the honest answer there, not
+ * "$0.00", which reads as free.
+ */
+function priceLabel(prices: Money[]): string {
+  const range = priceRange(prices);
+  if (!range) return "—";
+
+  // `compareMoney`, not `===` on the amounts: "79" and "79.00" are the same
+  // price written two ways, and a string comparison would render the range
+  // "$79.00 – $79.00" for a product that costs one thing.
+  return compareMoney(range.min, range.max) === 0
+    ? formatMoney(range.min)
+    : `${formatMoney(range.min)} – ${formatMoney(range.max)}`;
+}
+
+/** How many images the product carries, or nothing to say about it. */
+function imageLabel(count: number): string {
+  return count === 0 ? "" : `${count} image${count === 1 ? "" : "s"}`;
 }
 
 function Th({ children }: { children: React.ReactNode }) {
@@ -153,15 +180,100 @@ function Th({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Draft and Active are not styling variants of one thing: a draft cannot be
- * bought, and active can. The difference is worth a shape as well as a colour,
- * so it reads the same to someone who cannot tell the two greys apart.
+ * What can be done to a row.
+ *
+ * Two forms rather than one with two submit buttons, because a form has a single
+ * action and these are two different writes — `formAction` on the second button
+ * would work, and would also make the button's meaning depend on which one you
+ * pressed rather than on what it says. Neither has a client component above it:
+ * a row is markup and a Server Action, so changing what a shop sells works
+ * before React has loaded.
+ *
+ * The one that does not apply is disabled rather than hidden, so the pair stays
+ * where the eye left it — a Publish that vanishes when a product goes live
+ * moves Unpublish into the space the cursor is in.
+ *
+ * `aria-label` carries the product name, because "Publish" repeated down a
+ * column tells a screen reader nothing about which row it is in.
  */
-function StatusBadge({ status }: { status: "Draft" | "Active" }) {
+function RowActions({ id, name, status }: { id: string; name: string; status: Row["status"] }) {
+  const published = status === "Active";
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <StatusForm id={id} status="active" disabled={published} label={`Publish ${name}`}>
+        Publish
+      </StatusForm>
+      <StatusForm id={id} status="draft" disabled={!published} label={`Unpublish ${name}`}>
+        Unpublish
+      </StatusForm>
+
+      {/*
+        An anchor, not a `<Link>`, and that is the point rather than an
+        oversight.
+
+        A client-side navigation re-renders the edit route from the tree React
+        kept for it — Next holds a route's component state while you are away —
+        so clicking Edit a moment after saving shows the values from *before*
+        the save, then corrects itself when the server's response lands. The
+        correction is the good news; the quarter of a second of the wrong
+        numbers above it is what makes a save look like it did not happen.
+
+        A document load has nothing to restore, so the form is built from what
+        the server just sent. It costs a page load, on a screen whose entire job
+        is showing what is in the database now.
+      */}
+      <a
+        href={`/admin/products/${id}/edit`}
+        aria-label={`Edit ${name}`}
+        className="flex h-7 items-center rounded-control border border-line px-2 text-[12px] leading-[19.8px] text-ink transition-colors hover:bg-mist"
+      >
+        Edit
+      </a>
+    </div>
+  );
+}
+
+function StatusForm({
+  id,
+  status,
+  disabled,
+  label,
+  children,
+}: {
+  id: string;
+  status: "draft" | "active";
+  disabled: boolean;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <form action={setProductStatusAction}>
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="status" value={status} />
+      <button
+        type="submit"
+        disabled={disabled}
+        aria-label={label}
+        className="h-7 rounded-control border border-line px-2 text-[12px] leading-[19.8px] text-ink transition-colors hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+      >
+        {children}
+      </button>
+    </form>
+  );
+}
+
+/**
+ * Active is not a styling variant of the other two: it can be bought and they
+ * cannot. The difference is worth a shape as well as a colour, so it reads the
+ * same to someone who cannot tell the two greys apart — and draft and archived
+ * share the quiet one, because the word beside it is what tells them apart.
+ */
+function StatusBadge({ status }: { status: Row["status"] }) {
   const className =
-    status === "Draft"
-      ? "rounded-control bg-mist px-2 py-0.5 text-[12px] leading-[19.8px] text-ink-62"
-      : "rounded-control border border-line px-2 py-0.5 text-[12px] leading-[19.8px] text-ink";
+    status === "Active"
+      ? "rounded-control border border-line px-2 py-0.5 text-[12px] leading-[19.8px] text-ink"
+      : "rounded-control bg-mist px-2 py-0.5 text-[12px] leading-[19.8px] text-ink-62";
 
   return <span className={className}>{status}</span>;
 }

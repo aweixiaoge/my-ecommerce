@@ -26,7 +26,8 @@ export const ATTRIBUTE_PLACEHOLDERS: Record<AttributeKind, string> = {
   size: "S, M, L",
 };
 
-const ATTRIBUTE_KINDS: readonly AttributeKind[] = AttributeKindSchema.options;
+/** Every kind, in the order the form offers them. */
+export const ATTRIBUTE_KINDS: readonly AttributeKind[] = AttributeKindSchema.options;
 
 export interface FormAttribute {
   kind: AttributeKind;
@@ -89,7 +90,9 @@ export function serializeAttributes(attributes: FormAttribute[]): string {
  * refused.
  */
 export function availableKinds(
-  attributes: FormAttribute[],
+  // Any row with a kind, not only the create form's: the edit screen's options
+  // are a different shape and need the same rule.
+  attributes: readonly { kind: AttributeKind }[],
   current: AttributeKind,
 ): AttributeKind[] {
   const taken = new Set(

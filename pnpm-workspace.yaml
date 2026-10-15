@@ -8,5 +8,10 @@ packages:
 allowBuilds:
   # Native file watcher; needs its compiled binary for dev-mode watching.
   "@parcel/watcher": true
+  # Prisma's postinstall downloads the query engine and generates the client.
+  # Denied, every query fails at run time with a missing-engine error; the
+  # decision is needed at install time instead, which is what this is.
+  "@prisma/engines": true
+  prisma: true
   sharp: false
   unrs-resolver: false

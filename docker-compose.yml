@@ -1,0 +1,33 @@
+# Postgres, per plan.md's stack table — one service on the developer's machine
+# now, and the same file is the seed of the single-VPS deployment later.
+#
+# `docker compose up -d` reads `.env` from this directory, which is why the
+# credentials live there rather than here: the same file the app and the Prisma
+# CLI read is the one that decides what the container is called. Nothing is
+# published beyond the host port, and the data is a named volume, so
+# `docker compose down` does not take the catalogue with it.
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-my_ecommerce}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # `docker compose up -d` returns before Postgres is accepting
+      # connections. This is what makes `docker compose ps` able to say
+      # "healthy" instead of leaving a migration to fail for a reason that
+      # looks nothing like "the database was not ready yet".
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-my_ecommerce}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

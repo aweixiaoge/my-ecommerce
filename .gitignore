@@ -3,6 +3,12 @@ node_modules/
 out/
 dist/
 build/
+
+# Prisma's generated client. It is written into the package's source tree
+# because the `prisma-client` generator emits TypeScript rather than a built
+# package, and it is machine-written code that `db:generate` reproduces — the
+# package's `postinstall` runs it, so a clone gets one without being told.
+packages/db/src/generated/
 coverage/
 .turbo/
 .vercel/
