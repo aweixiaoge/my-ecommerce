@@ -25,7 +25,7 @@ export function ShopBanner() {
         The 300.675px is the design's own container height, and the 20px is
         where the grid sits inside it — not a margin that adds to it.
       */}
-      <div className="h-auto pt-5 lg:min-h-[300.675px]">
+      <div className="h-auto pt-5 bar:min-h-[300.675px]">
         {/*
           The design's columns are FIXED at 722.393 and 567.607 — but they only
           add up to 1290, so pinning them means the text column is crushed to
@@ -35,13 +35,13 @@ export function ShopBanner() {
           design's own split is what renders at the design's own width, and it
           degrades arithmetically below that rather than collapsing.
         */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[56fr_44fr] lg:gap-0">
+        <div className="grid grid-cols-1 gap-6 bar:grid-cols-[56fr_44fr] bar:gap-0">
           {/*
             `aspect-auto` at lg hands the height to the grid row, which the
             text column sizes — that is what keeps the image flush with the
             copy beside it when the copy needs an extra line.
           */}
-          <div className="relative aspect-[722.393/273.366] overflow-hidden bg-mist lg:aspect-auto lg:min-h-[273.366px]">
+          <div className="relative aspect-[722.393/273.366] overflow-hidden bg-mist bar:aspect-auto bar:min-h-[273.366px]">
             <Image
               src="/images/why-buy.jpg"
               alt="A pair of headphones on a ridged surface"
@@ -52,7 +52,13 @@ export function ShopBanner() {
             />
           </div>
 
-          <div className="lg:px-[45.405px]">
+          {/*
+            8% is the design's own 45.405px expressed as a share of the 567.607
+            column it sits in, which is what makes it the right number at the
+            design's width *and* the right number at 880, where a fixed 45.405
+            each side would eat a quarter of the column.
+          */}
+          <div className="bar:px-[8%]">
             <h2 className="text-[32px] leading-[48px] font-bold tracking-[0.40625px] text-ink">
               Hand-tested gear
             </h2>
