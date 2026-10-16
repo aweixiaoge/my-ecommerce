@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { SLUG_ATTEMPTS, slugAttempt, slugify } from "./slug";
+import {
+  SLUG_ATTEMPTS,
+  SlugExhaustedError,
+  slugAttempt,
+  slugify,
+} from "./slug";
 
 describe("slugify", () => {
   it("turns a name into the shape a URL can carry", () => {
@@ -35,6 +40,27 @@ describe("slugify", () => {
     expect(slugify("日本語")).toBe("product");
     expect(slugify("!!!")).toBe("product");
     expect(slugify("   ")).toBe("product");
+  });
+
+  it("lets the caller say what the fallback word is", () => {
+    // The fallback is the entity's: a category called "!!!" belongs at
+    // /categories/category, not at /categories/product.
+    expect(slugify("日本語", "category")).toBe("category");
+    expect(slugify("!!!", "category")).toBe("category");
+  });
+});
+
+describe("SlugExhaustedError", () => {
+  it("names the word it ran out of slugs for", () => {
+    // The message is written for the person who typed the name, and it is the
+    // only thing that tells them which of their rows collided 100 times.
+    const error = new SlugExhaustedError("studio-over-ear");
+
+    expect(error.message).toBe(
+      'Could not find a free slug for "studio-over-ear".',
+    );
+    expect(error.name).toBe("SlugExhaustedError");
+    expect(error).toBeInstanceOf(Error);
   });
 });
 

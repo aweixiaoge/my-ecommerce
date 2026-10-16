@@ -10,6 +10,7 @@ function product(overrides: Record<string, unknown> = {}) {
     name: "Studio Over-Ear",
     shortDescription: "Closed-back, tuned flat.",
     description: "## Materials\n\n- Aluminium\n- **Memory** foam",
+    categoryId: "cat_1",
     attributes: [{ kind: "color", values: ["Black", "Sand"] }],
     ...overrides,
   };
@@ -20,17 +21,55 @@ describe("AdminProductCreateSchema", () => {
     expect(AdminProductCreateSchema.safeParse(product()).success).toBe(true);
   });
 
-  it("accepts a product with nothing but a name", () => {
+  it("accepts a product with nothing but a name and a category", () => {
     // The form creates DRAFTS: copy and attributes get filled in later, so
-    // requiring any of them here would be a rule the store does not have.
+    // requiring any of them here would be a rule the store does not have. The
+    // category is the exception — a product nothing can browse to is one the
+    // catalogue has no place for.
     const result = AdminProductCreateSchema.safeParse({
       name: "Untitled",
       shortDescription: "",
       description: "",
+      categoryId: "cat_1",
       attributes: [],
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it("requires a category", () => {
+    // The shape the form produces: a select with nothing chosen sends the empty
+    // string, and `too_small` is the code the field's copy is chosen by —
+    // pinning it here keeps a Zod change from silently rerouting the message to
+    // the fallback sentence.
+    const empty = AdminProductCreateSchema.safeParse(product({ categoryId: "" }));
+    expect(empty.success).toBe(false);
+    expect(!empty.success && empty.error.issues[0]?.code).toBe("too_small");
+  });
+
+  it("refuses a category that is not a string", () => {
+    // The API's shape rather than the form's — the action turns a missing or
+    // non-string field into "" before the schema sees it, which is why the
+    // field's copy needs no case for this code.
+    const missing = AdminProductCreateSchema.safeParse(
+      product({ categoryId: undefined }),
+    );
+
+    expect(missing.success).toBe(false);
+    expect(!missing.success && missing.error.issues[0]?.code).toBe(
+      "invalid_type",
+    );
+  });
+
+  it("rejects a category that cannot be an id", () => {
+    // Bounds, not policy: nothing here knows what a cuid looks like, and this
+    // is not the layer that could check the row exists.
+    const result = AdminProductCreateSchema.safeParse(
+      product({ categoryId: "c".repeat(65) }),
+    );
+
+    expect(result.success).toBe(false);
+    expect(!result.success && result.error.issues[0]?.code).toBe("too_big");
   });
 
   it("trims the name and the short description", () => {

@@ -3,7 +3,9 @@ import {
   ADMIN_NAV,
   isActiveHref,
   isGroupActive,
-  toggleCollapsed,
+  isGroupOpen,
+  NO_GROUP_CHOICES,
+  toggleGroupOpen,
   type AdminNavGroup,
 } from "./nav";
 
@@ -70,34 +72,92 @@ describe("isGroupActive", () => {
   });
 });
 
-describe("toggleCollapsed", () => {
-  it("closes an open group", () => {
-    expect(toggleCollapsed([], "products")).toEqual(["products"]);
+describe("isGroupOpen", () => {
+  it("opens the group the current screen is in", () => {
+    expect(isGroupOpen("/admin/products", GROUP, NO_GROUP_CHOICES)).toBe(true);
+    expect(isGroupOpen("/admin/categories/12", GROUP, NO_GROUP_CHOICES)).toBe(
+      true,
+    );
   });
 
-  it("reopens a closed one", () => {
-    expect(toggleCollapsed(["products"], "products")).toEqual([]);
+  it("leaves a group the current screen is not in closed", () => {
+    // The flip the single-group version deferred: a group must not sit open on
+    // every screen just because it exists.
+    expect(isGroupOpen("/admin/orders", GROUP, NO_GROUP_CHOICES)).toBe(false);
+    expect(isGroupOpen("/admin/blogs", GROUP, NO_GROUP_CHOICES)).toBe(false);
+  });
+
+  it("closes every group on a screen that is in none of them", () => {
+    // `/admin` itself: no group holds the route, so nothing opens on its own —
+    // the dashboard's own copy already says to pick a screen from the sidebar.
+    expect(isGroupOpen("/admin", GROUP, NO_GROUP_CHOICES)).toBe(false);
+  });
+
+  it("keeps a group open once it was opened by hand", () => {
+    // Clicking a closed group's heading is what browsing the other half of the
+    // admin looks like, so it must survive the navigation that follows.
+    const state = { openByHand: ["products"], closedByHand: [] };
+
+    expect(isGroupOpen("/admin/blogs", GROUP, state)).toBe(true);
+  });
+
+  it("keeps a group closed once it was closed by hand, even on its own screen", () => {
+    // The person asked; navigation deliberately does not reopen it. A group
+    // that springs back open after you collapse it feels broken.
+    const state = { openByHand: [], closedByHand: ["products"] };
+
+    expect(isGroupOpen("/admin/products", GROUP, state)).toBe(false);
+  });
+});
+
+describe("toggleGroupOpen", () => {
+  it("closes an open group and clears any hand-open entry", () => {
+    // The invariant the two lists live by: an id in both would have no stated
+    // winner, and the loser would be the person — a stale `closed` entry
+    // collapses the group they are standing in.
+    expect(
+      toggleGroupOpen({ openByHand: ["products"], closedByHand: [] }, "products", true),
+    ).toEqual({ openByHand: [], closedByHand: ["products"] });
+  });
+
+  it("opens a closed group and clears any hand-close entry", () => {
+    expect(
+      toggleGroupOpen({ openByHand: [], closedByHand: ["products"] }, "products", false),
+    ).toEqual({ openByHand: ["products"], closedByHand: [] });
+  });
+
+  it("does not list one group twice", () => {
+    const state = toggleGroupOpen(
+      { openByHand: [], closedByHand: ["products"] },
+      "products",
+      true,
+    );
+
+    expect(state.closedByHand).toEqual(["products"]);
   });
 
   it("leaves the other groups alone", () => {
-    // A group is collapsed for its own sake, not at the expense of the rest:
+    // A group is opened for its own sake, not at the expense of the rest:
     // appending rather than replacing is the whole point.
-    expect(toggleCollapsed(["orders"], "products")).toEqual([
-      "orders",
+    const state = toggleGroupOpen(
+      { openByHand: ["blogs"], closedByHand: ["orders"] },
       "products",
-    ]);
-    expect(toggleCollapsed(["orders", "products"], "orders")).toEqual([
-      "products",
-    ]);
+      true,
+    );
+
+    expect(state.openByHand).toEqual(["blogs"]);
+    expect(state.closedByHand).toEqual(["orders", "products"]);
   });
 
-  it("does not mutate the list it was given", () => {
-    // React state: a mutated array is the same reference, so the re-render is
+  it("does not mutate the state it was given", () => {
+    // React state: a mutated object is the same reference, so the re-render is
     // skipped and the click silently does nothing.
-    const collapsed = ["orders"];
-    toggleCollapsed(collapsed, "products");
+    const openByHand = ["blogs"];
+    const closedByHand = ["orders"];
+    toggleGroupOpen({ openByHand, closedByHand }, "products", false);
 
-    expect(collapsed).toEqual(["orders"]);
+    expect(openByHand).toEqual(["blogs"]);
+    expect(closedByHand).toEqual(["orders"]);
   });
 });
 
@@ -137,11 +197,35 @@ describe("ADMIN_NAV", () => {
     }
   });
 
-  it("carries the two product screens", () => {
+  it("carries the three product screens", () => {
     const products = groups.find((group) => group.id === "products");
     expect(products?.items.map((item) => item.href)).toEqual([
       "/admin/products",
       "/admin/categories",
+      "/admin/features",
     ]);
+  });
+
+  it("carries the two blog screens", () => {
+    const blogs = groups.find((group) => group.id === "blogs");
+    expect(blogs?.items.map((item) => item.href)).toEqual([
+      "/admin/blogs",
+      "/admin/blog-categories",
+    ]);
+  });
+
+  it("keeps every screen out of every other screen's route", () => {
+    // The sidebar lights a link when the current path is at or below its route,
+    // so one screen nested under another would light two links at once. This is
+    // why the blog category screen is `/admin/blog-categories` and not
+    // `/admin/blogs/categories` — the same reason the product category screen
+    // is not under `/admin/products`.
+    for (const item of items) {
+      for (const other of items) {
+        if (item === other) continue;
+
+        expect(isActiveHref(item.href, other.href)).toBe(false);
+      }
+    }
   });
 });

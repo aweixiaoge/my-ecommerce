@@ -5,15 +5,15 @@ import type {
   Money,
   VariantDraft,
 } from "@my-ecommerce/shared";
+import { DEFAULT_LOCALE } from "./locale";
 import { ATTRIBUTE_LABELS } from "./product-form";
 import {
-  DEFAULT_LOCALE,
   productCreateData,
   variantCreateData,
   variantDraftsByName,
   variantFields,
 } from "./product-rows";
-import { SLUG_ATTEMPTS, slugAttempt, slugify } from "./slug";
+import { SLUG_ATTEMPTS, SlugExhaustedError, slugAttempt, slugify } from "./slug";
 
 /**
  * Where the admin reads and writes products.
@@ -45,16 +45,20 @@ export class DuplicateSkuError extends Error {
 }
 
 /**
- * A product no slug could be found for.
+ * The category the form named is not a row.
  *
- * Only reachable after `SLUG_ATTEMPTS` collisions on the same name, which is
- * not a thing that happens by accident — but a loop that can give up needs to
- * say so rather than return undefined.
+ * The payload's own rule is that a category was chosen, and no rule above the
+ * database can say whether the row it names is still there — a category deleted
+ * in another tab between the form loading and the save is the realistic way in,
+ * and a crafted POST is the other. There is no delete screen yet, which makes
+ * this rare rather than impossible, and rare is what a sentence is for: the
+ * generic one tells the person to check the server is running when what they
+ * have to do is pick again.
  */
-export class SlugExhaustedError extends Error {
-  constructor(base: string) {
-    super(`Could not find a free slug for "${base}".`);
-    this.name = "SlugExhaustedError";
+export class UnknownCategoryError extends Error {
+  constructor() {
+    super("That category no longer exists. Choose another.");
+    this.name = "UnknownCategoryError";
   }
 }
 
@@ -77,6 +81,11 @@ export async function createProduct(
     try {
       return await insertProduct(input, drafts, slugAttempt(base, attempt));
     } catch (error) {
+      // A category that is not a row is not something a different slug fixes,
+      // and it must not be swallowed into the retry: the product would be saved
+      // with no category at all, which is the one thing this screen's rule
+      // exists to prevent.
+      if (isMissingCategory(error)) throw new UnknownCategoryError();
       if (isSlugTaken(error)) continue;
       throw error;
     }
@@ -201,6 +210,15 @@ export interface ProductForEdit {
   shortDescription: string;
   description: string;
   slug: string;
+  /**
+   * The category the product is listed in, or null.
+   *
+   * Null is not a state the form can produce any more — the field is required —
+   * but it is the state of every product stored before the field existed, and
+   * an edit screen that opened on nothing would be worse than one that opens on
+   * "choose one" and refuses to save until it is answered.
+   */
+  categoryId: string | null;
   attributes: {
     id: string;
     kind: AttributeKind;
@@ -230,6 +248,10 @@ export async function getProductForEdit(
     where: { id },
     include: {
       translations: { where: { locale: DEFAULT_LOCALE } },
+      // Ordered, though the form shows one: a hand-inserted product with rows
+      // for several categories to pick from, and a read that picked a different
+      // one per request would be a form that changes when you reload it.
+      categories: { orderBy: { categoryId: "asc" } },
       options: {
         orderBy: { position: "asc" },
         include: {
@@ -291,6 +313,7 @@ export async function getProductForEdit(
     shortDescription: translation?.shortDescription ?? "",
     description: translation?.description ?? "",
     slug: translation?.slug ?? "",
+    categoryId: product.categories[0]?.categoryId ?? null,
   };
 }
 
@@ -321,6 +344,9 @@ export async function updateProduct(
       await writeProduct(id, input, slugAttempt(base, attempt));
       return;
     } catch (error) {
+      // Same as the create path: a category that is not a row is not a slug
+      // problem, and retrying would end in a sentence about the wrong field.
+      if (isMissingCategory(error)) throw new UnknownCategoryError();
       if (isSlugTaken(error)) continue;
       throw error;
     }
@@ -366,6 +392,20 @@ async function writeProduct(
         shortDescription: input.shortDescription,
         description: input.description,
       },
+    });
+
+    /*
+     * The category the screen says the product is in.
+     *
+     * Delete and recreate rather than compare: the screen owns the whole set,
+     * and the set it can express is one row. A product whose category changed
+     * gets the new pair; one that kept it gets the same pair written back —
+     * the pair *is* the primary key, so that second write is the same row
+     * rather than a duplicate of it.
+     */
+    await tx.productCategory.deleteMany({ where: { productId: id } });
+    await tx.productCategory.create({
+      data: { productId: id, categoryId: input.categoryId },
     });
 
     const current = await tx.productOption.findMany({
@@ -578,6 +618,22 @@ async function deleteVariantsForOptionValue(
   await tx.productVariant.deleteMany({
     where: { optionValues: { some: { optionValueId } } },
   });
+}
+
+/**
+ * Whether this is the join row's foreign key, rather than any other.
+ *
+ * A `P2003` on either write can only be the category. Every other foreign key
+ * these statements carry is an id the same transaction just minted, or — for
+ * media — an id claimed by an `updateMany`, which no-ops on one that names
+ * nothing rather than throwing. That stops being true the moment a second
+ * client-supplied foreign key appears, which is the reason this is written down
+ * here rather than left as an assumption.
+ */
+function isMissingCategory(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+
+  return (error as { code?: unknown }).code === "P2003";
 }
 
 /**

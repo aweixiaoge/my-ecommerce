@@ -8,7 +8,10 @@ import {
   ADMIN_NAV,
   isActiveHref,
   isGroupActive,
-  toggleCollapsed,
+  isGroupOpen,
+  NO_GROUP_CHOICES,
+  toggleGroupOpen,
+  type GroupOpenState,
 } from "@/lib/admin/nav";
 
 /**
@@ -21,37 +24,41 @@ import {
  * client boundary this small means the nav is the only part of the chrome in
  * the bundle, and it re-renders on navigation while the rest does not.
  *
- * Groups start open rather than closed. With a single group, starting closed
- * would hide the only two screens there are behind a click that gives no hint
- * anything is behind it. When the nav outgrows one group, flip the default to
- * "open only when it contains the current screen" — the collapsed set is keyed
- * by group id already, so that is a change to `open` alone.
+ * Groups start open only when they hold the current screen — the flip the
+ * single-group version deferred until the nav outgrew one group. Which groups
+ * that leaves open, and what a click does about it, is `isGroupOpen`'s and
+ * `toggleGroupOpen`'s; this file only renders their answer.
  */
 export function AdminNav() {
   const pathname = usePathname();
 
-  // Groups the person closed by hand. Navigation deliberately does not reopen
-  // them: a group that springs back open after you collapse it and click
-  // elsewhere feels broken, and nothing here is hidden for long.
-  const [collapsed, setCollapsed] = useState<readonly string[]>([]);
+  // The clicks that went against the defaults. Navigation deliberately does not
+  // reopen a group the person closed: one that springs back open after you
+  // collapse it and click elsewhere feels broken, and nothing here is hidden
+  // for long.
+  const [groups, setGroups] = useState<GroupOpenState>(NO_GROUP_CHOICES);
 
-  function toggle(id: string) {
-    setCollapsed((current) => toggleCollapsed(current, id));
+  function toggle(id: string, open: boolean) {
+    setGroups((current) => toggleGroupOpen(current, id, open));
   }
 
   return (
     <nav aria-label="Admin sections" className="flex flex-col gap-1">
       {ADMIN_NAV.map((group) => {
-        const open = !collapsed.includes(group.id);
+        const open = isGroupOpen(pathname, group, groups);
         const groupActive = isGroupActive(pathname, group);
 
         return (
           <div key={group.id}>
             <button
               type="button"
+              // Readable by the list below as the name of what it opens, so
+              // two items labelled "Category" are announced as "Products,
+              // Category" and "Blogs, Category" rather than twice the same.
+              id={`admin-nav-${group.id}-label`}
               aria-expanded={open}
               aria-controls={`admin-nav-${group.id}`}
-              onClick={() => toggle(group.id)}
+              onClick={() => toggle(group.id, open)}
               className={`flex h-10 w-full items-center gap-2 rounded-control px-3 text-left text-[13px] font-bold leading-[16.9px] tracking-[-0.076px] transition-colors hover:bg-mist hover:text-ink ${
                 groupActive ? "text-ink" : "text-ink-62"
               }`}
@@ -75,6 +82,7 @@ export function AdminNav() {
             */}
             <ul
               id={`admin-nav-${group.id}`}
+              aria-labelledby={`admin-nav-${group.id}-label`}
               className={
                 open ? "mt-0.5 flex flex-col gap-0.5" : "hidden"
               }

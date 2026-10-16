@@ -6,8 +6,9 @@ import {
   it,
   vi,
 } from "vitest";
-import { act } from "react";
+import { act, type ReactElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import type { ProductForEdit } from "@/lib/admin/products-repo";
 import { ProductForm } from "./product-form";
 
 /**
@@ -37,14 +38,20 @@ const actions = vi.hoisted(() => ({
 vi.mock("@/app/admin/(shell)/products/actions", () => ({
   createProductAction: actions.createProduct,
   updateProductAction: actions.updateProduct,
-  uploadProductMediaAction: actions.uploadMedia,
+}));
+
+// The upload action is its own module — one door for every form that stores an
+// image — so the component reaches it by a second import, mocked here at the
+// same place.
+vi.mock("@/app/admin/media/actions", () => ({
+  uploadMediaAction: actions.uploadMedia,
 }));
 
 let container: HTMLDivElement;
 let root: Root;
 
 /** The product the edit tests open on. */
-const saved = {
+const saved: ProductForEdit = {
   id: "prod_1",
   status: "draft" as const,
   updatedAt: "2026-10-15T08:00:00.000Z",
@@ -52,6 +59,7 @@ const saved = {
   shortDescription: "Closed-back.",
   description: "## Materials",
   slug: "studio-over-ear",
+  categoryId: "cat_1",
   attributes: [
     {
       id: "opt_1",
@@ -73,6 +81,12 @@ const saved = {
   ],
 };
 
+/** What the Category screen would hand the form: the names it shows. */
+const categories = [
+  { id: "cat_1", name: "Headphones" },
+  { id: "cat_2", name: "Speakers" },
+];
+
 beforeEach(() => {
   actions.createProduct.mockReset();
   actions.updateProduct.mockReset();
@@ -86,12 +100,12 @@ beforeEach(() => {
   document.body.append(container);
   act(() => {
     root = createRoot(container);
-    root.render(<ProductForm />);
+    root.render(<ProductForm categories={categories} />);
   });
 });
 
-/** Replaces the create form with the edit one — the same component, given a product. */
-async function renderEditing() {
+/** Mounts a fresh form, replacing whatever was on the container. */
+async function remount(ui: ReactElement) {
   await act(async () => root.unmount());
   container.remove();
 
@@ -99,8 +113,13 @@ async function renderEditing() {
   document.body.append(container);
   act(() => {
     root = createRoot(container);
-    root.render(<ProductForm product={saved} />);
+    root.render(ui);
   });
+}
+
+/** Replaces the create form with the edit one — the same component, given a product. */
+async function renderEditing(product = saved) {
+  await remount(<ProductForm product={product} categories={categories} />);
 }
 
 afterEach(async () => {
@@ -151,6 +170,42 @@ const typeInto = async (
     field.dispatchEvent(new Event("input", { bubbles: true }));
   });
 };
+
+/**
+ * Picks an option in a select the way a browser does.
+ *
+ * The same native-setter trick as `typeInto`, with `change` rather than `input`:
+ * a select announces a new value as a change, not as typing.
+ */
+const choose = async (select: HTMLSelectElement, value: string) => {
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(
+      HTMLSelectElement.prototype,
+      "value",
+    )!.set!;
+    setter.call(select, value);
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
+
+const categorySelect = () =>
+  container.querySelector<HTMLSelectElement>("#categoryId")!;
+
+/**
+ * Submits the form.
+ *
+ * A `submit` event, not a click on the button: jsdom does not implement the
+ * implicit submission a button press performs in a browser, so a click there
+ * never reaches React's action. The event is what the action is really
+ * attached to, so this drives the same path.
+ */
+async function submit() {
+  await act(async () => {
+    form().dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
+  });
+}
 
 /** Adds the colour attribute and fills its values box. */
 async function addColors(values: string) {
@@ -482,17 +537,12 @@ describe("ProductForm — attributes", () => {
     // would be offering a second place to say what the colour already said.
     await click(findByText("button", "Add attribute"));
 
-    await act(async () => {
-      const select = container.querySelector<HTMLSelectElement>(
+    await choose(
+      container.querySelector<HTMLSelectElement>(
         'select[aria-label="Attribute 1 kind"]',
-      )!;
-      const setter = Object.getOwnPropertyDescriptor(
-        HTMLSelectElement.prototype,
-        "value",
-      )!.set!;
-      setter.call(select, "size");
-      select.dispatchEvent(new Event("change", { bubbles: true }));
-    });
+      )!,
+      "size",
+    );
 
     expect(legends()).toEqual([]);
     expect(container.textContent).toContain("Separate values with commas");
@@ -612,22 +662,6 @@ describe("ProductForm — description", () => {
 });
 
 describe("ProductForm — what the server says back", () => {
-  /**
-   * Submits the form.
-   *
-   * A `submit` event, not a click on the button: jsdom does not implement the
-   * implicit submission a button press performs in a browser, so a click there
-   * never reaches React's action. The event is what the action is really
-   * attached to, so this drives the same path.
-   */
-  async function submit() {
-    await act(async () => {
-      form().dispatchEvent(
-        new Event("submit", { bubbles: true, cancelable: true }),
-      );
-    });
-  }
-
   it("shows what the action refused, next to nothing in particular", async () => {
     // The variants payload has no single field to describe — a price and a SKU
     // and an image list all live in it — so the message announces itself.
@@ -766,5 +800,87 @@ describe("ProductForm — editing", () => {
     expect(
       (variantsJson() as { color: string }[]).map((v) => v.color),
     ).toEqual(["Black"]);
+  });
+});
+
+describe("ProductForm — category", () => {
+  it("offers every category by name, behind a placeholder that cannot be chosen back", async () => {
+    const options = [...categorySelect().querySelectorAll("option")].map(
+      (option) => ({
+        value: option.value,
+        label: option.textContent,
+        disabled: option.disabled,
+      }),
+    );
+
+    expect(options).toEqual([
+      { value: "", label: "Choose a category", disabled: true },
+      { value: "cat_1", label: "Headphones", disabled: false },
+      { value: "cat_2", label: "Speakers", disabled: false },
+    ]);
+  });
+
+  it("will not be sent without a choice", async () => {
+    // `required` on an empty value is the whole of the browser-side rule, and
+    // the empty placeholder is what makes it true. The server refuses the same
+    // empty string, because a form is not the only way in.
+    expect(categorySelect().required).toBe(true);
+    expect(categorySelect().value).toBe("");
+  });
+
+  it("submits the category that was chosen", async () => {
+    await choose(categorySelect(), "cat_2");
+    await submit();
+
+    const [, formData] = actions.createProduct.mock.calls[0] as [
+      unknown,
+      FormData,
+    ];
+    expect(formData.get("categoryId")).toBe("cat_2");
+  });
+
+  it("opens on the category the product is already in", async () => {
+    await renderEditing();
+
+    expect(categorySelect().value).toBe("cat_1");
+  });
+
+  it("opens on nothing for a product stored without a category", async () => {
+    // Every product saved before the field existed. It asks rather than
+    // guessing, and `required` is what makes the ask unskippable.
+    await renderEditing({ ...saved, categoryId: null });
+
+    expect(categorySelect().value).toBe("");
+  });
+
+  it("says what to do when there are no categories at all", async () => {
+    // A required field against an empty database: the browser's "please select
+    // an item" is a riddle when there is no item, so the field explains, links
+    // to the screen that makes one, and the submit button stays off until there
+    // is something to pick.
+    await remount(<ProductForm categories={[]} />);
+
+    expect(container.textContent).toContain("No categories yet");
+    expect(findByText("a", "Create one").getAttribute("href")).toBe(
+      "/admin/categories/new",
+    );
+    expect(findByText("button", "Create product").hasAttribute("disabled")).toBe(
+      true,
+    );
+  });
+
+  it("shows a refused category beside the field", async () => {
+    // The store knows a row that the payload cannot: the category may have been
+    // deleted between the form being rendered and the save.
+    actions.createProduct.mockResolvedValue({
+      errors: { categoryId: ["That category no longer exists. Choose another."] },
+    });
+
+    await submit();
+
+    expect(
+      findByText("li", "That category no longer exists. Choose another."),
+    ).toBeTruthy();
+    expect(categorySelect().getAttribute("aria-invalid")).toBe("true");
   });
 });

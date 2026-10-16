@@ -6,9 +6,10 @@ import {
   getProductForEdit,
   listProducts,
   setProductStatus,
-  SlugExhaustedError,
+  UnknownCategoryError,
   updateProduct,
 } from "./products-repo";
+import { SlugExhaustedError } from "./slug";
 
 /**
  * The repository, against a stand-in for the database.
@@ -39,6 +40,7 @@ const db = vi.hoisted(() => ({
     deleteMany: vi.fn(),
   },
   media: { updateMany: vi.fn(), deleteMany: vi.fn() },
+  productCategory: { create: vi.fn(), deleteMany: vi.fn() },
 }));
 
 vi.mock("@my-ecommerce/db", () => ({
@@ -49,6 +51,7 @@ vi.mock("@my-ecommerce/db", () => ({
     productOptionValue: db.productOptionValue,
     productVariant: db.productVariant,
     media: db.media,
+    productCategory: db.productCategory,
     // The real one hands its callback a transaction client; this hands it the
     // same stand-ins, which is all the code under test can tell.
     $transaction: (run: (tx: unknown) => unknown) => run(db),
@@ -60,6 +63,7 @@ function payload(overrides: Partial<AdminProductCreate> = {}): AdminProductCreat
     name: "Studio Over-Ear",
     shortDescription: "Closed-back, tuned flat.",
     description: "## Materials",
+    categoryId: "cat_1",
     attributes: [{ kind: "color", values: ["Black", "Sand"] }],
     variants: [
       {
@@ -106,6 +110,19 @@ function uniqueViolation(modelName: string, constraint: string) {
   });
 }
 
+/**
+ * A foreign key that names no row, as Prisma reports it.
+ *
+ * `P2003` is what a `category_id` pointing at nothing produces, and it is the
+ * one failure of these writes the payload had no way to rule out — the row it
+ * names may have been deleted since the form was rendered.
+ */
+function missingCategory() {
+  return Object.assign(new Error("Foreign key constraint violated"), {
+    code: "P2003",
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   db.product.create.mockResolvedValue(createdProduct());
@@ -128,6 +145,8 @@ beforeEach(() => {
   db.productVariant.findFirst.mockResolvedValue(null);
   db.productVariant.deleteMany.mockResolvedValue({ count: 0 });
   db.media.deleteMany.mockResolvedValue({ count: 0 });
+  db.productCategory.create.mockResolvedValue({});
+  db.productCategory.deleteMany.mockResolvedValue({ count: 1 });
 });
 
 describe("createProduct", () => {
@@ -147,6 +166,34 @@ describe("createProduct", () => {
         }),
       }),
     );
+  });
+
+  it("lists the product in the category it was given", async () => {
+    // One join row, nested in the product's own insert: the category is a row
+    // that already exists, so nothing waits on an id this write mints.
+    await createProduct(payload({ categoryId: "cat_7" }));
+
+    expect(db.product.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          categories: { create: [{ categoryId: "cat_7" }] },
+        }),
+      }),
+    );
+  });
+
+  it("reports a category that is not a row", async () => {
+    // The foreign key is the database's answer to a question the payload cannot
+    // ask. It is not a slug problem, so it must not be swallowed by the retry —
+    // a hundred attempts would end in a sentence about the wrong field, and the
+    // product would be saved uncategorised, which is the one thing the field's
+    // rule exists to prevent.
+    db.product.create.mockRejectedValue(missingCategory());
+
+    await expect(createProduct(payload())).rejects.toBeInstanceOf(
+      UnknownCategoryError,
+    );
+    expect(db.product.create).toHaveBeenCalledTimes(1);
   });
 
   it("hangs the variant off the option value its colour names", async () => {
@@ -300,11 +347,17 @@ describe("createProduct", () => {
   });
 
   it("does not mistake a thrown non-Error for a collision", async () => {
-    // `throw "boom"` is legal, and reading `.code` off a string is how a
-    // classifier turns an odd failure into a retry loop.
+    // `throw "boom"` and `throw null` are both legal, and reading `.code` off
+    // either is how a classifier turns an odd failure into a retry loop.
     db.product.create.mockRejectedValue("boom");
 
     await expect(createProduct(payload())).rejects.toBe("boom");
+    expect(db.product.create).toHaveBeenCalledTimes(1);
+
+    db.product.create.mockReset();
+    db.product.create.mockRejectedValue(null);
+
+    await expect(createProduct(payload())).rejects.toBeNull();
     expect(db.product.create).toHaveBeenCalledTimes(1);
   });
 });
@@ -489,6 +542,7 @@ describe("getProductForEdit", () => {
         media: [{ id: "media_1" }, { id: "media_2" }],
       },
     ],
+    categories: [{ categoryId: "cat_1" }],
   };
 
   it("loads the copy from the translation, not from the product", async () => {
@@ -504,6 +558,8 @@ describe("getProductForEdit", () => {
       shortDescription: "Closed-back.",
       description: "## Materials",
       slug: "studio-over-ear",
+      // The category the form will open on — the row the dropdown selects.
+      categoryId: "cat_1",
       attributes: [
         {
           id: "opt_1",
@@ -543,6 +599,17 @@ describe("getProductForEdit", () => {
     expect(await getProductForEdit("nope")).toBeNull();
   });
 
+  it("answers null for a product in no category", async () => {
+    // The state of every product stored before the field existed. The form
+    // opens on "choose one" and will not save until it is answered — which is
+    // better than a screen that opens on a category the product is not in.
+    db.product.findUnique.mockResolvedValue({ ...row, categories: [] });
+
+    const product = await getProductForEdit("prod_1");
+
+    expect(product?.categoryId).toBeNull();
+  });
+
   it("opens an empty form for a row with no translation in this locale", async () => {
     // Not something this app writes — saving fills it in — but a form that
     // crashed on it would be a worse answer than a blank one.
@@ -564,6 +631,7 @@ describe("updateProduct", () => {
       name: "Studio Over-Ear",
       shortDescription: "Closed-back.",
       description: "## Materials",
+      categoryId: "cat_1",
       attributes: [{ kind: "color", values: ["Black", "Sand"] }],
       variants: [
         {
@@ -604,6 +672,32 @@ describe("updateProduct", () => {
           slug: "studio-wireless",
         }),
       }),
+    );
+  });
+
+  it("moves the product into the category the screen chose", async () => {
+    // The screen owns the whole set, and the set it can express is one row:
+    // what the product was in comes off, and what the dropdown says goes on.
+    existing();
+
+    await updateProduct("prod_1", payload({ categoryId: "cat_2" }));
+
+    expect(db.productCategory.deleteMany).toHaveBeenCalledWith({
+      where: { productId: "prod_1" },
+    });
+    expect(db.productCategory.create).toHaveBeenCalledWith({
+      data: { productId: "prod_1", categoryId: "cat_2" },
+    });
+  });
+
+  it("reports a category that is not a row", async () => {
+    // Same as the create path: a foreign key naming nothing is a sentence about
+    // the field, not a retry and not "check the server is running".
+    existing();
+    db.productCategory.create.mockRejectedValue(missingCategory());
+
+    await expect(updateProduct("prod_1", payload())).rejects.toBeInstanceOf(
+      UnknownCategoryError,
     );
   });
 

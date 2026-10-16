@@ -1,5 +1,6 @@
 /**
- * The markdown subset a product description is written in, parsed to data.
+ * The markdown subset a product or blog description is written in, parsed to
+ * data.
  *
  * A parser and not a renderer, and no HTML anywhere: the preview maps these
  * spans onto React elements, so text is escaped by React rather than by a

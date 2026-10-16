@@ -24,10 +24,17 @@ export function DescriptionEditor({
   value,
   onChange,
   messages,
+  placeholder = "## Materials\n\n- Recycled aluminium\n- **Memory** foam",
 }: {
   value: string;
   onChange: (value: string) => void;
   messages?: string[];
+  /**
+   * The markdown hint in the box, which differs per screen: the product form
+   * describes materials and the blog form a post — a default that named the
+   * wrong one would be copy about a field that is not on the screen.
+   */
+  placeholder?: string;
 }) {
   const [tab, setTab] = useState<TabId>("write");
 
@@ -65,7 +72,7 @@ export function DescriptionEditor({
             rows={14}
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            placeholder={"## Materials\n\n- Recycled aluminium\n- **Memory** foam"}
+            placeholder={placeholder}
             className="w-full resize-y rounded-card bg-paper p-3 font-mono text-[13px] leading-[21.45px] text-ink outline-none focus:ring-2 focus:ring-ink/15"
           />
         ) : (

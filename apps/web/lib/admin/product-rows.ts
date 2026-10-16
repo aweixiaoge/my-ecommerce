@@ -1,5 +1,6 @@
 import type { Prisma } from "@my-ecommerce/db";
 import type { AdminProductCreate, VariantDraft } from "@my-ecommerce/shared";
+import { DEFAULT_LOCALE } from "./locale";
 import { ATTRIBUTE_LABELS } from "./product-form";
 
 /**
@@ -18,18 +19,6 @@ import { ATTRIBUTE_LABELS } from "./product-form";
  * not exist yet. The product goes in first, and the variants follow inside the
  * same transaction.
  */
-
-/**
- * The language the first content is written in.
- *
- * plan.md makes multi-language a schema decision and deliberately leaves the
- * feature late (Phase 8), and never names a first locale. The form has no
- * locale picker, so this is the one place that decides — here, rather than
- * inside the shared payload, for the same reason `APP_CURRENCY` lives on the
- * app side: a default baked into the contract is a default every consumer
- * inherits, and a market's choice belongs to the market.
- */
-export const DEFAULT_LOCALE = "en";
 
 /**
  * The product, its copy, and the options it is offered in.
@@ -53,6 +42,15 @@ export function productCreateData(
         shortDescription: input.shortDescription,
         description: input.description,
       },
+    },
+    /*
+     * The category the product is listed in — one join row, created nested
+     * rather than in a second statement. A variant needs an option value this
+     * same insert is minting, which is why variants are written after it; a
+     * category is a row that already exists, so its id is in hand.
+     */
+    categories: {
+      create: [{ categoryId: input.categoryId }],
     },
     options: {
       create: input.attributes.map((attribute, index) => ({

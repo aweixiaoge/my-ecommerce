@@ -6,16 +6,15 @@ import {
   AdminProductCreateSchema,
   AdminProductPublishSchema,
 } from "@my-ecommerce/shared";
-import { putMedia } from "@/lib/admin/media-repo";
-import { fileProblem, mediaUrl } from "@/lib/admin/product-media";
 import {
   createProduct,
   DuplicateSkuError,
   setProductStatus,
-  SlugExhaustedError,
+  UnknownCategoryError,
   updateProduct,
 } from "@/lib/admin/products-repo";
 import { getSession } from "@/lib/admin/session";
+import { SlugExhaustedError } from "@/lib/admin/slug";
 
 /**
  * What the products screens do.
@@ -34,6 +33,7 @@ export interface ProductFormState {
     name?: string[];
     shortDescription?: string[];
     description?: string[];
+    categoryId?: string[];
     attributes?: string[];
     /**
      * Listed here AND in `fieldErrors` below. A path this object does not name
@@ -123,6 +123,10 @@ function readProductForm(formData: FormData) {
     name: formData.get("name") ?? "",
     shortDescription: formData.get("shortDescription") ?? "",
     description: formData.get("description") ?? "",
+    // A select with nothing chosen sends the empty string, and `?? ""` covers a
+    // field that never arrived at all — both are "no category" to the schema,
+    // which refuses them with the sentence the field renders.
+    categoryId: formData.get("categoryId") ?? "",
     attributes: readJson(formData.get("attributes")),
     variants: readJson(formData.get("variants")),
   };
@@ -131,60 +135,21 @@ function readProductForm(formData: FormData) {
 /**
  * What to say when the write was refused, in the shape the form can render.
  *
- * A taken SKU belongs to the colour rows, so it is reported where they are
- * rather than as a banner the person has to connect to a field themselves.
+ * The two the person can act on are reported against the field they belong to —
+ * a taken SKU to the colour rows, a category that is no longer a row to the
+ * dropdown — rather than as a banner they have to connect to a field
+ * themselves.
  */
 function productSaveFailure(error: unknown): ProductFormState {
   if (error instanceof DuplicateSkuError) {
     return { errors: { variants: [error.message] } };
   }
 
+  if (error instanceof UnknownCategoryError) {
+    return { errors: { categoryId: [error.message] } };
+  }
+
   return { message: saveFailureMessage(error) };
-}
-
-/** What an upload produced, or why it produced nothing. */
-export type UploadResult =
-  | { ok: true; media: { id: string; url: string } }
-  | { ok: false; message: string };
-
-/**
- * Stores one image and hands back the id the form will submit.
- *
- * One file per request, rather than the whole selection inside the create
- * payload: six photographs are tens of megabytes, and the action body limit is
- * a single global — raising it far enough for a full selection would raise it
- * for every action in the app, including sign-in. An image is uploaded when it
- * is chosen, so the create payload stays a few hundred bytes of JSON.
- *
- * The refusals come back as messages rather than throws, for the reason the
- * create action's do: a rejected file is something to tell someone about, not a
- * 500. And they are the same sentences the browser already showed — both sides
- * call `fileProblem`, so the check before the request and the check after it
- * cannot disagree.
- */
-export async function uploadProductMediaAction(file: File): Promise<UploadResult> {
-  // The shell layout refuses anyone who is not signed in, but that is a
-  // render-time gate: this is reachable by direct POST. An action that stores
-  // bytes is worth the one line.
-  if (!(await getSession())) {
-    return { ok: false, message: "Your session has expired. Sign in again." };
-  }
-
-  if (!(file instanceof File)) {
-    return { ok: false, message: "That upload could not be read. Try again." };
-  }
-
-  const problem = fileProblem(file);
-  if (problem) return { ok: false, message: problem };
-
-  const media = await putMedia({
-    bytes: new Uint8Array(await file.arrayBuffer()),
-    // The validated type, not the request's: `fileProblem` has just refused
-    // anything outside the allowlist.
-    type: file.type,
-  });
-
-  return { ok: true, media: { id: media.id, url: mediaUrl(media.id) } };
 }
 
 /**
@@ -278,6 +243,7 @@ function fieldErrors(
       field !== "name" &&
       field !== "shortDescription" &&
       field !== "description" &&
+      field !== "categoryId" &&
       field !== "attributes" &&
       field !== "variants"
     ) {
@@ -291,7 +257,13 @@ function fieldErrors(
 }
 
 function messageFor(
-  field: "name" | "shortDescription" | "description" | "attributes" | "variants",
+  field:
+    | "name"
+    | "shortDescription"
+    | "description"
+    | "categoryId"
+    | "attributes"
+    | "variants",
   issue: { code: string; message?: string },
 ): string {
   switch (field) {
@@ -301,6 +273,14 @@ function messageFor(
       return "Short description is too long.";
     case "description":
       return "Description is too long.";
+    case "categoryId":
+      // Two codes, and the pair covers everything the field can produce: an
+      // empty or missing value is `too_small`, a longer-than-an-id one is
+      // `too_big`, and a non-string (a file posted under this name) is the one
+      // other possibility — which is not a category either.
+      return issue.code === "too_small"
+        ? "Choose a category."
+        : "That category is not valid.";
     case "attributes":
       // `custom` is a refinement we wrote, and its message is already written
       // for a person — "Values must be unique." Zod's own codes are not, so

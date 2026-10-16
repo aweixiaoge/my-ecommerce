@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { ProductForm } from "@/components/admin/product-form";
+import { listCategories } from "@/lib/admin/categories-repo";
 import { getProductForEdit } from "@/lib/admin/products-repo";
 
 /**
@@ -34,6 +35,11 @@ export default async function AdminEditProductPage({
   await connection();
 
   const { id } = await params;
+
+  // The same list the create screen offers, read here rather than passed
+  // through: both pages read the database already, and a shared loader would be
+  // a third thing to keep in step with the Category screen that owns it.
+  const categories = await listCategories();
 
   // An id in a URL is an id anyone can type, so a missing product is a 404
   // rather than an exception — the difference between a wrong link and a bug.
@@ -70,7 +76,7 @@ export default async function AdminEditProductPage({
         the save silently failed. A new `updatedAt` is a new key, and a new key
         is a remount.
       */}
-      <ProductForm key={product.updatedAt} product={product} />
+      <ProductForm key={product.updatedAt} product={product} categories={categories} />
     </div>
   );
 }
