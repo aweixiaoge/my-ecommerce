@@ -5,3 +5,6 @@ export * from "./review";
 export * from "./cart";
 export * from "./admin";
 export * from "./admin-product";
+export * from "./admin-category";
+export * from "./admin-featured-product";
+export * from "./admin-blog";

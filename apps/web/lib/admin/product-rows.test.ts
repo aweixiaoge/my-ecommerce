@@ -13,6 +13,7 @@ function payload(overrides: Partial<AdminProductCreate> = {}): AdminProductCreat
     name: "Studio Over-Ear",
     shortDescription: "Closed-back, tuned flat.",
     description: "## Materials",
+    categoryId: "cat_1",
     attributes: [
       { kind: "color", values: ["Black", "Sand"] },
       { kind: "size", values: ["S", "M"] },
@@ -31,6 +32,14 @@ describe("productCreateData", () => {
     // Nothing this form collects has been checked or published, and plan.md's
     // statuses exist so that going live is a deliberate act.
     expect(productCreateData(payload(), "studio-over-ear").status).toBe("draft");
+  });
+
+  it("lists the product in the category it was given", () => {
+    // One join row, nested in the product's own insert: the category is a row
+    // that already exists, so nothing here waits on an id this write mints.
+    const data = productCreateData(payload({ categoryId: "cat_7" }), "studio-over-ear");
+
+    expect(data.categories).toEqual({ create: [{ categoryId: "cat_7" }] });
   });
 
   it("puts the name, copy and slug in the locale's translation row", () => {

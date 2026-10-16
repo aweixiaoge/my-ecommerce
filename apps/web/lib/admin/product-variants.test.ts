@@ -250,6 +250,7 @@ describe("serializeVariants", () => {
       name: "Studio Over-Ear",
       shortDescription: "",
       description: "",
+      categoryId: "cat_1",
       attributes: [{ kind: "color", values: ["Black", "Sand"] }],
       variants: serialized(
         {

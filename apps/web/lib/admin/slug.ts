@@ -1,10 +1,10 @@
 /**
- * A product name, as a URL.
+ * A name, as a URL.
  *
- * The create form has no slug field, and the database has a `(locale, slug)`
- * unique constraint (plan.md, decision 2: one slug per locale, unique within a
- * locale). So one is made from the name here rather than left to the database
- * to invent.
+ * No create form has a slug field, and the database has a `(locale, slug)`
+ * unique constraint per translation table (plan.md, decision 2: one slug per
+ * locale, unique within a locale). So one is made from the name here rather
+ * than left to the database to invent.
  *
  * The form of the transformation is deliberate and narrow: lowercase, ASCII
  * letters and digits, single dashes between them. Anything else — punctuation,
@@ -19,10 +19,15 @@
  * means two of them would collide, so an empty result falls back to a word
  * rather than to nothing — and `slugAttempt` is what keeps the fallback shared
  * rather than duplicated.
+ *
+ * A parameter rather than a constant, because the word is the entity's: a
+ * misspelt product called "!!!" becomes `/products/product`, and a category
+ * called the same becomes `/categories/category`. The default is the product
+ * one — the first caller, and the fallback every existing call already gets.
  */
 const FALLBACK = "product";
 
-export function slugify(name: string): string {
+export function slugify(name: string, fallback: string = FALLBACK): string {
   const slug = name
     // Accents come off first, before anything else is dropped: "Café" should be
     // "cafe", not "caf". NFKD splits an accented character into a base letter
@@ -36,7 +41,7 @@ export function slugify(name: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  return slug === "" ? FALLBACK : slug;
+  return slug === "" ? fallback : slug;
 }
 
 /**
@@ -53,9 +58,27 @@ export function slugAttempt(base: string, attempt: number): string {
 /**
  * How many times to try before giving up.
  *
- * Not a limit anybody should reach: it advances only when a product with the
- * same name already exists in the same locale, so the hundredth "Studio
- * Over-Ear" is `studio-over-ear-100`. The point of a bound is that a loop
- * against a database has one.
+ * Not a limit anybody should reach: it advances only when a row with the same
+ * name already exists in the same locale, so the hundredth "Studio Over-Ear"
+ * is `studio-over-ear-100`. The point of a bound is that a loop against a
+ * database has one.
  */
 export const SLUG_ATTEMPTS = 100;
+
+/**
+ * No slug could be found for a name.
+ *
+ * Only reachable after `SLUG_ATTEMPTS` collisions on the same name, which is
+ * not a thing that happens by accident — but a loop that can give up has to say
+ * so rather than return undefined.
+ *
+ * It lives here with the helpers that produce and number the slugs, because
+ * every entity that generates one — products, categories — can exhaust them,
+ * and each of their screens has to tell the person which word was the problem.
+ */
+export class SlugExhaustedError extends Error {
+  constructor(base: string) {
+    super(`Could not find a free slug for "${base}".`);
+    this.name = "SlugExhaustedError";
+  }
+}

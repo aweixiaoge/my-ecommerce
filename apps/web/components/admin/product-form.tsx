@@ -9,9 +9,9 @@ import {
 import {
   createProductAction,
   updateProductAction,
-  uploadProductMediaAction,
   type ProductFormState,
 } from "@/app/admin/(shell)/products/actions";
+import { uploadMediaAction } from "@/app/admin/media/actions";
 import { toFormAttributes, toFormDrafts } from "@/lib/admin/product-edit";
 import { mediaUrl, planUploads } from "@/lib/admin/product-media";
 import type { ProductForEdit } from "@/lib/admin/products-repo";
@@ -80,7 +80,18 @@ function uploadStateFor(
  * screen with its own layout would be a second screen to keep in step, and the
  * first thing to fall out of step would be the fields it forgot to show.
  */
-export function ProductForm({ product }: { product?: ProductForEdit } = {}) {
+export function ProductForm({
+  product,
+  categories,
+}: {
+  product?: ProductForEdit;
+  /**
+   * Every category in the catalogue, in the order the Category screen shows
+   * them. Passed in rather than fetched here: this is a Client Component, and
+   * the page above it is already reading the database.
+   */
+  categories: readonly { id: string; name: string }[];
+}) {
   const [state, formAction, pending] = useActionState<
     ProductFormState | undefined,
     FormData
@@ -110,6 +121,10 @@ export function ProductForm({ product }: { product?: ProductForEdit } = {}) {
   const [shortDescription, setShortDescription] = useState(
     product?.shortDescription ?? "",
   );
+  // Seeded from the product, so editing one shows the category it is already
+  // in. A product stored before the field existed has none, and the placeholder
+  // is what it opens on — a save then asks the question rather than guessing.
+  const [categoryId, setCategoryId] = useState(product?.categoryId ?? "");
   const nextKind = nextAvailableKind(attributes);
   const editing = product !== undefined;
 
@@ -223,7 +238,7 @@ export function ProductForm({ product }: { product?: ProductForEdit } = {}) {
 
     for (const file of accepted) {
       try {
-        const result = await uploadProductMediaAction(file);
+        const result = await uploadMediaAction(file);
 
         if (result.ok) {
           setDrafts((current) => {
@@ -310,6 +325,61 @@ export function ProductForm({ product }: { product?: ProductForEdit } = {}) {
           id="short-description-error"
           messages={state?.errors?.shortDescription}
         />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label htmlFor="categoryId" className={LABEL}>
+          Category
+        </label>
+        <select
+          id="categoryId"
+          name="categoryId"
+          required
+          value={categoryId}
+          onChange={(event) => setCategoryId(event.target.value)}
+          aria-invalid={state?.errors?.categoryId ? true : undefined}
+          aria-describedby={
+            state?.errors?.categoryId ? "category-id-error" : undefined
+          }
+          className={inputClass(Boolean(state?.errors?.categoryId))}
+        >
+          {/*
+            Disabled, so it is not a choice once a category has been picked —
+            and empty, which is what makes `required` mean something: a select
+            whose value is the empty string fails the browser's own validation,
+            so the form cannot be sent without answering. The server refuses it
+            too (`min(1)`), because a Server Action is reachable by direct POST
+            and the browser's check is feedback rather than enforcement.
+          */}
+          <option value="" disabled>
+            Choose a category
+          </option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
+        </select>
+
+        {/*
+          A required field and an empty database is a dead end, so it says why
+          instead: a browser refusing the submit with "please select an item"
+          when there is no item to select is a riddle, not a message.
+        */}
+        {categories.length === 0 && (
+          <p className="text-[12px] leading-[19.8px] text-ink-55">
+            No categories yet.{" "}
+            <Link
+              href="/admin/categories/new"
+              className="underline transition-colors hover:text-ink"
+            >
+              Create one
+            </Link>{" "}
+            and it will appear here.
+          </p>
+        )}
+
+        <FieldErrors id="category-id-error" messages={state?.errors?.categoryId} />
       </div>
 
       <section className="flex flex-col gap-3">
@@ -460,7 +530,10 @@ export function ProductForm({ product }: { product?: ProductForEdit } = {}) {
       <div className="flex items-center gap-3">
         <button
           type="submit"
-          disabled={pending || blocked || uploading}
+          // The last term is the required category with nothing to pick: the
+          // field's hint says what to do about it, and a button that refuses
+          // without saying why is worse than one that is off.
+          disabled={pending || blocked || uploading || categories.length === 0}
           className="h-11 rounded-control bg-ink px-5 text-[14px] font-medium text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {editing ? (pending ? "Saving…" : "Save changes") : pending ? "Creating…" : "Create product"}

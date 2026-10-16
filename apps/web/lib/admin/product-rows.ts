@@ -43,6 +43,15 @@ export function productCreateData(
         description: input.description,
       },
     },
+    /*
+     * The category the product is listed in — one join row, created nested
+     * rather than in a second statement. A variant needs an option value this
+     * same insert is minting, which is why variants are written after it; a
+     * category is a row that already exists, so its id is in hand.
+     */
+    categories: {
+      create: [{ categoryId: input.categoryId }],
+    },
     options: {
       create: input.attributes.map((attribute, index) => ({
         // What the option *is*, stored as itself: "Color" below is English for

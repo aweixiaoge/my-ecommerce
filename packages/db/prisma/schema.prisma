@@ -257,7 +257,9 @@ model Media {
 /// it makes is a root at position zero, and the tree screen writes the rest.
 /// The cascade is the file's convention for every relation, and it is also the
 /// only sensible one for a tree — a child whose parent is gone is not a
-/// category at the top level, it is an orphan.
+/// category at the top level, it is an orphan. The one deliberate exception is
+/// `blogs.category_id`, which unfiles a post rather than deleting it; it says
+/// so where it is written.
 model Category {
   id        String   @id @default(cuid())
   parentId  String?  @map("parent_id")

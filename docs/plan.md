@@ -93,11 +93,13 @@ read-then-write. See below.
 | `categories` | id, parent_id, position |
 | `category_translations` | category_id, locale, name, slug, description, meta_* |
 | `product_categories` | product_id, category_id |
-| `media` | id, product_id, variant_id, url, position |
+| `featured_products` | product_id — the home page's featured set |
+| `media` | id, product_id, variant_id, blog_id, url, position |
 | `media_translations` | media_id, locale, alt — alt text is an SEO field, translate it |
 
-Unique constraints: `(product_id, locale)` on product translations,
-`(locale, slug)` on both translation tables.
+Unique constraints: `(entity_id, locale)` on every translation table, and
+`(locale, slug)` on each of them too — a slug is unique within a locale, per
+entity.
 
 `stock` lives on the variant. If you later need per-warehouse inventory, a
 separate `inventory` table appears and `stock` becomes a derived total.
@@ -175,9 +177,16 @@ abandoned cart cannot burn a limited coupon.
 
 | Table | Key columns |
 | :--- | :--- |
-| `posts` | id, status, author_id, published_at, cover_media_id |
-| `post_translations` | post_id, locale, title, slug, excerpt, body, meta_* |
+| `blogs` | id, category_id — the plan's `status`, `author_id` and `published_at` arrive with the screens that write them; the cover is the first of the post's images rather than a column |
+| `blog_translations` | blog_id, locale, title, slug, short_description, description, meta_* |
+| `blog_categories` | id, created_at, updated_at |
+| `blog_category_translations` | category_id, locale, name, slug, description, meta_* |
 | `contact_messages` | id, name, email, subject, message, locale, status |
+
+The blog tables are what the admin writes today, and what the storefront's
+journal reads through `apps/web/lib/blog/blog-repo.ts`. That module's
+`BlogPostSummary` is still local to it; moving the type into the shared contract
+is Phase 7's job.
 
 ### i18n and currency infrastructure
 

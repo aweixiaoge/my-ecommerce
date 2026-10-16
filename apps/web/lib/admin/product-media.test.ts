@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { IMAGES_PER_VARIANT_MAX, MAX_IMAGE_BYTES } from "@my-ecommerce/shared";
+import {
+  IMAGES_PER_BLOG_MAX,
+  IMAGES_PER_VARIANT_MAX,
+  MAX_IMAGE_BYTES,
+} from "@my-ecommerce/shared";
 import { fileProblem, mediaUrl, planUploads } from "./product-media";
 
 /**
@@ -109,5 +113,26 @@ describe("planUploads", () => {
 
   it("says nothing when there was nothing to do", () => {
     expect(planUploads([], 6)).toEqual({ accepted: [], problems: [] });
+  });
+
+  it("defaults the message to the product form's colour", () => {
+    const result = planUploads([file("a.png")], 0);
+
+    expect(result.problems[0]).toContain(
+      `a colour holds at most ${IMAGES_PER_VARIANT_MAX}`,
+    );
+  });
+
+  it("quotes the holder and the limit the caller passed", () => {
+    // The blog form fills a post, and the sentence has to say so rather than
+    // telling an author about a colour that is not on their screen.
+    const result = planUploads([file("a.png"), file("b.png")], 1, {
+      holder: "a blog post",
+      limit: IMAGES_PER_BLOG_MAX,
+    });
+
+    expect(result.problems[0]).toContain(
+      `a blog post holds at most ${IMAGES_PER_BLOG_MAX}`,
+    );
   });
 });

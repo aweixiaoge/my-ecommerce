@@ -42,6 +42,7 @@ const VALUES_PER_ATTRIBUTE_MAX = 30;
 const ATTRIBUTES_MAX = 10;
 const SKU_MAX = 64;
 const MEDIA_ID_MAX = 64;
+const CATEGORY_ID_MAX = 64;
 
 /**
  * Per-image limits, exported because the two layers that enforce them must
@@ -182,6 +183,21 @@ export const AdminProductCreateSchema = z
     shortDescription: z.string().trim().max(SHORT_DESCRIPTION_MAX),
     /** Markdown source. The form renders a preview; the API stores the text. */
     description: z.string().max(DESCRIPTION_MAX),
+    /**
+     * The category the product is listed in.
+     *
+     * Required, and an id rather than a name: the storefront navigates by slug
+     * and the category's name is a translation, so the only stable way to say
+     * which one is to say which row. Required because a catalogue with
+     * uncategorised products is one nobody can browse, which is the whole
+     * reason the screen offers the field.
+     *
+     * One id, not an array, although `product_categories` holds pairs and
+     * `ProductSummary.categories` is a list (catalog.ts). That is the direction
+     * of the difference: the storefront can already render several, and the
+     * admin's form offers one until there is a screen that offers a second.
+     */
+    categoryId: z.string().min(1).max(CATEGORY_ID_MAX),
     attributes: z.array(ProductAttributeSchema).max(ATTRIBUTES_MAX),
     variants: z.array(VariantDraftSchema).max(VARIANTS_MAX).default([]),
   })

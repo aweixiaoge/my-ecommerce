@@ -49,14 +49,22 @@ export function fileProblem(file: File): string | null {
 /**
  * The files worth uploading, and what to say about the rest.
  *
- * `room` is how many more images the colour can hold. A file that is the wrong
+ * `room` is how many more images the holder can take. A file that is the wrong
  * type or too large is a problem with that file; a file that does not fit is a
  * problem with the list, and saying so once is clearer than naming each of the
  * files that would not have fitted anyway.
+ *
+ * `holder` and `limit` name the thing that is full, because the two forms that
+ * upload images fill different things: the product form fills a colour, the blog
+ * form fills a post, and the sentence has to quote the one that applies. They
+ * are arguments rather than constants read here because the numbers agree today
+ * by coincidence — a colour and a post hold six apiece — and a message that
+ * quoted the wrong one would be confidently wrong.
  */
 export function planUploads(
   files: readonly File[],
   room: number,
+  { holder = "a colour", limit = IMAGES_PER_VARIANT_MAX } = {},
 ): { accepted: File[]; problems: string[] } {
   const accepted: File[] = [];
   const problems: string[] = [];
@@ -80,8 +88,8 @@ export function planUploads(
   if (overflowed > 0) {
     problems.push(
       overflowed === 1
-        ? `1 image was not uploaded — a colour holds at most ${IMAGES_PER_VARIANT_MAX}.`
-        : `${overflowed} images were not uploaded — a colour holds at most ${IMAGES_PER_VARIANT_MAX}.`,
+        ? `1 image was not uploaded — ${holder} holds at most ${limit}.`
+        : `${overflowed} images were not uploaded — ${holder} holds at most ${limit}.`,
     );
   }
 

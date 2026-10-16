@@ -94,6 +94,7 @@ describe("serializeAttributes", () => {
       name: "Studio Over-Ear",
       shortDescription: "",
       description: "",
+      categoryId: "cat_1",
       attributes: JSON.parse(serializeAttributes(attributes)),
     });
 
