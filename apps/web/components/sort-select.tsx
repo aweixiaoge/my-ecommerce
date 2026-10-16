@@ -23,10 +23,21 @@ import { SORT_OPTIONS } from "@/lib/shop";
  * `key` is the current sort so that arriving via the back button remounts the
  * select with the value the URL actually holds — `defaultValue` alone is read
  * once and would leave the control showing a sort the grid is not using.
+ *
+ * `action` is the listing it sorts — `/shop` on the shop page, the category's
+ * own path on a category page. A form that always posted to `/shop` would take
+ * a shopper sorting a category back to the whole catalogue, which is what this
+ * prop exists to prevent.
  */
-export function SortSelect({ value }: { value: ProductSort }) {
+export function SortSelect({
+  value,
+  action,
+}: {
+  value: ProductSort;
+  action: string;
+}) {
   return (
-    <Form action="/shop" className="relative block w-full sm:w-[202.727px]">
+    <Form action={action} className="relative block w-full sm:w-[202.727px]">
       <Image
         src="/icons/chevron-down.svg"
         alt=""

@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ProductSummary } from "@my-ecommerce/shared";
 import { StarRating } from "@/components/star-rating";
+import { productPath } from "@/lib/catalog/product-path";
 import { formatMoney } from "@/lib/format";
 
 /**
@@ -21,19 +22,24 @@ import { formatMoney } from "@/lib/format";
  */
 export function ShopProductCard({
   product,
-  priority = false,
+  eager = false,
 }: {
   product: ProductSummary;
   /**
    * Set on the first card only. On a phone the grid's first image is the
    * largest thing above the fold, so it is the LCP element and lazy-loading it
    * makes the page look slower than it is.
+   *
+   * Named for what it does to the `loading` attribute rather than
+   * `priority`, which was Next's own prop until it was deprecated in 16 and
+   * would now read as a reference to it.
    */
-  priority?: boolean;
+  eager?: boolean;
 }) {
   const hasRange =
     product.priceMax !== null && product.priceMax.amount !== product.price.amount;
-  const href = `/products/${product.slug}`;
+  // One builder for every product link in the app — see `productPath`.
+  const href = productPath(product);
 
   return (
     <article className="flex flex-col">
@@ -46,7 +52,7 @@ export function ShopProductCard({
               fill
               sizes="(min-width: 768px) 25vw, (min-width: 640px) 50vw, 100vw"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
-              priority={priority}
+              loading={eager ? "eager" : "lazy"}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center p-6 text-center text-xs font-medium tracking-wide text-ink-55 uppercase">

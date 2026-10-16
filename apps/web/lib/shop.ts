@@ -130,18 +130,25 @@ export function pageNumbers(pagination: Pagination, span = 1): PageSlot[] {
 }
 
 /**
- * The href for a page of the shop, with the defaults left off.
+ * The href for a page of a listing, with the defaults left off.
+ *
+ * A *listing*, not the shop: a category's page is the same grid with the same
+ * sort and the same pager, and the only thing that differs is the path above
+ * them. Passing the path in keeps this the one place a listing's address is
+ * built — a second `?sort=` writer for category pages would be a second place
+ * for the two to disagree about which parameters survive a page change.
  *
  * `/shop` and `/shop?sort=default` are the same page; emitting only one of them
  * keeps the canonical URL stable and stops crawlers indexing the variants.
+ * `/products/earbuds` and its `?page=1` are the same page for the same reason.
  */
-export function shopHref(query: Partial<ShopQuery>): string {
+export function listingHref(path: string, query: Partial<ShopQuery>): string {
   const params = new URLSearchParams();
   if (query.sort && query.sort !== "default") params.set("sort", query.sort);
   if (query.page && query.page > 1) params.set("page", String(query.page));
 
   const search = params.toString();
-  return search ? `/shop?${search}` : "/shop";
+  return search ? `${path}?${search}` : path;
 }
 
 function first(value: string | string[] | undefined): string | undefined {

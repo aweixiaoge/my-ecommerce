@@ -13,3 +13,22 @@ export function formatMoney(money: Money, locale = "en-US"): string {
     currency: money.currency,
   }).format(money.amount as unknown as number);
 }
+
+/**
+ * Formats an instant for display — "October 12, 2026", which is the `long`
+ * date style and the form the design's review rows are written in.
+ *
+ * `timeZone: "UTC"` rather than the environment's, and it is not the same
+ * decision as "the server's timezone is UTC anyway": a review written at 23:00
+ * UTC would print tomorrow's date on a machine an hour or more ahead, so the
+ * date stamp on somebody's review would depend on where the app happens to be
+ * running. Whatever the reader's own timezone is, it is not this function's
+ * business — the design sets the date in uppercase type, not in a local
+ * calendar, and a date signed to a review is a fact about when it was written.
+ */
+export function formatDate(iso: string, locale = "en-US"): string {
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "long",
+    timeZone: "UTC",
+  }).format(new Date(iso));
+}

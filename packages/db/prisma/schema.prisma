@@ -11,10 +11,18 @@
 //     never a bare number. `price_currency` sits next to `price_amount` so the
 //     row means something on its own.
 //
-// Deliberately absent: `categories`, `category_translations`,
-// `product_categories`, `media_translations` and every table from Phase 2
+// Deliberately absent: `media_translations` and every table from Phase 2
 // onwards. They arrive with the screens that write them; a table nothing can
 // populate is a table that has to be kept migrated for no reason.
+//
+// `reviews` is the one table here that plan.md files under a later phase
+// (Phase 5) — it arrived with the product page's review section. Two of that
+// phase's tables are still not here: `review_media`, because the design's form
+// has no upload box and a table nothing can populate is the rule above, and
+// `product_review_stats`, because the rating a card shows is computed live
+// from the approved rows (`groupBy`) rather than denormalised — one source of
+// truth that cannot be forgotten by a write path. Both are deliberate, and
+// both are reversible additions rather than migrations of what is below.
 
 generator client {
   provider = "prisma-client"
@@ -32,6 +40,19 @@ enum ProductStatus {
   draft
   active
   archived
+}
+
+/// Whether a review is on the product page or waiting to be.
+///
+/// `pending` is a state rather than an absence, which is the point: the
+/// moderation screen's queue is a query for it, and a review with no status
+/// would be a row nothing could ask for. plan.md spells the three words; they
+/// are lowercase members of a quoted PascalCase type, the shape `ProductStatus`
+/// already has.
+enum ReviewStatus {
+  pending
+  approved
+  rejected
 }
 
 /// What an option *is*, as opposed to what it is called.
@@ -54,10 +75,13 @@ model Product {
   createdAt DateTime      @default(now()) @map("created_at")
   updatedAt DateTime      @updatedAt @map("updated_at")
 
-  translations ProductTranslation[]
-  options      ProductOption[]
-  variants     ProductVariant[]
-  media        Media[]
+  translations    ProductTranslation[]
+  options         ProductOption[]
+  variants        ProductVariant[]
+  media           Media[]
+  categories      ProductCategory[]
+  reviews         Review[]
+  featuredProduct FeaturedProduct?
 
   @@map("products")
 }
@@ -193,13 +217,17 @@ model VariantOptionValue {
 /// serve them back with a content type it chose rather than one the upload
 /// claimed. When a bucket exists, the bytes move out and `url` is what is left.
 ///
-/// Both links are nullable, and that is not laziness: an image is uploaded
-/// while the form is still being filled in, so there is no product and no
-/// variant to attach it to yet. The create action claims them by id.
+/// Every owner link is nullable, and that is not laziness: an image is uploaded
+/// while the form is still being filled in, so there is no product, no variant
+/// and no post to attach it to yet. The create action claims them by id. Which
+/// of the three a row carries is the form's business — the product form gives
+/// its images to variants, the blog form to the post itself — and position is
+/// the order within that owner, with zero being the Main image.
 model Media {
   id        String  @id @default(cuid())
   productId String? @map("product_id")
   variantId String? @map("variant_id")
+  blogId    String? @map("blog_id")
   url       String
   position  Int     @default(0)
 
@@ -208,8 +236,269 @@ model Media {
 
   product Product?        @relation(fields: [productId], references: [id], onDelete: Cascade)
   variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  blog    Blog?           @relation(fields: [blogId], references: [id], onDelete: Cascade)
 
   @@index([productId])
   @@index([variantId])
+  @@index([blogId])
   @@map("media")
+}
+
+/// The category tree.
+///
+/// plan.md lists three columns; the timestamp pair is what the root tables
+/// carry — `products` has it, and a category is a root the same way — and
+/// `created_at` is what gives a list of rows whose `position` is all zero —
+/// every category the create screen can make — an order that does not shuffle
+/// between reads.
+///
+/// `parent_id` and `position` are the tree's, and they are here because they
+/// are what the table *is*: the create screen writes only a name, so every row
+/// it makes is a root at position zero, and the tree screen writes the rest.
+/// The cascade is the file's convention for every relation, and it is also the
+/// only sensible one for a tree — a child whose parent is gone is not a
+/// category at the top level, it is an orphan.
+model Category {
+  id        String   @id @default(cuid())
+  parentId  String?  @map("parent_id")
+  position  Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  parent       Category?             @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children     Category[]            @relation("CategoryTree")
+  translations CategoryTranslation[]
+  products     ProductCategory[]
+
+  @@index([parentId])
+  @@map("categories")
+}
+
+/// Name, slug and copy, one row per language — the shape of a product's
+/// translation, for the same two decisions: text lives in `(entity_id, locale)`
+/// tables (decision 1), and the slug lives with it, unique within a locale
+/// rather than globally (decision 2).
+///
+/// `description` defaults to empty because the create screen has no box for it:
+/// a category made with a name alone is finished, not half-written. A column
+/// nothing fills is still the plan's column, and the screen that edits copy
+/// will find it rather than migrate for it.
+model CategoryTranslation {
+  id              String  @id @default(cuid())
+  categoryId      String  @map("category_id")
+  locale          String
+  name            String
+  slug            String
+  description     String  @default("")
+  metaTitle       String? @map("meta_title")
+  metaDescription String? @map("meta_description")
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale])
+  @@unique([locale, slug])
+  @@map("category_translations")
+}
+
+/// Which categories a product is listed in.
+///
+/// A join table rather than a `category_id` column on `products`, because the
+/// plan's catalogue has a product in more than one category — and the first
+/// time that is true, a column would have to be migrated into this shape. The
+/// admin's form offers a single choice today; the table does not narrow because
+/// of it.
+///
+/// Both sides cascade, like every other relation here: taking a category away
+/// takes it off the products it described rather than leaving a row pointing at
+/// nothing. `@@index([categoryId])` is the direction the primary key does not
+/// already cover — a category's products, rather than a product's categories.
+model ProductCategory {
+  productId  String @map("product_id")
+  categoryId String @map("category_id")
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([productId, categoryId])
+  @@index([categoryId])
+  @@map("product_categories")
+}
+
+/// A review somebody wrote, and whether anyone has let it through.
+///
+/// plan.md's column list is `id, product_id, customer_id, order_item_id,
+/// rating, title, body, locale, status, created_at`. Two of those are
+/// deliberately not built, for the same reason twice:
+///
+///   * `customer_id` and `order_item_id` point at `customers` and `orders`,
+///     neither of which exists — `order_item_id` is how a review becomes a
+///     verified purchase, and a verified purchase cannot be built before the
+///     thing it verifies. `author_name` and `author_email` stand in their
+///     place, because the design's form asks a guest for both and a review
+///     with nobody's name on it is not a review. They are also what a backfill
+///     from real accounts would key on, so the migration when accounts arrive
+///     is an UPDATE rather than a reshape.
+///   * `title` is *kept* and left nullable, the way `ProductVariant.weight` is:
+///     the plan lists the column, the design's form has no box for it, and a
+///     nullable column costs nothing where a migration costs a deploy. Nothing
+///     writes it, so nothing reads it — the shared contract has no `title`
+///     either.
+///
+/// `status` defaults to `pending` here rather than in the insert, so a row put
+/// in by hand gets the same treatment as one the storefront's form wrote.
+/// Nothing approves its own writing.
+///
+/// `locale` is the language it was written in — a plain column, not a
+/// `review_translations` table, because reviews are user content and are not
+/// translated (plan.md). The point of a review is that nobody rewrites what
+/// somebody said.
+///
+/// `created_at` alone: the plan lists no `updated_at` and nothing reads one.
+/// "Approved at, by whom" belongs in the audit log plan.md specifies, not as a
+/// second bare column here.
+///
+/// `author_email` is private. It is collected so a moderator can see who wrote
+/// something, the admin list is the only read that selects it, and it is never
+/// rendered.
+model Review {
+  id          String       @id @default(cuid())
+  productId   String       @map("product_id")
+  authorName  String       @map("author_name")
+  authorEmail String       @map("author_email")
+  rating      Int
+  title       String?
+  body        String
+  locale      String
+  status      ReviewStatus @default(pending)
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  /// `(product_id, status)`, in that order, and it is the only index here
+  /// because it is the only shape anything asks for: both storefront reads hit
+  /// it — the approved list filters on exactly this pair, and the rating
+  /// aggregate groups by `product_id` while filtering `status`. The admin's
+  /// list is neither filtered nor ordered by these columns, so an index for it
+  /// would be an index for a query nobody has written yet.
+  @@index([productId, status])
+  @@map("reviews")
+}
+
+/// Which products the home page features.
+///
+/// The product id is the whole key, like the pair on `product_categories` and
+/// for the same kind of reason: featuring a product twice is the same row
+/// rather than a duplicate — nothing here expresses why a product would appear
+/// twice — and a primary key is what makes the write an idempotent insert
+/// rather than a read followed by a decision.
+///
+/// No `position`, deliberately, although `categories` carries one. There the
+/// column is the order a tree screen will offer siblings in; here `created_at`
+/// alone is a complete order — the order things were featured in — and a
+/// position nothing writes would be a second order contradicting the first. A
+/// screen that lets someone drag this list into a different one brings the
+/// column with it.
+///
+/// The admin picks the set (`/admin/features`); the storefront's hero shows the
+/// newest row that is a product the shop can actually sell — see
+/// `lib/catalog/featured-repo.ts`.
+model FeaturedProduct {
+  productId String   @id @map("product_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("featured_products")
+}
+
+/// A blog post, and the category it is filed under.
+///
+/// The category is a column rather than the join table `product_categories` is,
+/// and the difference is a fact about the content: a post carries one category —
+/// the admin's form offers one and the storefront's listing view draws one label
+/// — where the plan's catalogue puts a product in more than one. A post that
+/// belongs to several is a migration into that shape, the same way the join
+/// table would have been.
+///
+/// `SetNull` is the file's one exception to cascading, and it is the point: the
+/// convention would delete every post filed under a category the moment that
+/// category went away. Unfiling them destroys nothing, and Prisma only permits
+/// it on a nullable foreign key — so the column is optional even though the
+/// create form requires a choice, the same form-versus-database asymmetry
+/// `products` already carries for its own category.
+///
+/// plan.md's Content table also lists `status`, `author_id`, `published_at` and
+/// `cover_media_id`. None of the four is here yet: the first three arrive with
+/// the screens that write them, and the cover is not a column at all — it is the
+/// first of the post's images, the way a product's Main image is position zero.
+model Blog {
+  id         String   @id @default(cuid())
+  categoryId String?  @map("category_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  translations BlogTranslation[]
+  category     BlogCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  media        Media[]
+
+  @@index([categoryId])
+  @@map("blogs")
+}
+
+/// Title, slug and copy, one row per language — a product's translation with the
+/// storefront's name for the blurb: its listing view calls the field `excerpt`,
+/// and it is the same one-line text a product card shows as `short_description`.
+model BlogTranslation {
+  id               String  @id @default(cuid())
+  blogId           String  @map("blog_id")
+  locale           String
+  title            String
+  slug             String
+  shortDescription String  @default("") @map("short_description")
+  description      String  @default("")
+  metaTitle        String? @map("meta_title")
+  metaDescription  String? @map("meta_description")
+
+  blog Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  @@unique([blogId, locale])
+  @@unique([locale, slug])
+  @@map("blog_translations")
+}
+
+/// The blog's categories.
+///
+/// No `parent_id`, no `position`, unlike `categories` — there the tree is the
+/// plan's and the columns are what the table *is*, and here nothing has said a
+/// blog category has a parent or an order a screen will one day drag. The
+/// timestamp pair is what the list orders by, with the id breaking its ties.
+model BlogCategory {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  translations BlogCategoryTranslation[]
+  blogs        Blog[]
+
+  @@map("blog_categories")
+}
+
+/// Name, slug and copy, one row per language — the shape of a category's
+/// translation, for the same two decisions: text lives in `(entity_id, locale)`
+/// tables, and the slug lives with it, unique within a locale.
+model BlogCategoryTranslation {
+  id              String  @id @default(cuid())
+  categoryId      String  @map("category_id")
+  locale          String
+  name            String
+  slug            String
+  description     String  @default("")
+  metaTitle       String? @map("meta_title")
+  metaDescription String? @map("meta_description")
+
+  category BlogCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, locale])
+  @@unique([locale, slug])
+  @@map("blog_category_translations")
 }

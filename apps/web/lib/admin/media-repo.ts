@@ -1,4 +1,5 @@
 import { prisma } from "@my-ecommerce/db";
+import { toStoredMedia, type StoredMedia } from "../media";
 import { mediaUrl } from "./product-media";
 
 /**
@@ -16,17 +17,6 @@ import { mediaUrl } from "./product-media";
  * the product it belongs to does not exist yet. `createProduct` claims it by
  * id, inside the same transaction that creates the variant it illustrates.
  */
-
-/** The bytes and the type the route handler serves them back as. */
-export interface StoredMedia {
-  bytes: Uint8Array<ArrayBuffer>;
-  /**
-   * What the upload was validated as, not what the request claimed at read
-   * time — the allowlist is applied on the way in, so the value stored here has
-   * already been checked against it.
-   */
-  type: string;
-}
 
 /**
  * Stores one image and returns where it will be served from.
@@ -69,16 +59,8 @@ export async function getMedia(id: string): Promise<StoredMedia | null> {
     select: { data: true, mimeType: true },
   });
 
-  // A row with bytes but no type cannot be served as anything — the browser
-  // would sniff it, which is the thing `nosniff` exists to stop. Treated as
-  // missing, so it 404s rather than being served as an unlabelled download.
-  if (!media?.data || !media.mimeType) return null;
-
-  return {
-    // Copied into a plain view over a plain `ArrayBuffer`: whatever the driver
-    // hands back, a `Response` takes a view over an `ArrayBuffer` and nothing
-    // else.
-    bytes: new Uint8Array(media.data),
-    type: media.mimeType,
-  };
+  // Whether these bytes can be served at all — no bytes, or no type to serve
+  // them as — is `toStoredMedia`'s question, and the storefront's route asks
+  // it too. That this row exists is this file's question.
+  return media ? toStoredMedia(media) : null;
 }

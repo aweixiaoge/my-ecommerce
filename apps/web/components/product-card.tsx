@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ProductSummary } from "@my-ecommerce/shared";
+import { productPath } from "@/lib/catalog/product-path";
 import { formatMoney } from "@/lib/format";
 
 /**
@@ -14,7 +15,7 @@ export function ProductCard({ product }: { product: ProductSummary }) {
     product.priceMax !== null && product.priceMax.amount !== product.price.amount;
 
   return (
-    <Link href={`/products/${product.slug}`} className="group flex flex-col pb-6">
+    <Link href={productPath(product)} className="group flex flex-col pb-6">
       <div className="relative aspect-[4/3] overflow-hidden rounded-[3px] bg-mist">
         {product.image ? (
           <Image

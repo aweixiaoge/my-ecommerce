@@ -12,9 +12,12 @@ import { resultsLabel } from "@/lib/shop";
 export function ShopToolbar({
   pagination,
   sort,
+  action,
 }: {
   pagination: Pagination;
   sort: ProductSort;
+  /** The listing the sort control belongs to — see `SortSelect`. */
+  action: string;
 }) {
   return (
     <div className="flex flex-col gap-3 pt-10 sm:flex-row sm:items-center sm:justify-between sm:gap-[13px]">
@@ -22,7 +25,7 @@ export function ShopToolbar({
         {resultsLabel(pagination)}
       </p>
 
-      <SortSelect value={sort} />
+      <SortSelect value={sort} action={action} />
     </div>
   );
 }

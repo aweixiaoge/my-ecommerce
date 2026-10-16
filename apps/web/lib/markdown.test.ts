@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { parseInline, parseMarkdown, safeHref } from "./markdown";
 
+describe("parseInline link syntax", () => {
+  it("leaves brackets that are not a link as text", () => {
+    // `[note]` with no target is a common way to write a bracket in prose, and
+    // it must survive as the author's characters rather than becoming an
+    // anchor with nowhere to go.
+    expect(parseInline("[note]")).toEqual([{ kind: "text", text: "[note]" }]);
+  });
+});
+
 /** Every character of the source, whatever spans it landed in. */
 function flatten(spans: { text: string }[]): string {
   return spans.map((span) => span.text).join("");

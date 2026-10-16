@@ -5,9 +5,9 @@ import type {
   Money,
   VariantDraft,
 } from "@my-ecommerce/shared";
+import { DEFAULT_LOCALE } from "../locale";
 import { ATTRIBUTE_LABELS } from "./product-form";
 import {
-  DEFAULT_LOCALE,
   productCreateData,
   variantCreateData,
   variantDraftsByName,

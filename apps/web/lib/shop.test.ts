@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Pagination, ProductSummary } from "@my-ecommerce/shared";
 import {
+  listingHref,
   pageNumbers,
   parseShopQuery,
   resultsLabel,
-  shopHref,
   sortProducts,
 } from "./shop";
 
@@ -177,20 +177,33 @@ describe("pageNumbers", () => {
   });
 });
 
-describe("shopHref", () => {
+describe("listingHref", () => {
   it("omits the defaults so there is one canonical URL per view", () => {
-    expect(shopHref({ page: 1, sort: "default" })).toBe("/shop");
+    expect(listingHref("/shop", { page: 1, sort: "default" })).toBe("/shop");
   });
 
   it("keeps a non-default sort and drops the first page", () => {
-    expect(shopHref({ page: 1, sort: "price-asc" })).toBe("/shop?sort=price-asc");
+    expect(listingHref("/shop", { page: 1, sort: "price-asc" })).toBe(
+      "/shop?sort=price-asc",
+    );
   });
 
   it("keeps the page and drops the default sort", () => {
-    expect(shopHref({ page: 2, sort: "default" })).toBe("/shop?page=2");
+    expect(listingHref("/shop", { page: 2, sort: "default" })).toBe("/shop?page=2");
   });
 
   it("carries both when both are set", () => {
-    expect(shopHref({ page: 3, sort: "price-desc" })).toBe("/shop?sort=price-desc&page=3");
+    expect(listingHref("/shop", { page: 3, sort: "price-desc" })).toBe(
+      "/shop?sort=price-desc&page=3",
+    );
+  });
+
+  it("builds a category's pages the same way, under the category's own path", () => {
+    // The reason this takes a path at all: a category page is the same listing,
+    // and its pager must not send a shopper back to the shop.
+    expect(listingHref("/products/earbuds", { page: 2, sort: "default" })).toBe(
+      "/products/earbuds?page=2",
+    );
+    expect(listingHref("/products/earbuds", {})).toBe("/products/earbuds");
   });
 });

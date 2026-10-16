@@ -53,6 +53,17 @@ describe("StarRating", () => {
     expect(markup.match(/<img[^>]*alt=""/g)).toHaveLength(5);
   });
 
+  it("lets a caller replace the sentence, for a figure that is not an average", () => {
+    // A single review's row: its rating *is* the count, and "from 1 reviews" is
+    // both ungrammatical and wrong about what the stars mean.
+    const markup = renderToStaticMarkup(
+      <StarRating rating={{ average: 4, count: 1 }} label="4 out of 5" />,
+    );
+
+    expect(markup).toContain('aria-label="4 out of 5"');
+    expect(markup).not.toContain("from 1 reviews");
+  });
+
   it("passes a caller's spacing through to the row", () => {
     const markup = renderToStaticMarkup(
       <StarRating rating={{ average: 4, count: 1 }} className="mt-[11px]" />,

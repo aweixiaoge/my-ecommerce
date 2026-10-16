@@ -11,8 +11,14 @@ const page = (over: Partial<Pagination> = {}): Pagination => ({
   ...over,
 });
 
-const render = (pagination: Pagination, sort: "default" | "price-asc" = "default") =>
-  renderToStaticMarkup(<ShopPagination pagination={pagination} sort={sort} />);
+const render = (
+  pagination: Pagination,
+  sort: "default" | "price-asc" = "default",
+  path = "/shop",
+) =>
+  renderToStaticMarkup(
+    <ShopPagination pagination={pagination} sort={sort} path={path} />,
+  );
 
 /** Hrefs as the browser would resolve them, with the `&` entities decoded. */
 const hrefs = (markup: string) =>
@@ -40,6 +46,16 @@ describe("ShopPagination", () => {
     const links = hrefs(render(page(), "price-asc"));
 
     expect(links).toEqual(["/shop?sort=price-asc&page=2", "/shop?sort=price-asc&page=2"]);
+  });
+
+  it("keeps a category's pages on the category", () => {
+    // The pager is the shop's component rendered on a category page too, and a
+    // href that dropped back to `/shop` would send a shopper somewhere they
+    // were not: the reason `path` is a required prop.
+    expect(hrefs(render(page(), "default", "/products/earbuds"))).toEqual([
+      "/products/earbuds?page=2",
+      "/products/earbuds?page=2",
+    ]);
   });
 
   it("omits Next on the last page, where there is nowhere to go", () => {

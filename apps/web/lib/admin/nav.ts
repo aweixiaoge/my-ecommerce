@@ -38,6 +38,14 @@ export const ADMIN_NAV: readonly AdminNavGroup[] = [
       { label: "Category", href: "/admin/categories" },
     ],
   },
+  {
+    // A group of its own rather than another item under Products, because a
+    // review is not a product: it belongs to one, it is written by somebody
+    // else, and the screen is about deciding whether strangers may read it.
+    id: "reviews",
+    label: "Reviews",
+    items: [{ label: "Review", href: "/admin/reviews" }],
+  },
 ];
 
 /**

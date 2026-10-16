@@ -11,16 +11,12 @@ import { formatMoney } from "@/lib/format";
 /**
  * The product list.
  *
- * One source: the `products` table. It used to be two — this and the fixture in
- * `lib/mock/catalog.ts` that the storefront reads — and the page's own comment
- * admitted the problem with that: a list built from two places is a lie in one
- * direction or the other, and it was the seeded half that lied, showing rows
- * nobody could edit through the admin.
- *
- * What that means in practice: a product the storefront displays but the
- * database has never been told about is not in this list. The fixture is
- * storefront demo data, and until it is loaded into the database it is not part
- * of the catalogue this screen manages.
+ * One source: the `products` table. It used to be two — this and the fixture
+ * the storefront read — and the page's own comment admitted the problem with
+ * that: a list built from two places is a lie in one direction or the other,
+ * and it was the seeded half that lied, showing rows nobody could edit through
+ * the admin. The fixture is gone now — the home page's grid was its last
+ * reader, and it reads the database too.
  *
  * It reads the database at request time, which the shell layout has already
  * allowed for the whole admin area.

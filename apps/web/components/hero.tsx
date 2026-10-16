@@ -1,7 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { HeroProduct } from "@/lib/catalog/featured-rows";
 
-export function Hero() {
+/**
+ * The home page's opening block, in two contents and one layout.
+ *
+ * With a product — the newest one an admin featured, which is
+ * `lib/catalog/featured-repo.ts`'s job to find — it draws that product's name,
+ * blurb and photograph, and a button to its own page. With none it draws the
+ * copy the page has always had. The second is the first's fallback rather than
+ * a second design: a database with nothing featured looks exactly as this page
+ * looked before it read a database at all, which is what stops the two states
+ * from drifting apart.
+ *
+ * The eyebrow and "Read our story" never move. They are the shop's voice rather
+ * than a product's, and a product that has no blurb written yet should not take
+ * the sentence about the shop away with it.
+ */
+export function Hero({ product }: { product: HeroProduct | null }) {
   return (
     <section className="bg-mist">
       {/*
@@ -25,21 +41,37 @@ export function Hero() {
           </p>
 
           <h1 className="mt-[18px] text-[38px] leading-[1.1] font-bold tracking-[-0.658px] text-ink sm:text-[50px] sm:leading-[55px]">
-            Sound that keeps up with your day.
+            {product ? product.name : "Sound that keeps up with your day."}
           </h1>
 
-          <p className="mt-5 text-[18px] leading-[29.7px] tracking-[-0.439px] text-ink-62">
-            Wireless earbuds, earphones and headphones — every one of them
-            tested by our own team before it reaches your cart.
-          </p>
+          {/*
+            A product with no blurb draws no paragraph rather than the shop's
+            copy: a sentence about the range on a page about one product is
+            worse than the space it would fill.
+          */}
+          {product ? (
+            product.shortDescription && (
+              <p className="mt-5 text-[18px] leading-[29.7px] tracking-[-0.439px] text-ink-62">
+                {product.shortDescription}
+              </p>
+            )
+          ) : (
+            <p className="mt-5 text-[18px] leading-[29.7px] tracking-[-0.439px] text-ink-62">
+              Wireless earbuds, earphones and headphones — every one of them
+              tested by our own team before it reaches your cart.
+            </p>
+          )}
 
           <div className="mt-8 flex flex-wrap items-center gap-6">
             <Link
-              href="/shop"
+              href={product ? product.href : "/shop"}
+              // `/shop` is built; a product page is built too, but the link
+              // here is the one the whole page exists to show, and a prefetch
+              // of it would race the read that decides where it points.
               prefetch={false}
               className="rounded-[3px] bg-ink px-5 py-[5px] text-[15px] font-medium leading-[24.75px] tracking-[-0.234px] text-paper"
             >
-              Shop all products
+              {product ? "Shop it now" : "Shop all products"}
             </Link>
             <Link
               href="/about"
@@ -52,15 +84,59 @@ export function Hero() {
         </div>
 
         <div className="relative aspect-[889/500] w-full overflow-hidden rounded-card bar:w-[588.48px]">
-          <Image
-            src="/images/hero-audio.jpg"
-            alt="Wireless over-ear headphones on a shoreline"
-            fill
-            sizes="(min-width: 768px) 46vw, 100vw"
-            className="object-cover"
-            priority
-          />
+          {product ? (
+            product.image ? (
+              <Image
+                src={product.image.url}
+                // The card's rule: a picture with no alt text of its own
+                // describes the product it is on.
+                alt={product.image.alt ?? product.name}
+                fill
+                sizes="(min-width: 768px) 46vw, 100vw"
+                className="object-cover"
+                priority
+              />
+            ) : (
+              // A product photographed nowhere: the slot stays its size, in
+              // paper against the mist, so the row does not collapse around a
+              // missing picture.
+              <div className="h-full w-full bg-paper" />
+            )
+          ) : (
+            <Image
+              src="/images/hero-audio.jpg"
+              alt="Wireless over-ear headphones on a shoreline"
+              fill
+              sizes="(min-width: 768px) 46vw, 100vw"
+              className="object-cover"
+              priority
+            />
+          )}
         </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * What stands in while the featured product is being read.
+ *
+ * The hero's own shape, in paper against the mist, so the page below it does
+ * not jump when the real content lands. `aria-hidden` because there is nothing
+ * here to announce — the heading and the button arrive with the read.
+ */
+export function HeroFallback() {
+  return (
+    <section aria-hidden className="bg-mist">
+      <div className="container-content flex animate-pulse flex-col gap-10 py-[72px] bar:flex-row bar:items-center bar:gap-16">
+        <div className="bar:w-[637.52px]">
+          <div className="h-[21.45px] w-[190px] bg-paper/60" />
+          <div className="mt-[18px] h-[55px] w-full bg-paper/60 sm:h-[110px]" />
+          <div className="mt-5 h-[59px] w-[85%] bg-paper/60" />
+          <div className="mt-8 h-[34.75px] w-[163px] bg-paper/60" />
+        </div>
+
+        <div className="aspect-[889/500] w-full overflow-hidden rounded-card bg-paper/60 bar:w-[588.48px]" />
       </div>
     </section>
   );

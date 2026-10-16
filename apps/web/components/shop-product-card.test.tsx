@@ -16,9 +16,9 @@ const base: ProductSummary = {
   rating: { average: 4.4, count: 128 },
 };
 
-const render = (over: Partial<ProductSummary> = {}, priority = false) =>
+const render = (over: Partial<ProductSummary> = {}, eager = false) =>
   renderToStaticMarkup(
-    <ShopProductCard product={{ ...base, ...over }} priority={priority} />,
+    <ShopProductCard product={{ ...base, ...over }} eager={eager} />,
   );
 
 /**
@@ -74,13 +74,25 @@ describe("ShopProductCard", () => {
     expect(render({ rating: null })).not.toContain("star-filled");
   });
 
-  it("routes every pointer to the product page", () => {
+  it("routes every pointer to the product page, under its category", () => {
     // There is no cart yet, so the button is a link. Three of them: the image,
-    // the title and the button must all reach the same product.
+    // the title and the button must all reach the same product — and that
+    // address carries the category the card names, because a product's URL is
+    // where it is filed (see `productPath`).
     const markup = render();
 
-    expect(markup.match(/href="\/products\/earbud-wireless-bluetooth"/g)).toHaveLength(3);
+    expect(
+      markup.match(/href="\/products\/earbuds\/earbud-wireless-bluetooth"/g),
+    ).toHaveLength(3);
     expect(markup).toContain("Add to Cart");
+  });
+
+  it("links an unfiled product at the short address", () => {
+    // A product nobody has categorised is still for sale, and its page is the
+    // one-segment URL rather than a category it does not have.
+    const markup = render({ categories: [] });
+
+    expect(markup).toContain('href="/products/earbud-wireless-bluetooth"');
   });
 
   it("falls back to the product name when the image is missing", () => {

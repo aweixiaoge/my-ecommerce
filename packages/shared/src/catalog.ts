@@ -74,8 +74,12 @@ export type Variant = z.infer<typeof VariantSchema>;
  *
  * Null is "no reviews yet", which is NOT the same as an average of 0 — an
  * unreviewed product must render no stars at all rather than one out of five.
- * The figure is denormalised from `product_review_stats`; reviews themselves
- * land in Phase 5.
+ *
+ * The figures are computed live from the approved `reviews` rows — a `groupBy`
+ * per read rather than plan.md's denormalised `product_review_stats` table, so
+ * the stars a card shows and the stars the product page shows cannot disagree.
+ * "No reviews" therefore arrives as a product the aggregate says nothing about,
+ * rather than as a stats row holding zeroes.
  */
 export const ProductRatingSchema = z.object({
   average: z.number().min(0).max(5),

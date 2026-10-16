@@ -144,4 +144,11 @@ describe("ADMIN_NAV", () => {
       "/admin/categories",
     ]);
   });
+
+  it("carries the moderation queue", () => {
+    // Every href here must resolve, so this is also the assertion that the
+    // screen behind it exists in the same change as the entry.
+    const reviews = groups.find((group) => group.id === "reviews");
+    expect(reviews?.items.map((item) => item.href)).toEqual(["/admin/reviews"]);
+  });
 });

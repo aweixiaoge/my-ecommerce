@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Pagination, ProductSort } from "@my-ecommerce/shared";
-import { pageNumbers, shopHref } from "@/lib/shop";
+import { listingHref, pageNumbers } from "@/lib/shop";
 
 /**
  * The design's `Navigation - Products pagination` (node 178:8721): 60px of air,
@@ -12,14 +12,19 @@ import { pageNumbers, shopHref } from "@/lib/shop";
  * announcing a destination that goes nowhere.
  *
  * The pager keeps the active sort in every href — paging is a move within a
- * sorted list, not a way to lose the sort.
+ * sorted list, not a way to lose the sort — and `path` keeps every href on the
+ * listing it was rendered for: the shop's pages under `/shop`, a category's
+ * under `/products/<category>`.
  */
 export function ShopPagination({
   pagination,
   sort,
+  path,
 }: {
   pagination: Pagination;
   sort: ProductSort;
+  /** The listing these pages belong to, e.g. `/shop`. Query state is added to it. */
+  path: string;
 }) {
   const slots = pageNumbers(pagination);
 
@@ -53,7 +58,7 @@ export function ShopPagination({
           ) : (
             <Link
               key={slot}
-              href={shopHref({ page: slot, sort })}
+              href={listingHref(path, { page: slot, sort })}
               className="flex h-10 w-[40.994px] items-center justify-center rounded-[4px] text-[14px] leading-[23.1px] font-semibold tracking-[-0.1504px] text-ink"
             >
               {slot}
@@ -63,7 +68,7 @@ export function ShopPagination({
 
         {hasNext && (
           <Link
-            href={shopHref({ page: nextPage, sort })}
+            href={listingHref(path, { page: nextPage, sort })}
             className="absolute right-0 inline-flex h-10 items-center gap-2 rounded-[4px] border-[1.818px] border-line px-[17px] text-[13px] leading-[21.45px] font-semibold tracking-[-0.0762px] text-ink uppercase"
           >
             Next

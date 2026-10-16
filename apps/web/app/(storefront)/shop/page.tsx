@@ -4,7 +4,7 @@ import { ShopBanner } from "@/components/shop-banner";
 import { ShopPagination } from "@/components/shop-pagination";
 import { ShopProductCard } from "@/components/shop-product-card";
 import { ShopToolbar } from "@/components/shop-toolbar";
-import { getShopProducts } from "@/lib/mock/catalog";
+import { getShopProducts } from "@/lib/catalog/products-repo";
 import { parseShopQuery } from "@/lib/shop";
 
 export const metadata: Metadata = {
@@ -53,7 +53,7 @@ async function ShopResults({ searchParams }: { searchParams: ShopSearchParams })
 
   return (
     <>
-      <ShopToolbar pagination={pagination} sort={query.sort} />
+      <ShopToolbar pagination={pagination} sort={query.sort} action="/shop" />
 
       {/*
         The design's List:margin — 25px above the grid — and its four columns
@@ -62,11 +62,11 @@ async function ShopResults({ searchParams }: { searchParams: ShopSearchParams })
       */}
       <div className="grid grid-cols-1 gap-[30px] pt-[25px] sm:grid-cols-2 bar:grid-cols-4">
         {items.map((product, index) => (
-          <ShopProductCard key={product.id} product={product} priority={index === 0} />
+          <ShopProductCard key={product.id} product={product} eager={index === 0} />
         ))}
       </div>
 
-      <ShopPagination pagination={pagination} sort={query.sort} />
+      <ShopPagination pagination={pagination} sort={query.sort} path="/shop" />
     </>
   );
 }

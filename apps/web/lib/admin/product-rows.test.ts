@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AdminProductCreate, VariantDraft } from "@my-ecommerce/shared";
+import { DEFAULT_LOCALE } from "../locale";
 import {
-  DEFAULT_LOCALE,
   productCreateData,
   variantCreateData,
   variantDraftsByName,

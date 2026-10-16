@@ -47,6 +47,11 @@ export const prisma = (globalForPrisma.__prismaClient ??= connect());
 
 export { PrismaClient };
 export type {
+  Blog,
+  BlogCategory,
+  BlogCategoryTranslation,
+  BlogTranslation,
+  FeaturedProduct,
   Media,
   Prisma,
   Product,
@@ -55,4 +60,6 @@ export type {
   ProductStatus,
   ProductTranslation,
   ProductVariant,
+  Review,
+  ReviewStatus,
 } from "./generated/client";
