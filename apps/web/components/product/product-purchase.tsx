@@ -6,7 +6,11 @@ import Link from "next/link";
 import { compareMoney, type Media, type Product, type Variant } from "@my-ecommerce/shared";
 import { StarRating } from "@/components/star-rating";
 import { categoryPath } from "@/lib/catalog/product-path";
-import { formatMoney } from "@/lib/format";
+import type { DisplayCurrency } from "@/lib/currency/display";
+import { formatPrice } from "@/lib/format";
+import { fill, plural } from "@/lib/i18n/format";
+import type { Messages } from "@/lib/i18n/messages";
+import type { Locale } from "@/lib/languages";
 
 /**
  * Choosing one, and looking at it.
@@ -30,10 +34,31 @@ import { formatMoney } from "@/lib/format";
 export function ProductPurchase({
   product,
   imagesByVariant,
+  messages,
+  ratingMessages,
+  locale,
+  currency,
 }: {
   product: Product;
   /** Media by variant id; a variant with none of its own is absent. */
   imagesByVariant: Record<string, Media[]>;
+  /** This locale's `product` slice of the catalog. */
+  messages: Messages["product"];
+  /**
+   * …and its `reviews` slice, for the star row's spoken sentence — the same
+   * sentence the review rows below state their own figures with.
+   */
+  ratingMessages: Messages["reviews"];
+  locale: Locale;
+  /**
+   * The currency prices are written in.
+   *
+   * A plain object of codes and rate strings, which is what lets it cross to
+   * this side of the boundary: the prices below are converted in the browser
+   * from the same table the server used, rather than the server handing over
+   * figures this component could not recompute when a variant is chosen.
+   */
+  currency: DisplayCurrency;
 }) {
   const [selected, setSelected] = useState<Record<string, string>>(() =>
     firstSelection(product),
@@ -71,6 +96,7 @@ export function ProductPurchase({
         images={images}
         mainImage={mainImage}
         onSelect={setImageId}
+        messages={messages}
       />
 
       <div className="flex flex-col">
@@ -79,21 +105,20 @@ export function ProductPurchase({
         </h1>
 
         <div className="flex items-center gap-3 pt-[10px]">
-          <StarRating rating={product.rating} />
+          <StarRating rating={product.rating} messages={ratingMessages} />
           <Link
             href="?tab=reviews"
             scroll={false}
             className="text-[20px] leading-[21.45px] tracking-[-0.076px] text-ink"
           >
-            ({product.rating?.count ?? 0} customer
-            {product.rating?.count === 1 ? " review" : " reviews"})
+            ({plural(product.rating?.count ?? 0, messages.reviewCount)})
           </Link>
         </div>
 
         <p className="pt-[10px] text-[20px] leading-[33px] font-bold tracking-[-0.449px] text-ink">
           {hasRange && product.priceMax
-            ? `${formatMoney(product.price)} – ${formatMoney(product.priceMax)}`
-            : formatMoney(product.price)}
+            ? `${formatPrice(product.price, currency, locale)}${messages.rangeSeparator}${formatPrice(product.priceMax, currency, locale)}`
+            : formatPrice(product.price, currency, locale)}
         </p>
 
         {product.shortDescription && (
@@ -153,9 +178,9 @@ export function ProductPurchase({
 
         <p className="pt-[50px] text-[20px] leading-[33px] font-bold tracking-[-0.449px] text-ink">
           {variant ? (
-            formatMoney(variant.price)
+            formatPrice(variant.price, currency, locale)
           ) : (
-            <span className="text-ink-55">Unavailable in this combination</span>
+            <span className="text-ink-55">{messages.unavailable}</span>
           )}
         </p>
 
@@ -165,10 +190,10 @@ export function ProductPurchase({
             disabled
             className="flex h-[50px] w-full items-center justify-center rounded-control bg-ink text-[15px] leading-[24.75px] font-medium tracking-[-0.234px] text-paper disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Add to cart
+            {messages.addToCart}
           </button>
           <p className="pt-2 text-center text-[13px] leading-[21.45px] text-ink-55">
-            Cart is wired up in Phase 2.
+            {messages.cartNote}
           </p>
         </div>
 
@@ -177,17 +202,17 @@ export function ProductPurchase({
         <dl className="flex flex-col pt-[35px] text-[13px] leading-[21.45px] tracking-[0.574px] uppercase">
           {variant && (
             <div className="flex gap-1">
-              <dt className="font-bold text-ink">SKU:</dt>
+              <dt className="font-bold text-ink">{messages.sku}</dt>
               <dd className="text-ink">{variant.sku}</dd>
             </div>
           )}
 
           {product.categories[0] && (
             <div className="flex gap-1 pt-[5px]">
-              <dt className="font-bold text-ink">Category:</dt>
+              <dt className="font-bold text-ink">{messages.category}</dt>
               <dd>
                 <Link
-                  href={categoryPath(product.categories[0])}
+                  href={categoryPath(product.categories[0], locale)}
                   className="text-ink"
                 >
                   {product.categories[0].name}
@@ -212,11 +237,13 @@ function Figure({
   images,
   mainImage,
   onSelect,
+  messages,
 }: {
   product: Product;
   images: Media[];
   mainImage: Media | undefined;
   onSelect: (id: string) => void;
+  messages: Messages["product"];
 }) {
   return (
     <div className="flex flex-col gap-[25px]">
@@ -250,7 +277,7 @@ function Figure({
               type="button"
               onClick={() => onSelect(image.id)}
               aria-pressed={image.id === mainImage?.id}
-              aria-label={`Show image of ${product.name}`}
+              aria-label={fill(messages.imageAlt, { name: product.name })}
               className={`relative aspect-[144/149] flex-1 overflow-hidden rounded-card border ${
                 image.id === mainImage?.id ? "border-ink" : "border-transparent"
               }`}

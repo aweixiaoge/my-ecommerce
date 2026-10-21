@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { en } from "@/lib/i18n/messages/en";
 import { SortSelect } from "./sort-select";
 
 const render = (
   value: Parameters<typeof SortSelect>[0]["value"],
   action = "/shop",
-) => renderToStaticMarkup(<SortSelect value={value} action={action} />);
+) =>
+  renderToStaticMarkup(
+    <SortSelect value={value} action={action} messages={en.listing} />,
+  );
 
 const options = (markup: string) =>
   [...markup.matchAll(/<option[^>]*value="([^"]*)"/g)].map((m) => m[1]);
@@ -47,7 +51,9 @@ describe("SortSelect", () => {
   });
 
   it("carries a label, because the visible text is inside the control", () => {
-    expect(render("default")).toContain('aria-label="Sort products"');
+    expect(render("default")).toContain(
+      `aria-label="${en.listing.sortLabel}"`,
+    );
   });
 
   it("provides a submit button for browsers without JavaScript", () => {
@@ -58,10 +64,12 @@ describe("SortSelect", () => {
   });
 
   it("names every option in words rather than exposing the raw key", () => {
+    // The words are this locale's catalog's — `messages.sort`, keyed as
+    // `SORT_OPTIONS` keys it — and the raw value lives on in `value=`.
     const markup = render("default");
 
-    expect(markup).toContain("Default sorting");
-    expect(markup).toContain("Price, low to high");
+    expect(markup).toContain(en.listing.sort.default);
+    expect(markup).toContain(en.listing.sort.priceAsc);
     expect(markup).not.toContain(">price-asc<");
   });
 });

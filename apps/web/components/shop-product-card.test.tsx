@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ProductSummary } from "@my-ecommerce/shared";
+import { displayCurrency, type DisplayCurrency } from "@/lib/currency/display";
+import { en } from "@/lib/i18n/messages/en";
 import { ShopProductCard } from "./shop-product-card";
 
 const base: ProductSummary = {
@@ -16,9 +18,23 @@ const base: ProductSummary = {
   rating: { average: 4.4, count: 128 },
 };
 
-const render = (over: Partial<ProductSummary> = {}, eager = false) =>
+/** The shop's own currency — what a reader who has chosen nothing sees, and
+ *  what every assertion about the card's own framing is written against. */
+const USD = displayCurrency([]);
+
+const render = (
+  over: Partial<ProductSummary> = {},
+  eager = false,
+  currency: DisplayCurrency = USD,
+) =>
   renderToStaticMarkup(
-    <ShopProductCard product={{ ...base, ...over }} eager={eager} />,
+    <ShopProductCard
+      product={{ ...base, ...over }}
+      eager={eager}
+      locale="en"
+      currency={currency}
+      messages={en}
+    />,
   );
 
 /**
@@ -49,6 +65,20 @@ describe("ShopProductCard", () => {
     const markup = render({ priceMax: { amount: "18.00", currency: "USD" } });
 
     expect(markup).not.toContain("–");
+  });
+
+  it("writes the price in the reader's currency, span and all", () => {
+    // Both ends of the span convert, which is what makes the row read as one
+    // price rather than two: 18.00 and 21.00 at 0.92 are 16.56 and 19.32.
+    const markup = render(
+      { priceMax: { amount: "21.00", currency: "USD" } },
+      false,
+      displayCurrency([{ base: "USD", quote: "EUR", rate: "0.92" }], "EUR"),
+    );
+
+    expect(markup).toContain("€16.56");
+    expect(markup).toContain("€19.32");
+    expect(markup).not.toContain("$18.00");
   });
 
   it("names the product's first category, leaving the casing to CSS", () => {
@@ -82,7 +112,7 @@ describe("ShopProductCard", () => {
     const markup = render();
 
     expect(
-      markup.match(/href="\/products\/earbuds\/earbud-wireless-bluetooth"/g),
+      markup.match(/href="\/en\/products\/earbuds\/earbud-wireless-bluetooth"/g),
     ).toHaveLength(3);
     expect(markup).toContain("Add to Cart");
   });
@@ -92,7 +122,7 @@ describe("ShopProductCard", () => {
     // one-segment URL rather than a category it does not have.
     const markup = render({ categories: [] });
 
-    expect(markup).toContain('href="/products/earbud-wireless-bluetooth"');
+    expect(markup).toContain('href="/en/products/earbud-wireless-bluetooth"');
   });
 
   it("falls back to the product name when the image is missing", () => {

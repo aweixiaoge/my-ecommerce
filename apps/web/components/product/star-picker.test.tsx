@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { en } from "@/lib/i18n/messages/en";
 import { StarPicker } from "./star-picker";
 
 /*
@@ -32,7 +33,13 @@ let root: Root;
  */
 function Harness({ initial }: { initial: number }) {
   const [rating, setRating] = useState(initial);
-  return <StarPicker value={rating} onChange={setRating} />;
+  return (
+    <StarPicker
+      value={rating}
+      onChange={setRating}
+      messages={en.reviews.form}
+    />
+  );
 }
 
 function mount(initial = 0) {

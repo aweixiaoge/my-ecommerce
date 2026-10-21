@@ -63,12 +63,12 @@ describe("toHeroProduct", () => {
       position: 0,
     };
 
-    expect(toHeroProduct(row(), summary({ image }))).toEqual({
+    expect(toHeroProduct(row(), summary({ image }), "en")).toEqual({
       id: "prod_1",
       name: "Earbud Wireless",
       shortDescription: "Forty hours of battery, in a case the size of a coin.",
       image,
-      href: "/products/earbuds/earbud-wireless",
+      href: "/en/products/earbuds/earbud-wireless",
     });
   });
 
@@ -81,14 +81,15 @@ describe("toHeroProduct", () => {
         slug: "studio-over-ear",
         categories: [{ id: "cat_2", slug: "earphone", name: "Earphone" }],
       }),
+      "en",
     );
 
-    expect(hero.href).toBe("/products/earphone/studio-over-ear");
+    expect(hero.href).toBe("/en/products/earphone/studio-over-ear");
   });
 
   it("leaves an unfiled product at the short address", () => {
-    expect(toHeroProduct(row(), summary({ categories: [] })).href).toBe(
-      "/products/earbud-wireless",
+    expect(toHeroProduct(row(), summary({ categories: [] }), "en").href).toBe(
+      "/en/products/earbud-wireless",
     );
   });
 
@@ -99,10 +100,16 @@ describe("toHeroProduct", () => {
       const hero = toHeroProduct(
         row({
           translations: [
-            { name: "Earbud Wireless", slug: "earbud-wireless", shortDescription },
+            {
+              locale: "en",
+              name: "Earbud Wireless",
+              slug: "earbud-wireless",
+              shortDescription,
+            },
           ],
         } as FeaturedRow),
         summary(),
+        "en",
       );
 
       expect(hero.shortDescription).toBeNull();
@@ -115,7 +122,7 @@ describe("toHeroProduct", () => {
     // kept because reading `.at(0)` off an empty array has to answer
     // something.
     expect(
-      toHeroProduct(row({ translations: [] }), summary()).shortDescription,
+      toHeroProduct(row({ translations: [] }), summary(), "en").shortDescription,
     ).toBeNull();
   });
 });

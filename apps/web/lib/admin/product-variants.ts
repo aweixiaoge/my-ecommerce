@@ -1,5 +1,6 @@
 import type { Money, VariantDraft } from "@my-ecommerce/shared";
 import { compareMoney } from "@my-ecommerce/shared";
+import { SHOP_CURRENCY } from "@/lib/currency/display";
 
 /**
  * What the create form collects next to a colour, and the conversions between
@@ -25,8 +26,14 @@ import { compareMoney } from "@my-ecommerce/shared";
  * amount is meaningless without its currency, but which currency a shop prices
  * in is a market's decision, and plan.md keeps those out of the database
  * (decision 1). When a second market arrives this becomes a field on the form.
+ *
+ * It is the storefront's own constant rather than a second literal, because
+ * the storefront now depends on the same fact from the other side: every
+ * exchange rate is quoted from this currency, so a catalogue priced in
+ * anything else would be a page that cannot convert its prices. Two literals
+ * that had to agree would eventually not.
  */
-export const APP_CURRENCY = "USD";
+export const APP_CURRENCY = SHOP_CURRENCY;
 
 export interface FormColorDraft {
   sku: string;

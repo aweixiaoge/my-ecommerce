@@ -1,4 +1,5 @@
 import type { Money } from "@my-ecommerce/shared";
+import { convertMoney, type DisplayCurrency } from "@/lib/currency/display";
 
 /**
  * Formats a Money value for display.
@@ -12,6 +13,30 @@ export function formatMoney(money: Money, locale = "en-US"): string {
     style: "currency",
     currency: money.currency,
   }).format(money.amount as unknown as number);
+}
+
+/**
+ * Formats a *price* for the reader: converted into the currency they are
+ * reading in, then written the way their language writes money.
+ *
+ * The two steps in that order, and this is the only place the storefront does
+ * either — every price on every page, from a home-page card to the buy box on a
+ * product page, comes through here. What it does not do is decide anything:
+ * which currency is `display` is the request's business (`lib/currency`), and
+ * whether a product's two prices are a range at all is `variantPriceSpan`'s,
+ * settled in the stored currency before either figure arrives.
+ *
+ * `formatMoney` is still the right call for money that is not for sale in the
+ * reader's currency — the admin's prices, the free-shipping threshold, the
+ * cart's placeholder — where converting would be converting the shop's own
+ * terms.
+ */
+export function formatPrice(
+  money: Money,
+  display: DisplayCurrency,
+  locale = "en-US",
+): string {
+  return formatMoney(convertMoney(money, display), locale);
 }
 
 /**

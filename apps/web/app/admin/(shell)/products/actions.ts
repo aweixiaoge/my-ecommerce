@@ -15,6 +15,8 @@ import {
 } from "@/lib/admin/products-repo";
 import { getSession } from "@/lib/admin/session";
 import { SlugExhaustedError } from "@/lib/admin/slug";
+import { noticeFor } from "@/lib/admin/translation-notice";
+import { translateProduct } from "@/lib/admin/translations";
 
 /**
  * What the products screens do.
@@ -68,13 +70,20 @@ export async function createProductAction(
    * alternative is a 500 the person cannot act on. The `catch` is narrow on
    * purpose: `redirect` signals by throwing, so it must stay outside.
    */
+  let id: string;
   try {
-    await createProduct(parsed.data);
+    id = await createProduct(parsed.data);
   } catch (error) {
     return productSaveFailure(error);
   }
 
-  redirect("/admin/products");
+  /*
+   * After the write, and never before it: the row a person typed is the thing
+   * the screen is reporting on, and a translation that does not happen must
+   * not cost them that. The pass catches its own failures per language, so the
+   * only thing it can do here is report.
+   */
+  redirect(`/admin/products?translated=${noticeFor(await translateProduct(id))}`);
 }
 
 /**
@@ -109,7 +118,13 @@ export async function updateProductAction(
     return productSaveFailure(error);
   }
 
-  redirect("/admin/products");
+  /*
+   * An edit translates too, and that is the rule the `autoTranslated` column
+   * exists for: a language the machine wrote is refreshed from the English
+   * that was just saved, and a language somebody corrected by hand is left
+   * exactly as they typed it.
+   */
+  redirect(`/admin/products?translated=${noticeFor(await translateProduct(id))}`);
 }
 
 /**

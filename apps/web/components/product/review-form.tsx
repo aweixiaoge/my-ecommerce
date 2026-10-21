@@ -4,9 +4,11 @@ import { useActionState, useState } from "react";
 import {
   createReviewAction,
   type ReviewFormState,
-} from "@/app/(storefront)/products/actions";
+} from "@/app/[lang]/products/actions";
 import { FieldErrors } from "@/components/admin/form-controls";
 import { REVIEW_AUTHOR_EMAIL_MAX, REVIEW_AUTHOR_NAME_MAX, REVIEW_BODY_MAX } from "@my-ecommerce/shared";
+import type { Messages } from "@/lib/i18n/messages";
+import type { Locale } from "@/lib/languages";
 import { StarPicker } from "./star-picker";
 
 /**
@@ -28,7 +30,25 @@ import { StarPicker } from "./star-picker";
  * leaving a filled-in form behind a message, which reads as though the submit
  * did not work.
  */
-export function ReviewForm({ productId }: { productId: string }) {
+export function ReviewForm({
+  productId,
+  messages,
+  locale,
+}: {
+  productId: string;
+  /** This locale's `reviews.form` slice of the catalog. */
+  messages: Messages["reviews"]["form"];
+  /**
+   * The language this page is being read in, sent with the submission so a
+   * review is filed under the language it was written on a page in.
+   *
+   * A hidden field rather than something the action looks up, because a Server
+   * Action cannot read the URL's root segment — it is not a render of a route,
+   * it is a POST to one. See `createReview`, which decides what the field is
+   * worth.
+   */
+  locale: Locale;
+}) {
   const [state, formAction, pending] = useActionState<
     ReviewFormState | undefined,
     FormData
@@ -46,8 +66,7 @@ export function ReviewForm({ productId }: { productId: string }) {
         role="status"
         className="text-[16px] leading-[26.4px] tracking-[-0.3125px] text-ink"
       >
-        Thanks — your review is with us. It will appear here once it has been
-        approved.
+        {messages.thanks}
       </p>
     );
   }
@@ -57,14 +76,15 @@ export function ReviewForm({ productId }: { productId: string }) {
   return (
     <form action={formAction} className="flex flex-col">
       <input type="hidden" name="productId" value={productId} />
+      <input type="hidden" name="locale" value={locale} />
 
       <h2 className="text-[16px] leading-[26.4px] font-bold tracking-[-0.3125px] text-ink">
-        Add a review
+        {messages.title}
       </h2>
 
       <div className="grid grid-cols-1 gap-x-[20px] gap-y-[24px] pt-[10px] bar:grid-cols-2">
         <p className="text-[13px] leading-[21.45px] tracking-[-0.076px] text-ink bar:col-span-2">
-          Your email address will not be published. Required fields are marked{" "}
+          {messages.note}{" "}
           <span aria-hidden className="text-[#cc0000]">
             *
           </span>
@@ -74,6 +94,7 @@ export function ReviewForm({ productId }: { productId: string }) {
           <StarPicker
             value={rating}
             onChange={setRating}
+            messages={messages}
             describedBy={errors?.rating ? "rating-error" : undefined}
           />
           <FieldErrors id="rating-error" messages={errors?.rating} announce />
@@ -81,7 +102,7 @@ export function ReviewForm({ productId }: { productId: string }) {
 
         <div>
           <label htmlFor="authorName" className={LABEL}>
-            Name
+            {messages.name}
             <span aria-hidden className="text-[#cc0000]">
               *
             </span>
@@ -103,7 +124,7 @@ export function ReviewForm({ productId }: { productId: string }) {
 
         <div>
           <label htmlFor="authorEmail" className={LABEL}>
-            Email
+            {messages.email}
             <span aria-hidden className="text-[#cc0000]">
               *
             </span>
@@ -126,7 +147,7 @@ export function ReviewForm({ productId }: { productId: string }) {
 
         <div className="bar:col-span-2">
           <label htmlFor="body" className={LABEL}>
-            Your review
+            {messages.body}
             <span aria-hidden className="text-[#cc0000]">
               *
             </span>
@@ -163,7 +184,7 @@ export function ReviewForm({ productId }: { productId: string }) {
             disabled={pending}
             className="h-10 w-[90px] rounded-control bg-ink text-[15px] leading-[24.75px] font-medium tracking-[-0.234375px] text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {pending ? "Sending…" : "Submit"}
+            {pending ? messages.sending : messages.submit}
           </button>
         </div>
       </div>

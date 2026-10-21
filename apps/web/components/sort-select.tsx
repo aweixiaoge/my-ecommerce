@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Form from "next/form";
 import type { ProductSort } from "@my-ecommerce/shared";
+import type { Messages } from "@/lib/i18n/messages";
 import { SORT_OPTIONS } from "@/lib/shop";
 
 /**
@@ -32,9 +33,13 @@ import { SORT_OPTIONS } from "@/lib/shop";
 export function SortSelect({
   value,
   action,
+  messages,
 }: {
   value: ProductSort;
   action: string;
+  /** This locale's `listing` slice of the catalog — the option labels and the
+   *  control's own name. */
+  messages: Messages["listing"];
 }) {
   return (
     <Form action={action} className="relative block w-full sm:w-[202.727px]">
@@ -50,13 +55,13 @@ export function SortSelect({
         key={value}
         name="sort"
         defaultValue={value}
-        aria-label="Sort products"
+        aria-label={messages.sortLabel}
         onChange={(event) => event.currentTarget.form?.requestSubmit()}
         className="h-10 w-full cursor-pointer appearance-none rounded-[3px] border-[0.909px] border-line bg-paper pl-[15.9px] text-[14px] leading-[23.1px] tracking-[-0.1504px] text-ink"
       >
         {SORT_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
-            {option.label}
+            {messages.sort[option.key]}
           </option>
         ))}
       </select>
@@ -66,7 +71,7 @@ export function SortSelect({
           type="submit"
           className="mt-2 h-10 w-full cursor-pointer rounded-[3px] border-[0.909px] border-line bg-paper text-[14px] text-ink"
         >
-          Apply sorting
+          {messages.sortApply}
         </button>
       </noscript>
     </Form>

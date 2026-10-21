@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Pagination, ProductSummary } from "@my-ecommerce/shared";
+import { en } from "@/lib/i18n/messages/en";
 import {
   listingHref,
   pageNumbers,
@@ -80,22 +81,22 @@ describe("sortProducts", () => {
   ];
 
   it("leaves the catalogue order alone for the default sort", () => {
-    const sorted = sortProducts(catalogue, "default");
+    const sorted = sortProducts(catalogue, "default", "en");
     expect(sorted.map((p) => p.name)).toEqual(["Zephyr", "Alpha", "Mid", "Beta"]);
   });
 
   it("orders by price ascending, comparing decimal strings rather than floats", () => {
-    const sorted = sortProducts(catalogue, "price-asc");
+    const sorted = sortProducts(catalogue, "price-asc", "en");
     expect(sorted.map((p) => p.price.amount)).toEqual(["9.50", "9.50", "30.00", "100.00"]);
   });
 
   it("orders by price descending", () => {
-    const sorted = sortProducts(catalogue, "price-desc");
+    const sorted = sortProducts(catalogue, "price-desc", "en");
     expect(sorted.map((p) => p.price.amount)).toEqual(["100.00", "30.00", "9.50", "9.50"]);
   });
 
   it("orders by name", () => {
-    const sorted = sortProducts(catalogue, "name-asc");
+    const sorted = sortProducts(catalogue, "name-asc", "en");
     expect(sorted.map((p) => p.name)).toEqual(["Alpha", "Beta", "Mid", "Zephyr"]);
   });
 
@@ -103,29 +104,32 @@ describe("sortProducts", () => {
     const sorted = sortProducts(
       [product("First", "9.50"), product("Second", "9.50")],
       "price-asc",
+      "en",
     );
     expect(sorted.map((p) => p.name)).toEqual(["First", "Second"]);
   });
 
   it("does not reorder the array it was given", () => {
     const original = catalogue.map((p) => p.name);
-    sortProducts(catalogue, "price-asc");
+    sortProducts(catalogue, "price-asc", "en");
     expect(catalogue.map((p) => p.name)).toEqual(original);
   });
 });
 
 describe("resultsLabel", () => {
+  // The sentence is the catalog's and the arithmetic is the function's, so the
+  // messages go in and the English reading comes out.
   it("counts the rows on the page when the page is full", () => {
-    expect(resultsLabel(pagination())).toBe("Showing 1–12 of 13 results");
+    expect(resultsLabel(pagination(), en.listing)).toBe("Showing 1–12 of 13 results");
   });
 
   it("counts the rows on the last, partial page", () => {
-    expect(resultsLabel(pagination({ page: 2 }))).toBe("Showing 13–13 of 13 results");
+    expect(resultsLabel(pagination({ page: 2 }), en.listing)).toBe("Showing 13–13 of 13 results");
   });
 
   it("says so in words when there is nothing to show", () => {
     // "Showing 0–0 of 0 results" is true and reads like a defect.
-    expect(resultsLabel(pagination({ total: 0, totalPages: 0 }))).toBe("No results");
+    expect(resultsLabel(pagination({ total: 0, totalPages: 0 }), en.listing)).toBe("No results");
   });
 });
 

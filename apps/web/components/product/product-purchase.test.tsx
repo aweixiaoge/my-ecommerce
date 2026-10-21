@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import type { Media, Product, Variant } from "@my-ecommerce/shared";
+import { displayCurrency, type DisplayCurrency } from "@/lib/currency/display";
+import { en } from "@/lib/i18n/messages/en";
 import { ProductPurchase } from "./product-purchase";
 
 /*
@@ -101,6 +103,11 @@ const imagesByVariant = {
   var_sand: [media("media_sand")],
 };
 
+/** The shop's own currency, and the one a reader who chose euros gets: 87.00
+ *  dollars is 80.04 euros and 333.00 is 306.36 at the seeded rate. */
+const USD = displayCurrency([]);
+const EUR = displayCurrency([{ base: "USD", quote: "EUR", rate: "0.92" }], "EUR");
+
 let container: HTMLDivElement;
 let root: Root;
 
@@ -115,6 +122,7 @@ let root: Root;
 function mount(
   over: Partial<Product> = {},
   images: Record<string, Media[]> = imagesByVariant,
+  currency: DisplayCurrency = USD,
 ) {
   if (root) act(() => root.unmount());
   container?.remove();
@@ -125,7 +133,14 @@ function mount(
   act(() => {
     root = createRoot(container);
     root.render(
-      <ProductPurchase product={{ ...product, ...over }} imagesByVariant={images} />,
+      <ProductPurchase
+        product={{ ...product, ...over }}
+        imagesByVariant={images}
+        messages={en.product}
+        ratingMessages={en.reviews}
+        locale="en"
+        currency={currency}
+      />,
     );
   });
 }
@@ -157,13 +172,14 @@ const click = (element: HTMLElement) =>
  * The price under the pills — the one the selection decides.
  *
  * Distinguished from the span above it by the en dash: both are paragraphs
- * starting with a dollar sign, and only one of them moves when a pill is
- * clicked.
+ * starting with a currency symbol, and only one of them moves when a pill is
+ * clicked. The symbol is an argument because the same price is written `$87.00`
+ * or `€80.04` depending on what the reader chose.
  */
-const selectedPrice = () =>
+const selectedPrice = (symbol = "$") =>
   [...container.querySelectorAll("p")]
     .map((p) => p.textContent ?? "")
-    .find((text) => text.startsWith("$") && !text.includes("–"));
+    .find((text) => text.startsWith(symbol) && !text.includes("–"));
 
 const skuLine = () => container.querySelector("dl")?.textContent ?? "";
 
@@ -322,7 +338,7 @@ describe("the rest of the buy box", () => {
   it("shows the category and links it to the category's own page", () => {
     // The same address a product's URL is nested under and the breadcrumb
     // points at — not `/shop?category=`, which the shop never read.
-    const link = container.querySelector<HTMLAnchorElement>('a[href="/products/earphone"]');
+    const link = container.querySelector<HTMLAnchorElement>('a[href="/en/products/earphone"]');
 
     expect(link?.textContent).toBe("Earphone");
   });
@@ -367,5 +383,31 @@ describe("a product with very little", () => {
 
     expect(container.textContent).toContain("Studio Over-Ear");
     expect(container.querySelectorAll("img[src^='/media/']")).toHaveLength(0);
+  });
+});
+
+describe("the reader's currency", () => {
+  it("writes the span and the chosen variant's price in it, together", () => {
+    mount({}, imagesByVariant, EUR);
+
+    expect(container.textContent).toContain("€80.04 – €306.36");
+    expect(selectedPrice("€")).toBe("€80.04");
+  });
+
+  it("converts the price the pills decide, not only the one on arrival", () => {
+    // The reason the table crosses to this side of the boundary rather than the
+    // server handing over converted figures: which variant's price is on screen
+    // is not known until somebody clicks, and the click is not a round trip.
+    mount({}, imagesByVariant, EUR);
+
+    click(pill("Onyx"));
+
+    expect(selectedPrice("€")).toBe("€306.36");
+  });
+
+  it("leaves the price alone for a reader who has chosen nothing", () => {
+    mount();
+
+    expect(selectedPrice()).toBe("$87.00");
   });
 });

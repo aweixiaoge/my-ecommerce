@@ -1,4 +1,6 @@
 import type { Review } from "@my-ecommerce/shared";
+import type { Messages } from "@/lib/i18n/messages";
+import type { Locale } from "@/lib/languages";
 import { ReviewForm } from "./review-form";
 import { ReviewList } from "./review-list";
 
@@ -19,15 +21,29 @@ export function ProductReviews({
   reviews,
   productId,
   productName,
+  messages,
+  locale,
 }: {
   reviews: readonly Review[];
   productId: string;
   productName: string;
+  /** This locale's `reviews` slice of the catalog. */
+  messages: Messages["reviews"];
+  locale: Locale;
 }) {
   return (
     <div className="grid grid-cols-1 gap-[64px] bar:grid-cols-2">
-      <ReviewList reviews={reviews} productName={productName} />
-      <ReviewForm productId={productId} />
+      <ReviewList
+        reviews={reviews}
+        productName={productName}
+        messages={messages}
+        locale={locale}
+      />
+      <ReviewForm
+        productId={productId}
+        messages={messages.form}
+        locale={locale}
+      />
     </div>
   );
 }

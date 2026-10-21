@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
+import { TranslateButton } from "@/components/admin/translate-button";
+import { TranslationNotice } from "@/components/admin/translation-notice";
 import { listBlogs } from "@/lib/admin/blogs-repo";
 
 /**
@@ -26,7 +28,9 @@ export const metadata: Metadata = {
  */
 export const instant = false;
 
-export default async function AdminBlogsPage() {
+export default async function AdminBlogsPage({
+  searchParams,
+}: PageProps<"/admin/blogs">) {
   /**
    * The posts are a database read, so this page only means anything at request
    * time. `connection()` is the marker for "prerendering stops here" — baked
@@ -36,6 +40,7 @@ export default async function AdminBlogsPage() {
   await connection();
 
   const blogs = await listBlogs();
+  const notice = (await searchParams).translated;
 
   return (
     <div className="flex flex-col gap-6">
@@ -57,6 +62,8 @@ export default async function AdminBlogsPage() {
         </Link>
       </div>
 
+      <TranslationNotice value={notice} />
+
       <table className="w-full border-collapse text-left">
         <caption className="sr-only">
           Every post in the journal, newest first.
@@ -67,6 +74,7 @@ export default async function AdminBlogsPage() {
             <Th>Title</Th>
             <Th>Category</Th>
             <Th>Created</Th>
+            <Th>Actions</Th>
           </tr>
         </thead>
 
@@ -87,6 +95,9 @@ export default async function AdminBlogsPage() {
               </td>
               <td className="py-3 pr-4 text-[13px] leading-[21.45px] text-ink-62 tabular-nums">
                 {formatDate(blog.createdAt)}
+              </td>
+              <td className="py-3">
+                <TranslateButton kind="blog" id={blog.id} name={blog.title} />
               </td>
             </tr>
           ))}

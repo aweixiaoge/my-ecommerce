@@ -8,10 +8,14 @@ export function SectionHeading({
   title,
   linkLabel,
   linkHref,
+  linkPrefetch,
 }: {
   title: string;
   linkLabel: string;
   linkHref: string;
+  /** `false` while the destination is unbuilt — see the note in `lib/nav.ts`.
+   *  Left off, the link prefetches, which is what a built route wants. */
+  linkPrefetch?: false;
 }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-4">
@@ -20,7 +24,7 @@ export function SectionHeading({
       </h2>
       <Link
         href={linkHref}
-        prefetch={false}
+        prefetch={linkPrefetch}
         className="text-[16px] leading-[26.4px] tracking-[-0.3125px] text-ink underline"
       >
         {linkLabel}

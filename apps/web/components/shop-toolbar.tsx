@@ -1,5 +1,6 @@
 import type { Pagination, ProductSort } from "@my-ecommerce/shared";
 import { SortSelect } from "@/components/sort-select";
+import type { Messages } from "@/lib/i18n/messages";
 import { resultsLabel } from "@/lib/shop";
 
 /**
@@ -13,19 +14,22 @@ export function ShopToolbar({
   pagination,
   sort,
   action,
+  messages,
 }: {
   pagination: Pagination;
   sort: ProductSort;
   /** The listing the sort control belongs to — see `SortSelect`. */
   action: string;
+  /** This locale's `listing` slice of the catalog. */
+  messages: Messages["listing"];
 }) {
   return (
     <div className="flex flex-col gap-3 pt-10 sm:flex-row sm:items-center sm:justify-between sm:gap-[13px]">
       <p className="text-[13px] leading-[21.45px] font-medium tracking-[0.4738px] text-ink uppercase">
-        {resultsLabel(pagination)}
+        {resultsLabel(pagination, messages)}
       </p>
 
-      <SortSelect value={sort} action={action} />
+      <SortSelect value={sort} action={action} messages={messages} />
     </div>
   );
 }

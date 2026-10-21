@@ -3,7 +3,10 @@ import Link from "next/link";
 import type { ProductSummary } from "@my-ecommerce/shared";
 import { StarRating } from "@/components/star-rating";
 import { productPath } from "@/lib/catalog/product-path";
-import { formatMoney } from "@/lib/format";
+import type { DisplayCurrency } from "@/lib/currency/display";
+import { formatPrice } from "@/lib/format";
+import type { Messages } from "@/lib/i18n/messages";
+import type { Locale } from "@/lib/languages";
 
 /**
  * The design's `Product Card:Shop` (node 178:9202) — the home card's sibling
@@ -23,6 +26,9 @@ import { formatMoney } from "@/lib/format";
 export function ShopProductCard({
   product,
   eager = false,
+  locale,
+  currency,
+  messages,
 }: {
   product: ProductSummary;
   /**
@@ -35,11 +41,23 @@ export function ShopProductCard({
    * would now read as a reference to it.
    */
   eager?: boolean;
+  locale: Locale;
+  /** The currency the price is written in — the reader's, not the row's. */
+  currency: DisplayCurrency;
+  /**
+   * This locale's catalog.
+   *
+   * The whole of it rather than the two slices this card reads, because a
+   * catalog handed from one Server Component to another is not serialized —
+   * it is an argument — and the card's three parents already hold one. A
+   * *client* component is the case that takes a slice; see `site-header.tsx`.
+   */
+  messages: Messages;
 }) {
   const hasRange =
     product.priceMax !== null && product.priceMax.amount !== product.price.amount;
   // One builder for every product link in the app — see `productPath`.
-  const href = productPath(product);
+  const href = productPath(product, locale);
 
   return (
     <article className="flex flex-col">
@@ -69,16 +87,20 @@ export function ShopProductCard({
       <p className="mt-[9.5px] text-[15px] leading-[24.75px] font-semibold tracking-[-0.2344px] text-ink">
         {hasRange && product.priceMax ? (
           <>
-            {formatMoney(product.price)}
+            {formatPrice(product.price, currency, locale)}
             {" – "}
-            {formatMoney(product.priceMax)}
+            {formatPrice(product.priceMax, currency, locale)}
           </>
         ) : (
-          formatMoney(product.price)
+          formatPrice(product.price, currency, locale)
         )}
       </p>
 
-      <StarRating rating={product.rating} className="mt-[11px]" />
+      <StarRating
+        rating={product.rating}
+        messages={messages.reviews}
+        className="mt-[11px]"
+      />
 
       {product.categories[0] && (
         <p className="mt-[10.5px] text-[13px] leading-[21.45px] font-semibold tracking-[-0.0762px] text-ink uppercase">
@@ -99,7 +121,7 @@ export function ShopProductCard({
           href={href}
           className="inline-flex h-10 items-center justify-center rounded-[3px] bg-ink px-5 text-[15px] leading-[24.75px] font-medium tracking-[-0.2344px] text-paper"
         >
-          Add to Cart
+          {messages.listing.addToCart}
         </Link>
       </div>
     </article>

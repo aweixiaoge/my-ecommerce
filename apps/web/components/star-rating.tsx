@@ -1,5 +1,7 @@
 import Image from "next/image";
 import type { ProductRating } from "@my-ecommerce/shared";
+import { fill } from "@/lib/i18n/format";
+import type { Messages } from "@/lib/i18n/messages";
 
 const STARS = [0, 1, 2, 3, 4];
 
@@ -15,14 +17,18 @@ const STARS = [0, 1, 2, 3, 4];
  *
  * That sentence is a product's, though — "Rated 4 out of 5 from 12 reviews" —
  * and a row of a *single* review has no count to state, so `label` replaces it
- * where the figure is not an average. Left out, the sentence above is unchanged.
+ * where the figure is not an average. A caller that passes one has built it in
+ * its own part of the catalog.
  */
 export function StarRating({
   rating,
+  messages,
   className,
   label,
 }: {
   rating: ProductRating | null;
+  /** This locale's `reviews` slice of the catalog — the default sentence. */
+  messages: Messages["reviews"];
   className?: string;
   label?: string;
 }) {
@@ -37,7 +43,11 @@ export function StarRating({
       className={`flex items-center gap-1.5 ${className ?? ""}`}
       role="img"
       aria-label={
-        label ?? `Rated ${rating.average} out of 5 from ${rating.count} reviews`
+        label ??
+        fill(messages.summary, {
+          average: rating.average,
+          count: rating.count,
+        })
       }
     >
       {STARS.map((star) => (

@@ -18,7 +18,7 @@ vi.mock("@my-ecommerce/db", () => ({
   prisma: { product: db.product, review: db.review },
 }));
 
-/** A row as `FEATURED_SELECT` returns one: a product the shop can sell. */
+/** A row as `featuredSelect` returns one: a product the shop can sell. */
 function row(overrides: Record<string, unknown> = {}) {
   return {
     id: "prod_1",
@@ -51,7 +51,7 @@ beforeEach(() => {
 
 describe("getHeroProduct", () => {
   it("asks for published products that are featured, newest first", async () => {
-    await getHeroProduct();
+    await getHeroProduct("en");
 
     expect(db.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -68,7 +68,7 @@ describe("getHeroProduct", () => {
   it("draws the newest featured product", async () => {
     db.product.findMany.mockResolvedValue([row()]);
 
-    const hero = await getHeroProduct();
+    const hero = await getHeroProduct("en");
 
     expect(hero).toEqual({
       id: "prod_1",
@@ -82,7 +82,7 @@ describe("getHeroProduct", () => {
         height: null,
         position: 0,
       },
-      href: "/products/earbuds/earbud-wireless",
+      href: "/en/products/earbuds/earbud-wireless",
     });
   });
 
@@ -100,7 +100,7 @@ describe("getHeroProduct", () => {
       }),
     ]);
 
-    const hero = await getHeroProduct();
+    const hero = await getHeroProduct("en");
 
     expect(hero?.id).toBe("prod_2");
     // The blurb is empty on that one, which the hero draws as no paragraph.
@@ -113,17 +113,17 @@ describe("getHeroProduct", () => {
       row({ id: "prod_2" }),
     ]);
 
-    expect((await getHeroProduct())?.id).toBe("prod_2");
+    expect((await getHeroProduct("en"))?.id).toBe("prod_2");
   });
 
   it("answers null when nothing featured is showable", async () => {
     // The home page then keeps the hero it has always had rather than
     // inventing a product nobody chose.
-    expect(await getHeroProduct()).toBeNull();
+    expect(await getHeroProduct("en")).toBeNull();
 
     db.product.findMany.mockResolvedValue([row({ variants: [] })]);
 
-    expect(await getHeroProduct()).toBeNull();
+    expect(await getHeroProduct("en")).toBeNull();
   });
 
   it("rates the products it asked about, in one query", async () => {
@@ -135,7 +135,7 @@ describe("getHeroProduct", () => {
       { productId: "prod_1", _avg: { rating: 4.5 }, _count: { _all: 2 } },
     ]);
 
-    const hero = await getHeroProduct();
+    const hero = await getHeroProduct("en");
 
     expect(db.review.groupBy).toHaveBeenCalledWith(
       expect.objectContaining({

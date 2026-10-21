@@ -1,8 +1,9 @@
 import type { Prisma } from "@my-ecommerce/db";
 import type { Media, ProductSummary } from "@my-ecommerce/shared";
-import { DEFAULT_LOCALE } from "../locale";
+import type { Locale } from "@/lib/languages";
 import { productPath } from "./product-path";
-import { SHOP_PRODUCT_SELECT } from "./product-summary";
+import { shopProductSelect } from "./product-summary";
+import { fallbackLocales, shownTranslation } from "./translation";
 
 /**
  * What the home page's hero draws, and how a featured row becomes it.
@@ -17,20 +18,22 @@ import { SHOP_PRODUCT_SELECT } from "./product-summary";
  *
  * Deliberately the shop's own select rather than a narrower one of its own: the
  * hero is a shop card with a bigger type size, and the rules that decide
- * whether a product can be shown at all — a name in this locale, a priced
+ * whether a product can be shown at all — a name in either language, a priced
  * variant — are `toSummary`'s, which reads exactly these columns.
  */
-export const FEATURED_SELECT = {
-  ...SHOP_PRODUCT_SELECT,
-  translations: {
-    where: { locale: DEFAULT_LOCALE },
-    select: { name: true, slug: true, shortDescription: true },
-  },
-} as const satisfies Prisma.ProductSelect;
+export function featuredSelect(locale: Locale) {
+  return {
+    ...shopProductSelect(locale),
+    translations: {
+      where: { locale: { in: fallbackLocales(locale) } },
+      select: { name: true, slug: true, shortDescription: true, locale: true },
+    },
+  } as const satisfies Prisma.ProductSelect;
+}
 
 /** A row as that select returns it. */
 export type FeaturedRow = Prisma.ProductGetPayload<{
-  select: typeof FEATURED_SELECT;
+  select: ReturnType<typeof featuredSelect>;
 }>;
 
 /**
@@ -69,12 +72,14 @@ export interface HeroProduct {
 export function toHeroProduct(
   row: FeaturedRow,
   summary: ProductSummary,
+  locale: Locale,
 ): HeroProduct {
   return {
     id: summary.id,
     name: summary.name,
-    shortDescription: row.translations.at(0)?.shortDescription || null,
+    shortDescription:
+      shownTranslation(row.translations, locale)?.shortDescription || null,
     image: summary.image,
-    href: productPath(summary),
+    href: productPath(summary, locale),
   };
 }

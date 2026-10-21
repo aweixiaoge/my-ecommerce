@@ -1,6 +1,6 @@
 import { prisma } from "@my-ecommerce/db";
 import type { Review, ReviewCreate } from "@my-ecommerce/shared";
-import { DEFAULT_LOCALE } from "../locale";
+import type { Locale } from "@/lib/languages";
 import {
   REVIEW_SELECT,
   toProductRatings,
@@ -91,13 +91,19 @@ export async function getProductRatings(
  * migration; this line is a property of the code, and "a review submitted
  * through the storefront is never born approved" is worth being able to read.
  *
- * The locale is stamped here rather than taken from the payload, for the reason
- * the shared schema carries no locale: it is a decision about the page being
- * read, and a client that could choose it could file a review under a language
- * nobody wrote it in.
+ * The locale is the page's, passed in by the action — which reads it from a
+ * hidden field, because a Server Action cannot see the URL's root segment. It
+ * is not the schema's, for the reason the shared schema carries no locale at
+ * all: it is a decision about the page being read, and a client that could
+ * choose it freely could file a review under a language nobody wrote it in. The
+ * form's field is a hint, not a claim — the worst a tampered payload can do is
+ * file an honest review under the wrong language tag, where the review's own
+ * words are the thing that matters.
  */
-export async function createReview(input: ReviewCreate): Promise<string | null> {
-  const product = await prisma.product.findFirst({
+export async function createReview(
+  input: ReviewCreate,
+  locale: Locale,
+): Promise<string | null> {  const product = await prisma.product.findFirst({
     where: { id: input.productId, status: "active" },
     select: { id: true },
   });
@@ -114,7 +120,7 @@ export async function createReview(input: ReviewCreate): Promise<string | null> 
       authorEmail: input.authorEmail,
       rating: input.rating,
       body: input.body,
-      locale: DEFAULT_LOCALE,
+      locale,
       status: "pending",
     },
     select: { id: true },

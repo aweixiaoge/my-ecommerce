@@ -5,8 +5,9 @@ import {
   type ProductSort,
   type ProductSummary,
 } from "@my-ecommerce/shared";
+import type { Locale } from "@/lib/languages";
 import { SHOP_PAGE_SIZE, sortProducts } from "../shop";
-import { SHOP_PRODUCT_SELECT, toSummary } from "./product-summary";
+import { shopProductSelect, toSummary } from "./product-summary";
 import { getProductRatings } from "./reviews-repo";
 
 /**
@@ -43,16 +44,19 @@ import { getProductRatings } from "./reviews-repo";
  * avoid going stale, and there is none: a shopper who cannot see a product the
  * admin just published is a worse bug than a query per visit.
  */
-export async function getShopProducts(query: {
-  page: number;
-  sort: ProductSort;
-  /**
-   * Narrow the listing to one category, by id. Absent means the whole shop —
-   * and a category page is the shop narrowed, not a second listing: the cards,
-   * the ordering and the paging are this one's.
-   */
-  categoryId?: string;
-}): Promise<Paginated<ProductSummary>> {
+export async function getShopProducts(
+  query: {
+    page: number;
+    sort: ProductSort;
+    /**
+     * Narrow the listing to one category, by id. Absent means the whole shop —
+     * and a category page is the shop narrowed, not a second listing: the
+     * cards, the ordering and the paging are this one's.
+     */
+    categoryId?: string;
+  },
+  locale: Locale,
+): Promise<Paginated<ProductSummary>> {
   const products = await prisma.product.findMany({
     where: listingWhere(query.categoryId),
     /*
@@ -67,7 +71,7 @@ export async function getShopProducts(query: {
      * is only millisecond-precise and a batch import would tie on it.
      */
     orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-    select: SHOP_PRODUCT_SELECT,
+    select: shopProductSelect(locale),
   });
 
   /*
@@ -84,7 +88,7 @@ export async function getShopProducts(query: {
   const ratings = await getProductRatings(products.map((product) => product.id));
 
   const summaries = products
-    .map((product) => toSummary(product, ratings))
+    .map((product) => toSummary(product, ratings, locale))
     .filter((summary): summary is ProductSummary => summary !== null);
 
   /*
@@ -95,7 +99,11 @@ export async function getShopProducts(query: {
    * afterwards — sorting a page at a time would put the cheapest product of
    * page two above the dearest of page one.
    */
-  return paginate(sortProducts(summaries, query.sort), query.page, SHOP_PAGE_SIZE);
+  return paginate(
+    sortProducts(summaries, query.sort, locale),
+    query.page,
+    SHOP_PAGE_SIZE,
+  );
 }
 
 /**
@@ -105,26 +113,29 @@ export async function getShopProducts(query: {
  * catalogue, because this is a *window* onto it — eight cards — and the shop's
  * own grid and pager are what exists for everything past them.
  *
- * `toSummary` can still drop a row the shop cannot render (no translation in
- * this locale, nothing priced), so a catalogue with unpriced rows shows fewer
- * than `limit`. That is the related row's behaviour too, and the alternative —
- * fetching more until eight survive — would make the home page the one screen
- * that shows products the shop would not.
+ * `toSummary` can still drop a row the shop cannot render (a translation in
+ * neither language, nothing priced), so a catalogue with unpriced rows shows
+ * fewer than `limit`. That is the related row's behaviour too, and the
+ * alternative — fetching more until eight survive — would make the home page
+ * the one screen that shows products the shop would not.
  */
-export async function listNewArrivals(limit: number): Promise<ProductSummary[]> {
+export async function listNewArrivals(
+  limit: number,
+  locale: Locale,
+): Promise<ProductSummary[]> {
   const rows = await prisma.product.findMany({
     where: { status: "active" },
     // Newest first, the catalogue's own order everywhere else — with the id
     // breaking a same-millisecond tie rather than the query plan.
     orderBy: [{ createdAt: "desc" }, { id: "asc" }],
     take: limit,
-    select: SHOP_PRODUCT_SELECT,
+    select: shopProductSelect(locale),
   });
 
   const ratings = await getProductRatings(rows.map((row) => row.id));
 
   return rows
-    .map((row) => toSummary(row, ratings))
+    .map((row) => toSummary(row, ratings, locale))
     .filter((summary): summary is ProductSummary => summary !== null);
 }
 

@@ -8,6 +8,8 @@ import {
 import { createBlog, UnknownCategoryError } from "@/lib/admin/blogs-repo";
 import { getSession } from "@/lib/admin/session";
 import { SlugExhaustedError } from "@/lib/admin/slug";
+import { noticeFor } from "@/lib/admin/translation-notice";
+import { translateBlog } from "@/lib/admin/translations";
 
 /**
  * What the blog screens do.
@@ -61,13 +63,22 @@ export async function createBlogAction(
    * alternative is a 500 the person cannot act on. The `catch` is narrow on
    * purpose: `redirect` signals by throwing, so it must stay outside.
    */
+  let id: string;
   try {
-    await createBlog(parsed.data);
+    id = await createBlog(parsed.data);
   } catch (error) {
     return blogSaveFailure(error);
   }
 
-  redirect("/admin/blogs");
+  /*
+   * After the write, and never before it: the row a person typed is the thing
+   * the screen is reporting on, and a translation that does not happen must
+   * not cost them that. The pass catches its own failures per language, so the
+   * only thing it can do here is report.
+   */
+  const run = await translateBlog(id);
+
+  redirect(`/admin/blogs?translated=${noticeFor(run)}`);
 }
 
 /**

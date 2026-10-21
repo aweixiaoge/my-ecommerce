@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { en } from "@/lib/i18n/messages/en";
 import { ReviewForm } from "./review-form";
 
 /**
@@ -24,7 +25,7 @@ const actions = vi.hoisted(() => ({ createReview: vi.fn() }));
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT?: boolean })
   .IS_REACT_ACT_ENVIRONMENT = true;
 
-vi.mock("@/app/(storefront)/products/actions", () => ({
+vi.mock("@/app/[lang]/products/actions", () => ({
   createReviewAction: actions.createReview,
 }));
 
@@ -47,7 +48,9 @@ function mount() {
 
   act(() => {
     root = createRoot(container);
-    root.render(<ReviewForm productId="prod_1" />);
+    root.render(
+      <ReviewForm productId="prod_1" messages={en.reviews.form} locale="en" />,
+    );
   });
 }
 
@@ -131,6 +134,18 @@ describe("what the form submits", () => {
     expect(data?.get("authorEmail")).toBe("ada@example.com");
     expect(data?.get("rating")).toBe("4");
     expect(data?.get("body")).toBe("Works well.");
+  });
+
+  it("sends the language the page was read in", async () => {
+    // The action is a POST, not a render of a route, so it cannot read the
+    // URL's language segment — the form is how it learns which language to
+    // answer a refusal in, and which language to file the review under.
+    actions.createReview.mockResolvedValue({ ok: true });
+
+    await fillIn();
+    await submit();
+
+    expect(submitted()?.get("locale")).toBe("en");
   });
 
   it("carries the design's labels and the shared bounds", () => {

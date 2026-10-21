@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Pagination, ProductSort } from "@my-ecommerce/shared";
+import type { Messages } from "@/lib/i18n/messages";
 import { listingHref, pageNumbers } from "@/lib/shop";
 
 /**
@@ -20,11 +21,14 @@ export function ShopPagination({
   pagination,
   sort,
   path,
+  messages,
 }: {
   pagination: Pagination;
   sort: ProductSort;
   /** The listing these pages belong to, e.g. `/shop`. Query state is added to it. */
   path: string;
+  /** This locale's `listing` slice of the catalog. */
+  messages: Messages["listing"];
 }) {
   const slots = pageNumbers(pagination);
 
@@ -36,7 +40,7 @@ export function ShopPagination({
   const hasNext = nextPage <= pagination.totalPages;
 
   return (
-    <nav aria-label="Pagination" className="pt-[60px]">
+    <nav aria-label={messages.pagination} className="pt-[60px]">
       <div className="relative flex h-10 items-center justify-center gap-[13.573px]">
         {slots.map((slot, index) =>
           slot === "gap" ? (
@@ -71,7 +75,7 @@ export function ShopPagination({
             href={listingHref(path, { page: nextPage, sort })}
             className="absolute right-0 inline-flex h-10 items-center gap-2 rounded-[4px] border-[1.818px] border-line px-[17px] text-[13px] leading-[21.45px] font-semibold tracking-[-0.0762px] text-ink uppercase"
           >
-            Next
+            {messages.next}
             <Image src="/icons/chevron-right.svg" alt="" width={9} height={9} />
           </Link>
         )}

@@ -1,5 +1,7 @@
 import { prisma, type Prisma } from "@my-ecommerce/db";
-import { DEFAULT_LOCALE } from "../locale";
+import type { Locale } from "@/lib/languages";
+import { categoryPath } from "./product-path";
+import { fallbackLocales, shownTranslation } from "./translation";
 
 /**
  * Reading one category, for its page.
@@ -24,17 +26,19 @@ import { DEFAULT_LOCALE } from "../locale";
  * `include` brings every scalar on the relation, and this page shows a name and
  * at most a sentence.
  */
-const CATEGORY_SELECT = {
-  id: true,
-  translations: {
-    where: { locale: DEFAULT_LOCALE },
-    select: { slug: true, name: true, description: true },
-  },
-} as const satisfies Prisma.CategorySelect;
+export function categorySelect(locale: Locale) {
+  return {
+    id: true,
+    translations: {
+      where: { locale: { in: fallbackLocales(locale) } },
+      select: { slug: true, name: true, description: true, locale: true },
+    },
+  } as const satisfies Prisma.CategorySelect;
+}
 
 /** A row as that select returns it. */
 export type CategoryRow = Prisma.CategoryGetPayload<{
-  select: typeof CATEGORY_SELECT;
+  select: ReturnType<typeof categorySelect>;
 }>;
 
 /**
@@ -57,19 +61,55 @@ export interface CategoryDetail {
  * One category by its public URL, or null when there is nothing at that
  * address.
  *
- * Null covers two states and the page turns both into the same 404: no such
- * slug, and a slug in another locale — a category's name and slug are one row
- * per language, and `/products/ohrstoepsel` is not the English page.
+ * Null means no such slug — in the language of the page or in the default one.
+ * Both are accepted as addresses, because a category that has not been
+ * translated is still a category with products in it: `/de/products/earbuds`
+ * finds the English row and renders it under German chrome, which is the same
+ * bargain every other read makes. The day a German translation is written, that
+ * URL starts redirecting to the German slug — see `categoryRedirect`.
  */
 export async function getCategoryBySlug(
   slug: string,
+  locale: Locale,
 ): Promise<CategoryDetail | null> {
   const row = await prisma.category.findFirst({
-    where: { translations: { some: { locale: DEFAULT_LOCALE, slug } } },
-    select: CATEGORY_SELECT,
+    where: {
+      translations: {
+        some: { slug, locale: { in: fallbackLocales(locale) } },
+      },
+    },
+    select: categorySelect(locale),
   });
 
-  return row ? toCategory(row) : null;
+  return row ? toCategory(row, locale) : null;
+}
+
+/**
+ * Where a category addressed by *another language's* slug lives in this one —
+ * or null when no category has that slug in any language.
+ *
+ * The product repo's `foreignProductPath`, for the other half of the same
+ * problem: a language swapper's link from `/de/products/kopfhorer` to `/fr/`
+ * carries the German slug, which `getCategoryBySlug` above answers null for.
+ * `/fr/products/kopfhorer` is a French way of asking for the headphones.
+ *
+ * Same shape, same tie-break, same reason for being a second query rather than
+ * a wider first one — see that function.
+ */
+export async function foreignCategoryPath(
+  slug: string,
+  locale: Locale,
+): Promise<string | null> {
+  const row = await prisma.category.findFirst({
+    where: { translations: { some: { slug } } },
+    orderBy: [{ position: "asc" }, { id: "asc" }],
+    select: categorySelect(locale),
+  });
+  if (!row) return null;
+
+  const category = toCategory(row, locale);
+
+  return category ? categoryPath(category, locale) : null;
 }
 
 /**
@@ -77,11 +117,11 @@ export async function getCategoryBySlug(
  *
  * The null is reachable despite the query's `some` filter for the reason the
  * product repo gives: that filter chooses *which rows* come back, not which
- * translations, so a category whose only English translation was deleted
- * arrives with an empty array.
+ * translations, so a category whose translations were both deleted arrives with
+ * an empty array.
  */
-function toCategory(row: CategoryRow): CategoryDetail | null {
-  const translation = row.translations.at(0);
+function toCategory(row: CategoryRow, locale: Locale): CategoryDetail | null {
+  const translation = shownTranslation(row.translations, locale);
   if (!translation) return null;
 
   return {

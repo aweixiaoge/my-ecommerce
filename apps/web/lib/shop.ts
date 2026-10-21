@@ -5,6 +5,8 @@ import {
   type ProductSort,
   type ProductSummary,
 } from "@my-ecommerce/shared";
+import { fill } from "./i18n/format";
+import type { Messages } from "./i18n/messages";
 
 /**
  * Everything the shop page derives from its URL and its data.
@@ -22,12 +24,20 @@ export type ShopQuery = {
   sort: ProductSort;
 };
 
-/** Sort dropdown options, in the order the control lists them. */
-export const SORT_OPTIONS: ReadonlyArray<{ value: ProductSort; label: string }> = [
-  { value: "default", label: "Default sorting" },
-  { value: "price-asc", label: "Price, low to high" },
-  { value: "price-desc", label: "Price, high to low" },
-  { value: "name-asc", label: "Name, A to Z" },
+/** Sort dropdown options, in the order the control lists them.
+ *
+ *  A key rather than a label, because the control is rendered in five
+ *  languages: the component looks each one up in this locale's catalog, and
+ *  `Messages["listing"]["sort"]` is what makes an option without a translation
+ *  a typecheck failure rather than an empty row in a dropdown. */
+export const SORT_OPTIONS: ReadonlyArray<{
+  value: ProductSort;
+  key: keyof Messages["listing"]["sort"];
+}> = [
+  { value: "default", key: "default" },
+  { value: "price-asc", key: "priceAsc" },
+  { value: "price-desc", key: "priceDesc" },
+  { value: "name-asc", key: "nameAsc" },
 ];
 
 /**
@@ -67,6 +77,7 @@ export function parseShopQuery(
 export function sortProducts(
   products: ProductSummary[],
   sort: ProductSort,
+  locale: string,
 ): ProductSummary[] {
   const sorted = [...products];
 
@@ -76,25 +87,37 @@ export function sortProducts(
     case "price-desc":
       return sorted.sort((a, b) => compareMoney(b.price, a.price));
     case "name-asc":
-      return sorted.sort((a, b) => a.name.localeCompare(b.name));
+      // The locale is passed rather than left to the runtime's: `localeCompare`
+      // without one orders by whatever the server's environment says, which is
+      // both arbitrary and unstable between deployments — and it is not the
+      // order the page says it is in. German sorts "Ä" with "A"; Swedish sorts
+      // it last.
+      return sorted.sort((a, b) => a.name.localeCompare(b.name, locale));
     case "default":
       return sorted;
   }
 }
 
 /**
- * The "Showing 1–12 of 13 results" line.
+ * The "Showing 1–12 of 13 results" line, in the page's language.
  *
  * An empty result set gets its own sentence: "Showing 0–0 of 0 results" is
  * arithmetically true and reads like a bug.
+ *
+ * The sentence is the catalog's and the arithmetic is this function's, which is
+ * why the messages arrive as an argument: the count and the bounds are the same
+ * in every language, and where the numbers go in the sentence is not.
  */
-export function resultsLabel(pagination: Pagination): string {
-  if (pagination.total === 0) return "No results";
+export function resultsLabel(
+  pagination: Pagination,
+  messages: Messages["listing"],
+): string {
+  if (pagination.total === 0) return messages.noResults;
 
   const from = (pagination.page - 1) * pagination.perPage + 1;
   const to = Math.min(pagination.page * pagination.perPage, pagination.total);
 
-  return `Showing ${from}–${to} of ${pagination.total} results`;
+  return fill(messages.results, { from, to, total: pagination.total });
 }
 
 /** A page number, or an ellipsis standing in for the numbers skipped. */

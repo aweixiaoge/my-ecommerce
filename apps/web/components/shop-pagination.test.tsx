@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Pagination } from "@my-ecommerce/shared";
+import { en } from "@/lib/i18n/messages/en";
 import { ShopPagination } from "./shop-pagination";
 
 const page = (over: Partial<Pagination> = {}): Pagination => ({
@@ -17,7 +18,12 @@ const render = (
   path = "/shop",
 ) =>
   renderToStaticMarkup(
-    <ShopPagination pagination={pagination} sort={sort} path={path} />,
+    <ShopPagination
+      pagination={pagination}
+      sort={sort}
+      path={path}
+      messages={en.listing}
+    />,
   );
 
 /** Hrefs as the browser would resolve them, with the `&` entities decoded. */

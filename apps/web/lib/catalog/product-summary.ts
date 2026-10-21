@@ -1,9 +1,10 @@
 import type { Prisma } from "@my-ecommerce/db";
 import type { CategoryRef, Media, ProductSummary } from "@my-ecommerce/shared";
-import { DEFAULT_LOCALE } from "../locale";
+import type { Locale } from "@/lib/languages";
 import { publicMediaUrl } from "./media-repo";
 import { priceOf, variantPriceSpan } from "./pricing";
 import type { RatingLookup } from "./review-rows";
+import { fallbackLocales, shownTranslation } from "./translation";
 
 /**
  * What a listing row is, and how it becomes a summary.
@@ -35,48 +36,54 @@ import type { RatingLookup } from "./review-rows";
  * products. `description` is the other one worth not fetching: it is the whole
  * product page's markdown, and a card shows none of it.
  */
-export const SHOP_PRODUCT_SELECT = {
-  id: true,
-  translations: {
-    where: { locale: DEFAULT_LOCALE },
-    select: { name: true, slug: true },
-  },
-  variants: {
-    // `status` is deliberately not selected, and must not be added as a
-    // filter. Every variant in this database is `draft` — `variantCreateData`
-    // writes it that way and `setProductStatus` never touches a variant — so a
-    // `some: { status: "active" }` would empty the shop in one line.
-    select: { priceAmount: true, priceCurrency: true, stock: true },
-  },
-  media: {
-    // Position is the order the admin arranged them in. The id breaks ties
-    // rather than leaving them to the database: images of different variants
-    // can share a position, and an arbitrary winner would let a card's
-    // photograph change between two identical requests.
-    orderBy: [{ position: "asc" }, { id: "asc" }],
-    // No `data`, and no `url` either — the bytes are megabytes and the route
-    // that serves them builds its own URL. See `publicMediaUrl`.
-    select: { id: true, position: true },
-  },
-  categories: {
-    // The same tie-break as the images, for the same reason and a worse one:
-    // every category the admin's create screen makes is a root at position
-    // zero, so position alone leaves the choice of a card's category line to
-    // the query plan.
-    orderBy: [{ category: { position: "asc" } }, { categoryId: "asc" }],
-    select: {
-      category: {
-        select: {
-          id: true,
-          translations: {
-            where: { locale: DEFAULT_LOCALE },
-            select: { name: true, slug: true },
+export function shopProductSelect(locale: Locale) {
+  return {
+    id: true,
+    translations: {
+      // Two locales, not one: the language of the page, and the default behind
+      // it. `shownTranslation` picks between them, which is what keeps a
+      // product without a translation in this language on the shelf rather
+      // than out of the grid.
+      where: { locale: { in: fallbackLocales(locale) } },
+      select: { name: true, slug: true, locale: true },
+    },
+    variants: {
+      // `status` is deliberately not selected, and must not be added as a
+      // filter. Every variant in this database is `draft` — `variantCreateData`
+      // writes it that way and `setProductStatus` never touches a variant — so a
+      // `some: { status: "active" }` would empty the shop in one line.
+      select: { priceAmount: true, priceCurrency: true, stock: true },
+    },
+    media: {
+      // Position is the order the admin arranged them in. The id breaks ties
+      // rather than leaving them to the database: images of different variants
+      // can share a position, and an arbitrary winner would let a card's
+      // photograph change between two identical requests.
+      orderBy: [{ position: "asc" }, { id: "asc" }],
+      // No `data`, and no `url` either — the bytes are megabytes and the route
+      // that serves them builds its own URL. See `publicMediaUrl`.
+      select: { id: true, position: true },
+    },
+    categories: {
+      // The same tie-break as the images, for the same reason and a worse one:
+      // every category the admin's create screen makes is a root at position
+      // zero, so position alone leaves the choice of a card's category line to
+      // the query plan.
+      orderBy: [{ category: { position: "asc" } }, { categoryId: "asc" }],
+      select: {
+        category: {
+          select: {
+            id: true,
+            translations: {
+              where: { locale: { in: fallbackLocales(locale) } },
+              select: { name: true, slug: true, locale: true },
+            },
           },
         },
       },
     },
-  },
-} as const satisfies Prisma.ProductSelect;
+  } as const satisfies Prisma.ProductSelect;
+}
 
 /**
  * A row as the listing query returns it.
@@ -86,7 +93,7 @@ export const SHOP_PRODUCT_SELECT = {
  * does with it.
  */
 export type ShopRow = Prisma.ProductGetPayload<{
-  select: typeof SHOP_PRODUCT_SELECT;
+  select: ReturnType<typeof shopProductSelect>;
 }>;
 
 /**
@@ -95,22 +102,28 @@ export type ShopRow = Prisma.ProductGetPayload<{
  * Null is not a symptom of a query that asked for too much. Two states reach
  * it, and neither has a valid `ProductSummary` behind it:
  *
- *   * no translation in the display locale — there is no name and no slug, so
- *     no card and nowhere for its link to lead;
+ *   * no translation at all — not in the language of the page, and not in the
+ *     default either, so there is no name and no slug: no card, and nowhere
+ *     for its link to lead;
  *   * nothing is priced, or the prices are in two currencies — the two states
  *     `variantPriceSpan` describes, and a product page drops the same rows for
  *     the same reasons.
  *
  * Dropping the row is the answer `listProducts` gives in the admin repo to a
  * row it cannot read: a list with a gap in it beats a list that throws.
+ *
+ * The first state used to be "no translation in the display locale", which is
+ * a shorter list than it sounds: until a language's rows are written, *every*
+ * product is in it. `shownTranslation` is what makes the difference — the page
+ * shows the product's name in the default language rather than hiding a
+ * product that is for sale.
  */
 export function toSummary(
   row: ShopRow,
   ratings: RatingLookup,
+  locale: Locale,
 ): ProductSummary | null {
-  // `at`, not `[0]`: the array is empty whenever the row has no translation in
-  // this locale, and the index type would claim otherwise.
-  const translation = row.translations.at(0);
+  const translation = shownTranslation(row.translations, locale);
   if (!translation) return null;
 
   const span = variantPriceSpan(row.variants.flatMap(priceOf));
@@ -132,7 +145,7 @@ export function toSummary(
     // The card shows the first one, in the order the admin arranged the tree.
     // Empty is an ordinary state, not a failure: a product nobody has filed
     // yet simply has no line there.
-    categories: row.categories.flatMap(categoryRef),
+    categories: row.categories.flatMap((link) => categoryRef(link, locale)),
     // Absent from the aggregate when no review of this product has been
     // approved yet — which is not the same as a rating of zero, and is why
     // `StarRating` renders nothing at all for it.
@@ -166,17 +179,24 @@ export function mediaRef(media: {
 }
 
 /**
- * A product's link to a category, as a card reads it — or nothing when this
- * locale has no name for it.
+ * A product's link to a category, as a card reads it — or nothing when the
+ * category has no name in this language and none in the default either.
  *
  * Skipped rather than defaulting to a placeholder, and skipped rather than
- * taking the product down with it: a category whose translation has not been
+ * taking the product down with it: a category whose translations have not been
  * written is a gap in a card's category line, not a reason to hide a product
  * that is otherwise perfectly sellable. The card already renders nothing for an
  * empty list, so the two absences look the same, which is what they are.
+ *
+ * The name and the slug come from the *category's* translation, not the
+ * product's: they are two rows that fall back independently, and a card can
+ * legitimately carry a Dutch product name over a German category one.
  */
-export function categoryRef(link: ShopRow["categories"][number]): CategoryRef[] {
-  const translation = link.category.translations.at(0);
+export function categoryRef(
+  link: ShopRow["categories"][number],
+  locale: Locale,
+): CategoryRef[] {
+  const translation = shownTranslation(link.category.translations, locale);
   if (!translation) return [];
 
   return [

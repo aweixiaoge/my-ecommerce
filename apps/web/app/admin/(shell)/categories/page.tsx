@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
+import { TranslateButton } from "@/components/admin/translate-button";
+import { TranslationNotice } from "@/components/admin/translation-notice";
 import { listCategories } from "@/lib/admin/categories-repo";
 
 /**
@@ -27,7 +29,9 @@ export const metadata: Metadata = {
  */
 export const instant = false;
 
-export default async function AdminCategoriesPage() {
+export default async function AdminCategoriesPage({
+  searchParams,
+}: PageProps<"/admin/categories">) {
   /**
    * The categories are a database read, so this page only means anything at
    * request time. `connection()` is the marker for "prerendering stops here" —
@@ -37,6 +41,7 @@ export default async function AdminCategoriesPage() {
   await connection();
 
   const categories = await listCategories();
+  const notice = (await searchParams).translated;
 
   return (
     <div className="flex flex-col gap-6">
@@ -58,6 +63,8 @@ export default async function AdminCategoriesPage() {
         </Link>
       </div>
 
+      <TranslationNotice value={notice} />
+
       <table className="w-full border-collapse text-left">
         <caption className="sr-only">
           Every category in the catalogue, in the order they were added.
@@ -67,6 +74,7 @@ export default async function AdminCategoriesPage() {
           <tr className="border-b border-line">
             <Th>Name</Th>
             <Th>Slug</Th>
+            <Th>Actions</Th>
           </tr>
         </thead>
 
@@ -83,6 +91,13 @@ export default async function AdminCategoriesPage() {
               */}
               <td className="py-3 pr-4 text-[13px] leading-[21.45px] text-ink-62">
                 {category.slug}
+              </td>
+              <td className="py-3">
+                <TranslateButton
+                  kind="category"
+                  id={category.id}
+                  name={category.name}
+                />
               </td>
             </tr>
           ))}

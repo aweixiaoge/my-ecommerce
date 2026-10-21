@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProductSchema } from "@my-ecommerce/shared";
-import { getProductBySlug, listRelatedProducts } from "./product-repo";
+import {
+  foreignProductPath,
+  getProductBySlug,
+  listRelatedProducts,
+} from "./product-repo";
 
 /**
  * The product page's read, against a stand-in for the database.
@@ -86,31 +90,38 @@ beforeEach(() => {
 });
 
 describe("getProductBySlug", () => {
-  it("looks the slug up through the translation, for one locale, published only", async () => {
+  it("looks the slug up through the translation, in either language, published only", async () => {
     // The slug lives in the translation table and is unique within a locale
-    // rather than globally, so the lookup has to say which locale it means.
+    // rather than globally, so the lookup has to say which locales it means —
+    // and both are answers, because a product nobody has translated is still a
+    // product the shop is selling.
     db.product.findFirst.mockResolvedValue(row());
 
-    await getProductBySlug("studio-over-ear");
+    await getProductBySlug("studio-over-ear", "de");
 
     expect(db.product.findFirst).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
           status: "active",
-          translations: { some: { locale: "en", slug: "studio-over-ear" } },
+          translations: {
+            some: {
+              slug: "studio-over-ear",
+              locale: { in: ["de", "en"] },
+            },
+          },
         },
       }),
     );
   });
 
   it("answers null for a slug that names nothing", async () => {
-    expect(await getProductBySlug("nope")).toBeNull();
+    expect(await getProductBySlug("nope", "en")).toBeNull();
   });
 
   it("hands out a product the published contract accepts", async () => {
     db.product.findFirst.mockResolvedValue(row());
 
-    const detail = await getProductBySlug("studio-over-ear");
+    const detail = await getProductBySlug("studio-over-ear", "en");
 
     const result = ProductSchema.safeParse(detail?.product);
     expect(result.success, JSON.stringify(result.error?.issues)).toBe(true);
@@ -122,7 +133,7 @@ describe("getProductBySlug", () => {
       { productId: "prod_1", _avg: { rating: 4.5 }, _count: { _all: 2 } },
     ]);
 
-    const detail = await getProductBySlug("studio-over-ear");
+    const detail = await getProductBySlug("studio-over-ear", "en");
 
     expect(detail?.product.rating).toEqual({ average: 4.5, count: 2 });
     expect(db.review.groupBy).toHaveBeenCalledWith(
@@ -135,7 +146,7 @@ describe("getProductBySlug", () => {
   it("shows no rating at all until a review is approved", async () => {
     db.product.findFirst.mockResolvedValue(row());
 
-    const detail = await getProductBySlug("studio-over-ear");
+    const detail = await getProductBySlug("studio-over-ear", "en");
 
     // Null rather than an average of zero: the buy box renders no stars and
     // "(0 customer reviews)", not one out of five.
@@ -143,11 +154,78 @@ describe("getProductBySlug", () => {
   });
 });
 
+describe("foreignProductPath", () => {
+  /** A row whose translations are the page's own — what the select returns
+   *  after it has filtered to the fallback set. */
+  function frenchRow() {
+    return row({
+      translations: [
+        {
+          locale: "fr",
+          slug: "casque-circum-aural-de-studio",
+          name: "Casque circum-aural de studio",
+        },
+      ],
+      categories: [
+        {
+          category: {
+            id: "cat_1",
+            translations: [
+              { locale: "fr", name: "Écouteurs", slug: "ecouteurs" },
+            ],
+          },
+        },
+      ],
+    });
+  }
+
+  it("finds a product by a slug from another language, and answers with this language's address", async () => {
+    // The language switcher's case: `/fr` arrived from `/de/products/kopfhorer/
+    // kopfhorer`, and the German slug is what it is holding. The product is
+    // found — by a slug no French row carries — and the answer is the French
+    // address, which the page then redirects to.
+    db.product.findFirst.mockResolvedValue(frenchRow());
+
+    expect(await foreignProductPath("kopfhorer", "fr")).toBe(
+      "/fr/products/ecouteurs/casque-circum-aural-de-studio",
+    );
+
+    // Any language's slug, and only published products: the fallback set has
+    // already been asked and said no, so this one does not narrow by locale.
+    expect(db.product.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { status: "active", translations: { some: { slug: "kopfhorer" } } },
+      }),
+    );
+  });
+
+  it("answers null for a slug no language knows", async () => {
+    expect(await foreignProductPath("nope", "fr")).toBeNull();
+  });
+
+  it("answers null for a product no page would render", async () => {
+    // Nothing priced, so there is no page at the English address either — and
+    // an address that does not exist is not one to be sent to.
+    db.product.findFirst.mockResolvedValue(row({ variants: [] }));
+
+    expect(await foreignProductPath("kopfhorer", "fr")).toBeNull();
+  });
+
+  it("answers null for a row with no translation in this page's languages", async () => {
+    // Reachable for the reason the lookup above gives: `some` chooses which
+    // rows come back, not which translations, so a product whose German row is
+    // its only one arrives with nothing to build an address from.
+    db.product.findFirst.mockResolvedValue(row({ translations: [] }));
+
+    expect(await foreignProductPath("kopfhorer", "fr")).toBeNull();
+  });
+});
+
 describe("the product a page renders", () => {
   it("carries the copy, the options and the images", async () => {
     db.product.findFirst.mockResolvedValue(row());
 
-    const detail = await getProductBySlug("studio-over-ear");
+    const detail = await getProductBySlug("studio-over-ear", "en");
 
     expect(detail?.product).toEqual(
       expect.objectContaining({
@@ -178,7 +256,7 @@ describe("the product a page renders", () => {
     // cannot quote a different price from the card that linked there.
     db.product.findFirst.mockResolvedValue(row());
 
-    const detail = await getProductBySlug("studio-over-ear");
+    const detail = await getProductBySlug("studio-over-ear", "en");
 
     expect(detail?.product.price).toEqual({ amount: "333.00", currency: "USD" });
     expect(detail?.product.categories).toEqual([
@@ -202,7 +280,7 @@ describe("the product a page renders", () => {
       }),
     );
 
-    const detail = await getProductBySlug("untitled");
+    const detail = await getProductBySlug("untitled", "en");
 
     expect(detail?.product.shortDescription).toBeNull();
     expect(detail?.product.metaTitle).toBeNull();
@@ -211,7 +289,7 @@ describe("the product a page renders", () => {
   it("keys the variant images so the gallery can follow the selection", async () => {
     db.product.findFirst.mockResolvedValue(row());
 
-    const detail = await getProductBySlug("studio-over-ear");
+    const detail = await getProductBySlug("studio-over-ear", "en");
 
     expect(detail?.imagesByVariant).toEqual({
       var_onyx: [
@@ -232,7 +310,7 @@ describe("the product a page renders", () => {
     // *products* come back rather than which translations.
     db.product.findFirst.mockResolvedValue(row({ translations: [] }));
 
-    expect(await getProductBySlug("studio-over-ear")).toBeNull();
+    expect(await getProductBySlug("studio-over-ear", "en")).toBeNull();
   });
 
   it("answers null when nothing on the product is priced", async () => {
@@ -242,7 +320,7 @@ describe("the product a page renders", () => {
       row({ variants: [variant({ priceAmount: null, priceCurrency: null })] }),
     );
 
-    expect(await getProductBySlug("studio-over-ear")).toBeNull();
+    expect(await getProductBySlug("studio-over-ear", "en")).toBeNull();
   });
 });
 
@@ -250,7 +328,7 @@ describe("the variants a shopper can pick between", () => {
   it("keeps a variant that is priced and identified", async () => {
     db.product.findFirst.mockResolvedValue(row());
 
-    const detail = await getProductBySlug("studio-over-ear");
+    const detail = await getProductBySlug("studio-over-ear", "en");
 
     expect(detail?.product.variants).toEqual([
       {
@@ -272,7 +350,7 @@ describe("the variants a shopper can pick between", () => {
     // as an ordinary answer.
     db.product.findFirst.mockResolvedValue(row({ variants: [variant({ sku: null })] }));
 
-    const detail = await getProductBySlug("studio-over-ear");
+    const detail = await getProductBySlug("studio-over-ear", "en");
 
     expect(detail?.product.variants).toEqual([]);
   });
@@ -287,7 +365,7 @@ describe("the variants a shopper can pick between", () => {
       }),
     );
 
-    const detail = await getProductBySlug("studio-over-ear");
+    const detail = await getProductBySlug("studio-over-ear", "en");
 
     expect(detail?.product.variants?.map((v) => v.id)).toEqual(["var_b"]);
   });
@@ -295,7 +373,7 @@ describe("the variants a shopper can pick between", () => {
   it("calls a variant with nothing on the shelf out of stock", async () => {
     db.product.findFirst.mockResolvedValue(row({ variants: [variant({ stock: 0 })] }));
 
-    const detail = await getProductBySlug("studio-over-ear");
+    const detail = await getProductBySlug("studio-over-ear", "en");
 
     expect(detail?.product.variants?.[0]?.inStock).toBe(false);
   });
@@ -314,7 +392,7 @@ describe("the variants a shopper can pick between", () => {
       }),
     );
 
-    const detail = await getProductBySlug("studio-over-ear");
+    const detail = await getProductBySlug("studio-over-ear", "en");
 
     expect(detail?.product.variants?.[0]?.optionValues).toEqual([
       { id: "val_onyx", name: "" },
@@ -337,7 +415,7 @@ describe("the variants a shopper can pick between", () => {
       }),
     );
 
-    const detail = await getProductBySlug("studio-over-ear");
+    const detail = await getProductBySlug("studio-over-ear", "en");
 
     expect(detail?.product.options).toEqual([
       {
@@ -356,7 +434,7 @@ describe("listRelatedProducts", () => {
       productId: "prod_1",
       categoryIds: ["cat_1"],
       limit: 4,
-    });
+    }, "en");
 
     expect(db.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -374,7 +452,7 @@ describe("listRelatedProducts", () => {
     // "What is like this product" has no answer when nobody has said what it
     // is, so it returns an empty row rather than querying for everything.
     expect(
-      await listRelatedProducts({ productId: "prod_1", categoryIds: [], limit: 4 }),
+      await listRelatedProducts({ productId: "prod_1", categoryIds: [], limit: 4 }, "en"),
     ).toEqual([]);
 
     expect(db.product.findMany).not.toHaveBeenCalled();
@@ -387,7 +465,7 @@ describe("listRelatedProducts", () => {
       productId: "prod_1",
       categoryIds: ["cat_1"],
       limit: 4,
-    });
+    }, "en");
 
     expect(related.map((product) => product.id)).toEqual(["prod_2"]);
     expect(related[0]?.price).toEqual({ amount: "333.00", currency: "USD" });
@@ -409,7 +487,7 @@ describe("listRelatedProducts", () => {
       productId: "prod_1",
       categoryIds: ["cat_1"],
       limit: 4,
-    });
+    }, "en");
 
     expect(related[0]?.rating).toBeNull();
     expect(related[1]?.rating).toEqual({ average: 3.4, count: 5 });
@@ -423,7 +501,7 @@ describe("listRelatedProducts", () => {
     ]);
 
     expect(
-      await listRelatedProducts({ productId: "prod_1", categoryIds: ["cat_1"], limit: 4 }),
+      await listRelatedProducts({ productId: "prod_1", categoryIds: ["cat_1"], limit: 4 }, "en"),
     ).toEqual([]);
   });
 });

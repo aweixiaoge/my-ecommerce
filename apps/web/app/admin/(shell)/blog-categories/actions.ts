@@ -1,10 +1,12 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { AdminBlogCategoryCreateSchema } from "@my-ecommerce/shared";
+import { SlugExhaustedError } from "@/lib/admin/slug";
 import { createBlogCategory } from "@/lib/admin/blog-categories-repo";
 import { getSession } from "@/lib/admin/session";
-import { SlugExhaustedError } from "@/lib/admin/slug";
+import { noticeFor } from "@/lib/admin/translation-notice";
+import { redirect } from "next/navigation";
+import { translateBlogCategory } from "@/lib/admin/translations";
 
 /**
  * What the blog category screens do.
@@ -51,13 +53,22 @@ export async function createBlogCategoryAction(
    * act on. The `catch` is narrow on purpose: `redirect` signals by throwing,
    * so it must stay outside.
    */
+  let id: string;
   try {
-    await createBlogCategory(parsed.data);
+    id = await createBlogCategory(parsed.data);
   } catch (error) {
     return categorySaveFailure(error);
   }
 
-  redirect("/admin/blog-categories");
+  /*
+   * After the write, and never before it: the row a person typed is the thing
+   * the screen is reporting on, and a translation that does not happen must
+   * not cost them that. The pass catches its own failures per language, so the
+   * only thing it can do here is report.
+   */
+  const run = await translateBlogCategory(id);
+
+  redirect(`/admin/blog-categories?translated=${noticeFor(run)}`);
 }
 
 /**

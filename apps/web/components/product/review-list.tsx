@@ -1,6 +1,9 @@
 import type { Review } from "@my-ecommerce/shared";
 import { formatDate } from "@/lib/format";
 import { StarRating } from "@/components/star-rating";
+import { fill, plural } from "@/lib/i18n/format";
+import type { Messages } from "@/lib/i18n/messages";
+import type { Locale } from "@/lib/languages";
 
 /**
  * The design's review list (Figma 178:3099): a count, then one bordered entry
@@ -25,16 +28,21 @@ import { StarRating } from "@/components/star-rating";
 export function ReviewList({
   reviews,
   productName,
+  messages,
+  locale,
 }: {
   reviews: readonly Review[];
   productName: string;
+  /** This locale's `reviews` slice of the catalog. */
+  messages: Messages["reviews"];
+  locale: Locale;
 }) {
   // "No reviews yet." rather than a heading reading "0 reviews for X": an
   // unreviewed product is a state, not a count of nothing.
   if (reviews.length === 0) {
     return (
       <p className="text-[16px] leading-[26.4px] tracking-[-0.3125px] text-ink-60">
-        No reviews yet.
+        {messages.empty}
       </p>
     );
   }
@@ -45,13 +53,12 @@ export function ReviewList({
        heading in one cell and the list in another. */
     <div>
       <h2 className="text-[16px] leading-[24px] font-bold tracking-[-0.3125px] text-ink">
-        {reviews.length} {reviews.length === 1 ? "review" : "reviews"} for{" "}
-        {productName}
+        {plural(reviews.length, messages.listTitle, { product: productName })}
       </h2>
 
       <ul className="pt-[20px]">
         {reviews.map((review) => (
-          <ReviewItem key={review.id} review={review} />
+          <ReviewItem key={review.id} review={review} messages={messages} locale={locale} />
         ))}
       </ul>
     </div>
@@ -62,7 +69,15 @@ export function ReviewList({
  * One review, on the design's 40px rhythm: the rule above it, the 40px below
  * that, and the two columns.
  */
-function ReviewItem({ review }: { review: Review }) {
+function ReviewItem({
+  review,
+  messages,
+  locale,
+}: {
+  review: Review;
+  messages: Messages["reviews"];
+  locale: Locale;
+}) {
   return (
     <li className="border-t border-line pt-[40px] pb-[40px]">
       <div className="flex gap-[25px]">
@@ -73,7 +88,7 @@ function ReviewItem({ review }: { review: Review }) {
             <p className="text-[16px] leading-[20px] font-bold tracking-[-0.3125px] text-ink">
               {review.authorName}
               <span className="pl-[7.7px] text-[13px] leading-[20px] font-medium tracking-[-0.076px] uppercase">
-                – {formatDate(review.createdAt)}
+                – {formatDate(review.createdAt, locale)}
               </span>
             </p>
 
@@ -81,7 +96,8 @@ function ReviewItem({ review }: { review: Review }) {
                 here and no count to read out — the count IS this row. */}
             <StarRating
               rating={{ average: review.rating, count: 1 }}
-              label={`Rated ${review.rating} out of 5`}
+              messages={messages}
+              label={fill(messages.singleRating, { rating: review.rating })}
               className="shrink-0"
             />
           </div>

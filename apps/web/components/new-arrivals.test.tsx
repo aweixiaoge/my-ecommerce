@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ProductSummary } from "@my-ecommerce/shared";
+import { displayCurrency } from "@/lib/currency/display";
+import { en } from "@/lib/i18n/messages/en";
 import { HOME_GRID_SIZE, NewArrivals, NewArrivalsFallback } from "./new-arrivals";
 
 /**
@@ -34,8 +36,20 @@ function product(overrides: Partial<ProductSummary> = {}): ProductSummary {
   };
 }
 
+/** The shop's own currency and nothing else — the state a database with an
+ *  empty rate table leaves the storefront in. What `lib/currency/display.ts`
+ *  makes of a rate table is that module's test's business. */
+const USD = displayCurrency([]);
+
 const render = (products: ProductSummary[]) =>
-  renderToStaticMarkup(<NewArrivals products={products} />);
+  renderToStaticMarkup(
+    <NewArrivals
+      products={products}
+      messages={en.arrivals}
+      locale="en"
+      currency={USD}
+    />,
+  );
 
 describe("NewArrivals", () => {
   it("frames the grid with its heading and the way out of it", () => {
@@ -43,7 +57,8 @@ describe("NewArrivals", () => {
 
     expect(markup).toContain("New arrivals");
     expect(markup).toContain("View all products →");
-    expect(markup).toContain('href="/shop"');
+    // Every address leads with its language; English's shop is `/en/shop`.
+    expect(markup).toContain('href="/en/shop"');
   });
 
   it("draws one card per product, each linking to its own page", () => {
@@ -54,8 +69,28 @@ describe("NewArrivals", () => {
 
     expect(markup).toContain("Earbud Wireless Bluetooth");
     expect(markup).toContain("Sport In-Ear Buds");
-    expect(markup).toContain('href="/products/earbuds/earbud-wireless-bluetooth"');
-    expect(markup).toContain('href="/products/earbuds/sport-in-ear-buds"');
+    expect(markup).toContain(
+      'href="/en/products/earbuds/earbud-wireless-bluetooth"',
+    );
+    expect(markup).toContain('href="/en/products/earbuds/sport-in-ear-buds"');
+  });
+
+  it("writes the cards' prices in the reader's currency", () => {
+    // The grid a shopper meets first, converted from the same table the header
+    // offered them: 18.00 dollars at 0.92 is 16.56 euros.
+    const markup = renderToStaticMarkup(
+      <NewArrivals
+        products={[product()]}
+        messages={en.arrivals}
+        locale="en"
+        currency={displayCurrency(
+          [{ base: "USD", quote: "EUR", rate: "0.92" }],
+          "EUR",
+        )}
+      />,
+    );
+
+    expect(markup).toContain("€16.56");
   });
 
   it("draws nothing at all when the shop has nothing to show", () => {

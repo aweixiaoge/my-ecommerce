@@ -80,18 +80,24 @@ beforeEach(() => {
 });
 
 describe("getShopProducts", () => {
-  it("asks only for products that are on sale", async () => {
+  it("asks only for products that are on sale, in the language and its fallback", async () => {
     // The status column is what the admin's Publish button writes, so a draft
     // reaching the shop would be the shop publishing something nobody did.
+    // The locale is asked for as a list, because the row that comes back may
+    // be either the page's language or the default behind it — the mapper
+    // decides, and it can only decide about rows the query returned.
     db.product.findMany.mockResolvedValue([row()]);
 
-    const { items } = await getShopProducts({ page: 1, sort: "default" });
+    const { items } = await getShopProducts({ page: 1, sort: "default" }, "de");
 
     expect(db.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { status: "active" },
         select: expect.objectContaining({
-          translations: { where: { locale: "en" }, select: { name: true, slug: true } },
+          translations: {
+            where: { locale: { in: ["de", "en"] } },
+            select: { name: true, slug: true, locale: true },
+          },
         }),
       }),
     );
@@ -108,7 +114,7 @@ describe("getShopProducts", () => {
       page: 1,
       sort: "default",
       categoryId: "cat_earbuds",
-    });
+    }, "en");
 
     expect(db.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -126,7 +132,7 @@ describe("getShopProducts", () => {
     // tie-break every price sort falls back on. Without an `ORDER BY` Postgres
     // promises nothing, so the default listing and every tie would shuffle
     // between requests.
-    await getShopProducts({ page: 1, sort: "default" });
+    await getShopProducts({ page: 1, sort: "default" }, "en");
 
     expect(db.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -140,7 +146,7 @@ describe("getShopProducts", () => {
     // through the connection and drop it — measured at 19 MB for two products
     // — so a `select` that names its columns is load-bearing, and this is the
     // assertion that fails if someone switches it back.
-    await getShopProducts({ page: 1, sort: "default" });
+    await getShopProducts({ page: 1, sort: "default" }, "en");
 
     const [query] = db.product.findMany.mock.calls[0] as [
       { select: { media: { select: Record<string, unknown> } } },
@@ -158,7 +164,7 @@ describe("getShopProducts", () => {
       row({ media: [media("media_b", 1), media("media_a", 1)] }),
     ]);
 
-    const { items } = await getShopProducts({ page: 1, sort: "default" });
+    const { items } = await getShopProducts({ page: 1, sort: "default" }, "en");
 
     expect(db.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -178,7 +184,7 @@ describe("getShopProducts", () => {
   it("renders a product the database holds", async () => {
     db.product.findMany.mockResolvedValue([row()]);
 
-    const { items } = await getShopProducts({ page: 1, sort: "default" });
+    const { items } = await getShopProducts({ page: 1, sort: "default" }, "en");
 
     expect(items).toEqual([
       {
@@ -202,7 +208,7 @@ describe("getShopProducts", () => {
       { productId: "prod_1", _avg: { rating: 4.666666666666667 }, _count: { _all: 3 } },
     ]);
 
-    const { items } = await getShopProducts({ page: 1, sort: "default" });
+    const { items } = await getShopProducts({ page: 1, sort: "default" }, "en");
 
     expect(items[0]?.rating).toEqual({ average: 4.7, count: 3 });
     // The second product has no approved reviews, and "none" is not "zero" —
@@ -227,7 +233,7 @@ describe("getShopProducts", () => {
       row({ id: "prod_3", categories: [link("cat_1", "Earbuds", "earbuds")] }),
     ]);
 
-    for (const summary of (await getShopProducts({ page: 1, sort: "default" })).items) {
+    for (const summary of (await getShopProducts({ page: 1, sort: "default" }, "en")).items) {
       const result = ProductSummarySchema.safeParse(summary);
       expect(result.success, JSON.stringify(result.error?.issues)).toBe(true);
     }
@@ -240,7 +246,7 @@ describe("the span a card shows", () => {
       row({ variants: [variant({ priceAmount: "79.00" }), variant({ priceAmount: "79.00" })] }),
     ]);
 
-    const [summary] = (await getShopProducts({ page: 1, sort: "default" })).items;
+    const [summary] = (await getShopProducts({ page: 1, sort: "default" }, "en")).items;
 
     expect(summary?.price).toEqual({ amount: "79.00", currency: "USD" });
     expect(summary?.priceMax).toBeNull();
@@ -253,7 +259,7 @@ describe("the span a card shows", () => {
       row({ variants: [variant({ priceAmount: "79" }), variant({ priceAmount: "79.00" })] }),
     ]);
 
-    const [summary] = (await getShopProducts({ page: 1, sort: "default" })).items;
+    const [summary] = (await getShopProducts({ page: 1, sort: "default" }, "en")).items;
 
     expect(summary?.priceMax).toBeNull();
   });
@@ -263,7 +269,7 @@ describe("the span a card shows", () => {
       row({ variants: [variant({ priceAmount: "18.00" }), variant({ priceAmount: "21.00" })] }),
     ]);
 
-    const [summary] = (await getShopProducts({ page: 1, sort: "default" })).items;
+    const [summary] = (await getShopProducts({ page: 1, sort: "default" }, "en")).items;
 
     expect(summary?.price).toEqual({ amount: "18.00", currency: "USD" });
     expect(summary?.priceMax).toEqual({ amount: "21.00", currency: "USD" });
@@ -276,7 +282,7 @@ describe("the span a card shows", () => {
       row({ variants: [variant({ priceAmount: "21.00" }), variant({ priceAmount: "18.00" })] }),
     ]);
 
-    const [summary] = (await getShopProducts({ page: 1, sort: "default" })).items;
+    const [summary] = (await getShopProducts({ page: 1, sort: "default" }, "en")).items;
 
     expect(summary?.price).toEqual({ amount: "18.00", currency: "USD" });
     expect(summary?.priceMax).toEqual({ amount: "21.00", currency: "USD" });
@@ -295,7 +301,7 @@ describe("the span a card shows", () => {
       }),
     ]);
 
-    const [summary] = (await getShopProducts({ page: 1, sort: "default" })).items;
+    const [summary] = (await getShopProducts({ page: 1, sort: "default" }, "en")).items;
 
     expect(summary?.price).toEqual({ amount: "34.00", currency: "USD" });
     expect(summary?.priceMax).toBeNull();
@@ -313,7 +319,7 @@ describe("the span a card shows", () => {
       }),
     ]);
 
-    const [summary] = (await getShopProducts({ page: 1, sort: "default" })).items;
+    const [summary] = (await getShopProducts({ page: 1, sort: "default" }, "en")).items;
 
     expect(summary?.price).toEqual({ amount: "35.00", currency: "USD" });
   });
@@ -325,7 +331,7 @@ describe("the span a card shows", () => {
       row({ variants: [variant({ priceAmount: null, priceCurrency: null })] }),
     ]);
 
-    const { items, pagination } = await getShopProducts({ page: 1, sort: "default" });
+    const { items, pagination } = await getShopProducts({ page: 1, sort: "default" }, "en");
 
     expect(items).toEqual([]);
     expect(pagination.total).toBe(0);
@@ -334,7 +340,7 @@ describe("the span a card shows", () => {
   it("leaves out a product with no variants at all", async () => {
     db.product.findMany.mockResolvedValue([row({ variants: [] })]);
 
-    expect((await getShopProducts({ page: 1, sort: "default" })).items).toEqual([]);
+    expect((await getShopProducts({ page: 1, sort: "default" }, "en")).items).toEqual([]);
   });
 
   it("leaves out a product priced in two currencies rather than throwing", async () => {
@@ -347,7 +353,7 @@ describe("the span a card shows", () => {
     ]);
 
     await expect(
-      getShopProducts({ page: 1, sort: "default" }),
+      getShopProducts({ page: 1, sort: "default" }, "en"),
     ).resolves.toEqual(expect.objectContaining({ items: [] }));
   });
 });
@@ -358,7 +364,7 @@ describe("what else the card reads", () => {
       row({ variants: [variant({ stock: 0 }), variant({ stock: 3 })] }),
     ]);
 
-    const [summary] = (await getShopProducts({ page: 1, sort: "default" })).items;
+    const [summary] = (await getShopProducts({ page: 1, sort: "default" }, "en")).items;
 
     expect(summary?.inStock).toBe(true);
   });
@@ -366,7 +372,7 @@ describe("what else the card reads", () => {
   it("counts a product with nothing on the shelf as out of stock", async () => {
     db.product.findMany.mockResolvedValue([row({ variants: [variant({ stock: 0 })] })]);
 
-    const [summary] = (await getShopProducts({ page: 1, sort: "default" })).items;
+    const [summary] = (await getShopProducts({ page: 1, sort: "default" }, "en")).items;
 
     expect(summary?.inStock).toBe(false);
   });
@@ -378,7 +384,7 @@ describe("what else the card reads", () => {
       row({ media: [media("media_first", 0), media("media_second", 1)] }),
     ]);
 
-    const [summary] = (await getShopProducts({ page: 1, sort: "default" })).items;
+    const [summary] = (await getShopProducts({ page: 1, sort: "default" }, "en")).items;
 
     expect(summary?.image).toEqual({
       id: "media_first",
@@ -390,13 +396,44 @@ describe("what else the card reads", () => {
     });
   });
 
-  it("leaves out a product with no translation in this locale", async () => {
+  it("leaves out a product with no translation in either language", async () => {
     // No name and no slug: there is no card, and no page for its link to lead
     // to. Not a state this app writes — every create writes one — but a hand
     // inserted row should not reach the screen half-formed.
     db.product.findMany.mockResolvedValue([row({ translations: [] })]);
 
-    expect((await getShopProducts({ page: 1, sort: "default" })).items).toEqual([]);
+    expect((await getShopProducts({ page: 1, sort: "default" }, "en")).items).toEqual([]);
+  });
+
+  it("keeps an untranslated product on the shelf, in the default language", async () => {
+    // The state every product is in until somebody translates it: a German
+    // shop with the English products in it rather than an empty grid. The row
+    // is the one the query fetched as the fallback, and it is shown as it is.
+    db.product.findMany.mockResolvedValue([row()]);
+
+    const [summary] = (await getShopProducts({ page: 1, sort: "default" }, "de")).items;
+
+    expect(summary?.name).toBe("Studio Over-Ear");
+    expect(summary?.slug).toBe("studio-over-ear");
+  });
+
+  it("prefers the translation when the product has one, link and all", async () => {
+    // The slug comes from the same row as the name, which is what makes a
+    // translated product's links change with it — no card anywhere is edited
+    // for the German address to appear.
+    db.product.findMany.mockResolvedValue([
+      row({
+        translations: [
+          { locale: "de", name: "Studio Überohr", slug: "studio-ueberohr" },
+          { locale: "en", name: "Studio Over-Ear", slug: "studio-over-ear" },
+        ],
+      }),
+    ]);
+
+    const [summary] = (await getShopProducts({ page: 1, sort: "default" }, "de")).items;
+
+    expect(summary?.name).toBe("Studio Überohr");
+    expect(summary?.slug).toBe("studio-ueberohr");
   });
 });
 
@@ -406,7 +443,7 @@ describe("the category a card names", () => {
       row({ categories: [link("cat_1", "Earbuds", "earbuds")] }),
     ]);
 
-    const [summary] = (await getShopProducts({ page: 1, sort: "default" })).items;
+    const [summary] = (await getShopProducts({ page: 1, sort: "default" }, "en")).items;
 
     expect(summary?.categories).toEqual([
       { id: "cat_1", name: "Earbuds", slug: "earbuds" },
@@ -426,7 +463,7 @@ describe("the category a card names", () => {
       }),
     ]);
 
-    const [summary] = (await getShopProducts({ page: 1, sort: "default" })).items;
+    const [summary] = (await getShopProducts({ page: 1, sort: "default" }, "en")).items;
 
     expect(summary?.categories.map((category) => category.name)).toEqual([
       "Earbuds",
@@ -438,7 +475,7 @@ describe("the category a card names", () => {
     // Every category the admin's create screen makes is a root at position
     // zero, so position alone would leave the card's category line to the query
     // plan. The id breaks the tie.
-    await getShopProducts({ page: 1, sort: "default" });
+    await getShopProducts({ page: 1, sort: "default" }, "en");
 
     expect(db.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -456,20 +493,20 @@ describe("the category a card names", () => {
     // list, exactly as it does for one it cannot read.
     db.product.findMany.mockResolvedValue([row({ categories: [] })]);
 
-    const [summary] = (await getShopProducts({ page: 1, sort: "default" })).items;
+    const [summary] = (await getShopProducts({ page: 1, sort: "default" }, "en")).items;
 
     expect(summary?.categories).toEqual([]);
   });
 
-  it("skips a category with no name in this locale", async () => {
-    // A category whose translation has not been written is a gap in a card's
+  it("skips a category with no name in either language", async () => {
+    // A category whose translations have not been written is a gap in a card's
     // category line, not a reason to hide a product that is otherwise
     // sellable — and not a card rendering the word "undefined".
     db.product.findMany.mockResolvedValue([
       row({ categories: [{ category: { id: "cat_1", translations: [] } }] }),
     ]);
 
-    const [summary] = (await getShopProducts({ page: 1, sort: "default" })).items;
+    const [summary] = (await getShopProducts({ page: 1, sort: "default" }, "en")).items;
 
     expect(summary?.categories).toEqual([]);
   });
@@ -479,7 +516,7 @@ describe("paging and ordering", () => {
   it("fills a page at twelve, as the design's grid does", async () => {
     db.product.findMany.mockResolvedValue(manyRows(13));
 
-    const page = await getShopProducts({ page: 1, sort: "default" });
+    const page = await getShopProducts({ page: 1, sort: "default" }, "en");
 
     expect(page.items).toHaveLength(12);
     expect(page.pagination).toEqual({
@@ -493,8 +530,8 @@ describe("paging and ordering", () => {
   it("serves the remainder without repeating a product", async () => {
     db.product.findMany.mockResolvedValue(manyRows(13));
 
-    const first = await getShopProducts({ page: 1, sort: "default" });
-    const second = await getShopProducts({ page: 2, sort: "default" });
+    const first = await getShopProducts({ page: 1, sort: "default" }, "en");
+    const second = await getShopProducts({ page: 2, sort: "default" }, "en");
 
     expect(second.items).toHaveLength(1);
 
@@ -509,7 +546,7 @@ describe("paging and ordering", () => {
     // fail it.
     db.product.findMany.mockResolvedValue(manyRows(13));
 
-    const page = await getShopProducts({ page: 1, sort: "price-asc" });
+    const page = await getShopProducts({ page: 1, sort: "price-asc" }, "en");
     const amounts = page.items.map((product) => product.price.amount);
 
     expect(amounts).toEqual([...amounts].sort((a, b) => Number(a) - Number(b)));
@@ -522,7 +559,7 @@ describe("paging and ordering", () => {
     // which has its own tests — this is the wiring that proves it is used.
     db.product.findMany.mockResolvedValue(manyRows(2));
 
-    const page = await getShopProducts({ page: 99, sort: "default" });
+    const page = await getShopProducts({ page: 99, sort: "default" }, "en");
 
     expect(page.pagination.page).toBe(1);
     expect(page.items).toHaveLength(2);
@@ -535,7 +572,7 @@ describe("listNewArrivals", () => {
     // grid draws eight cards, and the shop's pager is what exists for the rest.
     db.product.findMany.mockResolvedValue([row(), row({ id: "prod_2" })]);
 
-    const products = await listNewArrivals(8);
+    const products = await listNewArrivals(8, "en");
 
     expect(db.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -557,6 +594,6 @@ describe("listNewArrivals", () => {
       row({ id: "prod_2" }),
     ]);
 
-    expect((await listNewArrivals(8)).map((p) => p.id)).toEqual(["prod_2"]);
+    expect((await listNewArrivals(8, "en")).map((p) => p.id)).toEqual(["prod_2"]);
   });
 });

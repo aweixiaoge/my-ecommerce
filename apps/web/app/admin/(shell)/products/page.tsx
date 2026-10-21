@@ -4,6 +4,8 @@ import { connection } from "next/server";
 import type { Money } from "@my-ecommerce/shared";
 import { compareMoney } from "@my-ecommerce/shared";
 import { setProductStatusAction } from "./actions";
+import { TranslateButton } from "@/components/admin/translate-button";
+import { TranslationNotice } from "@/components/admin/translation-notice";
 import { priceRange } from "@/lib/admin/product-variants";
 import { listProducts } from "@/lib/admin/products-repo";
 import { formatMoney } from "@/lib/format";
@@ -44,7 +46,9 @@ interface Row {
   status: "Draft" | "Active" | "Archived";
 }
 
-export default async function AdminProductsPage() {
+export default async function AdminProductsPage({
+  searchParams,
+}: PageProps<"/admin/products">) {
   /**
    * The products are a database read, so this page only means anything at
    * request time. Left prerenderable, the build would render it and bake the
@@ -56,6 +60,7 @@ export default async function AdminProductsPage() {
   await connection();
 
   const products = await listProducts();
+  const notice = (await searchParams).translated;
 
   const rows: Row[] = products.map((product) => ({
     id: product.id,
@@ -101,6 +106,8 @@ export default async function AdminProductsPage() {
           Create product
         </Link>
       </div>
+
+      <TranslationNotice value={notice} />
 
       <table className="w-full border-collapse text-left">
         <caption className="sr-only">
@@ -203,6 +210,7 @@ function RowActions({ id, name, status }: { id: string; name: string; status: Ro
       <StatusForm id={id} status="draft" disabled={!published} label={`Unpublish ${name}`}>
         Unpublish
       </StatusForm>
+      <TranslateButton kind="product" id={id} name={name} />
 
       {/*
         An anchor, not a `<Link>`, and that is the point rather than an

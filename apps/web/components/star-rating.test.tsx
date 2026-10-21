@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { en } from "@/lib/i18n/messages/en";
 import { StarRating } from "./star-rating";
 
 /**
@@ -14,24 +15,24 @@ const stars = (markup: string) =>
 
 describe("StarRating", () => {
   it("paints five stars, one per step of the scale", () => {
-    expect(stars(renderToStaticMarkup(<StarRating rating={{ average: 3, count: 1 }} />))).toHaveLength(5);
+    expect(stars(renderToStaticMarkup(<StarRating rating={{ average: 3, count: 1 }} messages={en.reviews} />))).toHaveLength(5);
   });
 
   it("fills the stars the average rounds to", () => {
-    const markup = renderToStaticMarkup(<StarRating rating={{ average: 4.2, count: 9 }} />);
+    const markup = renderToStaticMarkup(<StarRating rating={{ average: 4.2, count: 9 }} messages={en.reviews} />);
 
     expect(stars(markup).filter((s) => s.includes("filled"))).toHaveLength(4);
     expect(stars(markup).filter((s) => s.includes("empty"))).toHaveLength(1);
   });
 
   it("rounds .5 and above up, because the design has no half star to draw", () => {
-    const markup = renderToStaticMarkup(<StarRating rating={{ average: 4.6, count: 9 }} />);
+    const markup = renderToStaticMarkup(<StarRating rating={{ average: 4.6, count: 9 }} messages={en.reviews} />);
 
     expect(stars(markup).filter((s) => s.includes("filled"))).toHaveLength(5);
   });
 
   it("fills none of the stars for an average of zero", () => {
-    const markup = renderToStaticMarkup(<StarRating rating={{ average: 0, count: 0 }} />);
+    const markup = renderToStaticMarkup(<StarRating rating={{ average: 0, count: 0 }} messages={en.reviews} />);
 
     expect(stars(markup).filter((s) => s.includes("filled"))).toHaveLength(0);
   });
@@ -39,11 +40,11 @@ describe("StarRating", () => {
   it("renders nothing at all when a product has no reviews", () => {
     // Not an empty star row: five pale stars reads as a one-star verdict on a
     // product nobody has rated.
-    expect(renderToStaticMarkup(<StarRating rating={null} />)).toBe("");
+    expect(renderToStaticMarkup(<StarRating rating={null} messages={en.reviews} />)).toBe("");
   });
 
   it("gives assistive tech the figure once, not five images", () => {
-    const markup = renderToStaticMarkup(<StarRating rating={{ average: 4.2, count: 98 }} />);
+    const markup = renderToStaticMarkup(<StarRating rating={{ average: 4.2, count: 98 }} messages={en.reviews} />);
 
     expect(markup).toContain('role="img"');
     expect(markup).toContain("Rated 4.2 out of 5 from 98 reviews");
@@ -57,7 +58,11 @@ describe("StarRating", () => {
     // A single review's row: its rating *is* the count, and "from 1 reviews" is
     // both ungrammatical and wrong about what the stars mean.
     const markup = renderToStaticMarkup(
-      <StarRating rating={{ average: 4, count: 1 }} label="4 out of 5" />,
+      <StarRating
+        rating={{ average: 4, count: 1 }}
+        messages={en.reviews}
+        label="4 out of 5"
+      />,
     );
 
     expect(markup).toContain('aria-label="4 out of 5"');
@@ -66,7 +71,11 @@ describe("StarRating", () => {
 
   it("passes a caller's spacing through to the row", () => {
     const markup = renderToStaticMarkup(
-      <StarRating rating={{ average: 4, count: 1 }} className="mt-[11px]" />,
+      <StarRating
+        rating={{ average: 4, count: 1 }}
+        messages={en.reviews}
+        className="mt-[11px]"
+      />,
     );
 
     expect(markup).toContain("mt-[11px]");

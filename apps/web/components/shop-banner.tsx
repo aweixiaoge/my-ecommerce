@@ -1,5 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Messages } from "@/lib/i18n/messages";
+import { localePath } from "@/lib/i18n/paths";
+import type { Locale } from "@/lib/languages";
 
 /**
  * The Shop page's opening block — the design's `Header` (node 178:8357):
@@ -14,11 +17,18 @@ import Link from "next/link";
  * paragraph about trees yielding chemicals, beside a photo of cracked soil).
  * The layout is reproduced exactly; the words are ours. See the handover note.
  */
-export function ShopBanner() {
+export function ShopBanner({
+  messages,
+  locale,
+}: {
+  /** This locale's `shop` slice of the catalog — the banner's own copy. */
+  messages: Messages["shop"];
+  locale: Locale;
+}) {
   return (
     <header>
       <h1 className="text-[30px] leading-[45px] font-bold tracking-[0.3955px] text-ink">
-        Shop
+        {messages.title}
       </h1>
 
       {/*
@@ -44,7 +54,7 @@ export function ShopBanner() {
           <div className="relative aspect-[722.393/273.366] overflow-hidden bg-mist bar:aspect-auto bar:min-h-[273.366px]">
             <Image
               src="/images/why-buy.jpg"
-              alt="A pair of headphones on a ridged surface"
+              alt={messages.bannerImageAlt}
               fill
               sizes="(min-width: 768px) 56vw, 100vw"
               className="object-cover"
@@ -60,24 +70,20 @@ export function ShopBanner() {
           */}
           <div className="bar:px-[8%]">
             <h2 className="text-[32px] leading-[48px] font-bold tracking-[0.40625px] text-ink">
-              Hand-tested gear
+              {messages.bannerTitle}
             </h2>
 
             <p className="mt-[19.6px] text-[17px] leading-[28.05px] tracking-[-0.4316px] text-ink">
-              Every pair that reaches this page has been worn by someone here
-              first. Battery life measured across a week of commutes, fit
-              checked on a run, calls taken on a busy street. The ones that did
-              not hold up never made it into the catalogue — and what we learned
-              testing them is in the journal.
+              {messages.bannerBody}
             </p>
 
             <div className="mt-[25.5px] flex items-center gap-6">
               <Link
-                href="/about"
+                href={localePath(locale, "/about")}
                 prefetch={false}
                 className="inline-flex h-10 items-center justify-center rounded-[3px] bg-ink px-5 text-[15px] leading-[24.75px] font-medium tracking-[-0.2344px] text-paper"
               >
-                Learn more
+                {messages.bannerCta}
               </Link>
             </div>
           </div>

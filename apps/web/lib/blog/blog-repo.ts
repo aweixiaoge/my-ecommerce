@@ -1,5 +1,6 @@
 import { prisma } from "@my-ecommerce/db";
-import { BLOG_SELECT, toBlogPost, type BlogPostSummary } from "./blog-rows";
+import type { Locale } from "@/lib/languages";
+import { blogSelect, toBlogPost, type BlogPostSummary } from "./blog-rows";
 
 /**
  * The journal, as the storefront reads it.
@@ -13,17 +14,20 @@ import { BLOG_SELECT, toBlogPost, type BlogPostSummary } from "./blog-rows";
  * three; the day there is a journal *page*, it is that page's read — with its
  * own pager — rather than this one with a bigger number.
  */
-export async function listBlogPosts(limit: number): Promise<BlogPostSummary[]> {
+export async function listBlogPosts(
+  limit: number,
+  locale: Locale,
+): Promise<BlogPostSummary[]> {
   const rows = await prisma.blog.findMany({
     // Newest first, with the id breaking a same-millisecond tie rather than the
     // query plan — the same pair `listBlogs` orders by in the admin repository,
     // so the two screens agree on what "newest" means.
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: limit,
-    select: BLOG_SELECT,
+    select: blogSelect(locale),
   });
 
   return rows
-    .map(toBlogPost)
+    .map((row) => toBlogPost(row, locale))
     .filter((post): post is BlogPostSummary => post !== null);
 }

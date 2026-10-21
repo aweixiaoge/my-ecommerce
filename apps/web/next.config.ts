@@ -36,6 +36,16 @@ const nextConfig: NextConfig = {
     },
   },
   experimental: {
+    /*
+     * A 404 for a URL that matches no route.
+     *
+     * The storefront now has two root layouts and a root layout under a
+     * top-level dynamic segment (`app/[lang]`), which are the two cases the
+     * framework names as needing a global 404: there is no single layout to
+     * compose one from, so without this file the framework falls back to its
+     * own unstyled page.
+     */
+    globalNotFound: true,
     serverActions: {
       /*
        * Sized for ONE image per request — the 3 MB cap in the shared schema,

@@ -1,6 +1,10 @@
 import type { ProductSummary } from "@my-ecommerce/shared";
 import { ProductCard } from "@/components/product-card";
 import { SectionHeading } from "@/components/section-heading";
+import type { DisplayCurrency } from "@/lib/currency/display";
+import type { Messages } from "@/lib/i18n/messages";
+import { localePath } from "@/lib/i18n/paths";
+import type { Locale } from "@/lib/languages";
 
 /**
  * The home design's grid is two rows of four, and stays two rows of four —
@@ -20,8 +24,16 @@ export const HOME_GRID_SIZE = 8;
  */
 export function NewArrivals({
   products,
+  messages,
+  locale,
+  currency,
 }: {
   products: readonly ProductSummary[];
+  /** This locale's `arrivals` slice of the catalog. */
+  messages: Messages["arrivals"];
+  locale: Locale;
+  /** The currency the cards write their prices in. */
+  currency: DisplayCurrency;
 }) {
   // Nothing to show, no section: a heading over an empty grid is a promise the
   // page cannot keep, and the shop's own page is where "there is nothing here"
@@ -32,14 +44,19 @@ export function NewArrivals({
     <section className="pt-[72px] pb-[80px]">
       <div className="container-content">
         <SectionHeading
-          title="New arrivals"
-          linkLabel="View all products →"
-          linkHref="/shop"
+          title={messages.title}
+          linkLabel={messages.link}
+          linkHref={localePath(locale, "/shop")}
         />
 
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 bar:grid-cols-4">
           {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              locale={locale}
+              currency={currency}
+            />
           ))}
         </div>
       </div>

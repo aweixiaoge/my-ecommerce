@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Hero, HeroFallback } from "./hero";
 import type { HeroProduct } from "@/lib/catalog/featured-rows";
+import { en } from "@/lib/i18n/messages/en";
 
 /**
  * The home page's opening block, in its two contents.
@@ -41,7 +42,7 @@ const product = (overrides: Partial<HeroProduct> = {}): HeroProduct => ({
 });
 
 const render = (featured: HeroProduct | null) =>
-  renderToStaticMarkup(<Hero product={featured} />);
+  renderToStaticMarkup(<Hero product={featured} messages={en.hero} locale="en" />);
 
 describe("the hero with a featured product", () => {
   it("draws that product's name, blurb and picture", () => {
@@ -103,7 +104,9 @@ describe("the hero with nothing featured", () => {
     const markup = render(null);
 
     expect(markup).toContain("Shop all products");
-    expect(markup).toContain('href="/shop"');
+    // The language is the address's first segment, so the English shop is
+    // `/en/shop` and not `/shop`.
+    expect(markup).toContain('href="/en/shop"');
     expect(markup).not.toContain("Shop it now");
   });
 });

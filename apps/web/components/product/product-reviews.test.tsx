@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Review } from "@my-ecommerce/shared";
+import { en } from "@/lib/i18n/messages/en";
 import { ProductReviews } from "./product-reviews";
 
 /**
@@ -10,7 +11,7 @@ import { ProductReviews } from "./product-reviews";
  * A small claim, and worth one test: which half is which is the whole of this
  * component, and the two halves are tested where they live.
  */
-vi.mock("@/app/(storefront)/products/actions", () => ({
+vi.mock("@/app/[lang]/products/actions", () => ({
   createReviewAction: vi.fn(),
 }));
 
@@ -35,6 +36,8 @@ const render = (reviews: Review[]) =>
       reviews={reviews}
       productId="prod_1"
       productName="Earbud Wireless"
+      messages={en.reviews}
+      locale="en"
     />,
   );
 

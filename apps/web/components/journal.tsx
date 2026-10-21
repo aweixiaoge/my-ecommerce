@@ -2,6 +2,9 @@ import Link from "next/link";
 import { SectionHeading } from "@/components/section-heading";
 import { formatDate } from "@/lib/format";
 import type { BlogPostSummary } from "@/lib/blog/blog-rows";
+import type { Messages } from "@/lib/i18n/messages";
+import { localePath } from "@/lib/i18n/paths";
+import type { Locale } from "@/lib/languages";
 
 /** The design's row of three, and the number the page's read asks for. */
 export const JOURNAL_SIZE = 3;
@@ -16,16 +19,26 @@ export const JOURNAL_SIZE = 3;
  * replaced had its own formatter that understood a `YYYY-MM-DD` string; the
  * database sends an instant.
  */
-export function Journal({ posts }: { posts: readonly BlogPostSummary[] }) {
+export function Journal({
+  posts,
+  messages,
+  locale,
+}: {
+  posts: readonly BlogPostSummary[];
+  /** This locale's `journal` slice of the catalog. */
+  messages: Messages["journal"];
+  locale: Locale;
+}) {
   if (posts.length === 0) return null;
 
   return (
     <section className="py-[72px]">
       <div className="container-content">
         <SectionHeading
-          title="From the journal"
-          linkLabel="All articles →"
-          linkHref="/journal"
+          title={messages.title}
+          linkLabel={messages.link}
+          linkHref={localePath(locale, "/journal")}
+          linkPrefetch={false}
         />
 
         {/*
@@ -50,7 +63,10 @@ export function Journal({ posts }: { posts: readonly BlogPostSummary[] }) {
                 {/* The journal's own page does not exist yet (plan.md's
                     Content phase); the address is the one it will have, and
                     the prefetch is off because there is nothing to fetch. */}
-                <Link href={`/journal/${post.slug}`} prefetch={false}>
+                <Link
+                  href={localePath(locale, `/journal/${post.slug}`)}
+                  prefetch={false}
+                >
                   {post.title}
                 </Link>
               </h3>
@@ -62,7 +78,7 @@ export function Journal({ posts }: { posts: readonly BlogPostSummary[] }) {
               )}
 
               <p className="mt-1.5 text-[13px] leading-[21.45px] tracking-[-0.076px] text-ink">
-                {formatDate(post.publishedAt)}
+                {formatDate(post.publishedAt, locale)}
               </p>
             </article>
           ))}

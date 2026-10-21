@@ -1,5 +1,9 @@
 import type { Prisma } from "@my-ecommerce/db";
-import { DEFAULT_LOCALE } from "../locale";
+import type { Locale } from "@/lib/languages";
+import {
+  fallbackLocales,
+  shownTranslation,
+} from "../catalog/translation";
 
 /**
  * What a post row is, and how it becomes the journal's listing view.
@@ -18,26 +22,30 @@ import { DEFAULT_LOCALE } from "../locale";
  * here either, for the same reason: the design's card is a label, a title, an
  * excerpt and a date.
  */
-export const BLOG_SELECT = {
-  id: true,
-  // The date the card shows. See `toBlogPost`.
-  createdAt: true,
-  translations: {
-    where: { locale: DEFAULT_LOCALE },
-    select: { title: true, slug: true, shortDescription: true },
-  },
-  category: {
-    select: {
-      translations: {
-        where: { locale: DEFAULT_LOCALE },
-        select: { name: true },
+export function blogSelect(locale: Locale) {
+  return {
+    id: true,
+    // The date the card shows. See `toBlogPost`.
+    createdAt: true,
+    translations: {
+      where: { locale: { in: fallbackLocales(locale) } },
+      select: { title: true, slug: true, shortDescription: true, locale: true },
+    },
+    category: {
+      select: {
+        translations: {
+          where: { locale: { in: fallbackLocales(locale) } },
+          select: { name: true, locale: true },
+        },
       },
     },
-  },
-} as const satisfies Prisma.BlogSelect;
+  } as const satisfies Prisma.BlogSelect;
+}
 
 /** A row as that select returns it. */
-export type BlogRow = Prisma.BlogGetPayload<{ select: typeof BLOG_SELECT }>;
+export type BlogRow = Prisma.BlogGetPayload<{
+  select: ReturnType<typeof blogSelect>;
+}>;
 
 /**
  * A post, as the journal draws it.
@@ -71,19 +79,26 @@ export interface BlogPostSummary {
 /**
  * The row as a card, or null when there is no card to draw.
  *
- * Null means one thing: no translation in the display locale. A post with no
- * title and no slug is a card with nowhere for its link to lead, and it is
- * dropped the way `toSummary` drops a product nothing has written a name for.
- * There is no `some` filter to lean on here the way the product queries lean on
- * theirs — the translation is *selected* per locale, not filtered — so this is
- * the only place that decides it.
+ * Null means one thing: a translation in neither the language of the page nor
+ * the default. A post with no title and no slug is a card with nowhere for its
+ * link to lead, and it is dropped the way `toSummary` drops a product nobody
+ * has written a name for. There is no `some` filter to lean on here the way the
+ * product queries lean on theirs — the translation is *selected* per locale,
+ * not filtered — so this is the only place that decides it.
+ *
+ * A post that has been translated shows the translation and links to that
+ * language's slug; one that has not shows the English title at the English
+ * slug, and is still readable rather than missing from the journal.
  *
  * The category is the one thing allowed to be absent, and its absence is an
  * empty label rather than a placeholder — the rule a product card's category
  * line already follows.
  */
-export function toBlogPost(row: BlogRow): BlogPostSummary | null {
-  const translation = row.translations.at(0);
+export function toBlogPost(
+  row: BlogRow,
+  locale: Locale,
+): BlogPostSummary | null {
+  const translation = shownTranslation(row.translations, locale);
   if (!translation) return null;
 
   return {
@@ -91,7 +106,7 @@ export function toBlogPost(row: BlogRow): BlogPostSummary | null {
     slug: translation.slug,
     title: translation.title,
     excerpt: translation.shortDescription,
-    category: row.category?.translations.at(0)?.name ?? "",
+    category: shownTranslation(row.category?.translations ?? [], locale)?.name ?? "",
     publishedAt: row.createdAt.toISOString(),
   };
 }

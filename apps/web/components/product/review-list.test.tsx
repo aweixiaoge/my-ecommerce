@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Review } from "@my-ecommerce/shared";
+import { en } from "@/lib/i18n/messages/en";
 import { ReviewList } from "./review-list";
 
 /**
@@ -30,7 +31,14 @@ function review(overrides: Partial<Review> = {}): Review {
 }
 
 const render = (reviews: Review[], productName = "Earbud Wireless") =>
-  renderToStaticMarkup(<ReviewList reviews={reviews} productName={productName} />);
+  renderToStaticMarkup(
+    <ReviewList
+      reviews={reviews}
+      productName={productName}
+      messages={en.reviews}
+      locale="en"
+    />,
+  );
 
 describe("the count above the list", () => {
   it("reads as one review of this product", () => {

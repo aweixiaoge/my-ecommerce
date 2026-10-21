@@ -9,6 +9,9 @@ import {
 } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { CurrencyTrigger } from "@/components/currency-switcher";
+import { en } from "@/lib/i18n/messages/en";
+import { localePath } from "@/lib/i18n/paths";
 import { NAV } from "@/lib/nav";
 import { SiteHeader } from "./site-header";
 
@@ -30,6 +33,20 @@ vi.mock("next/image", () => ({
     // eslint-disable-next-line @next/next/no-img-element
     <img src={typeof src === "string" ? src : "mock"} alt={alt ?? ""} />
   ),
+}));
+
+/** The language switcher, rendered inside the header, reads the address it is
+ *  on to draw its rows. jsdom is not a Next render, so the pathname is handed
+ *  to it — one with a language in it, which is what the swap works on. */
+vi.mock("next/navigation", () => ({ usePathname: () => "/en/shop" }));
+
+/** The seven routes, resolved the way `app/[lang]/layout.tsx` resolves them:
+ *  the label from this locale's catalog and the address through `localePath`.
+ *  `NAV` itself carries keys and paths without a language. */
+const nav = NAV.map((item) => ({
+  label: en.nav[item.key],
+  href: localePath("en", item.href),
+  prefetch: item.prefetch,
 }));
 
 type MediaChange = (event: { matches: boolean }) => void;
@@ -72,7 +89,19 @@ beforeEach(() => {
   mediaStubs = [];
   act(() => {
     root = createRoot(container);
-    root.render(<SiteHeader />);
+    root.render(
+      <SiteHeader
+        nav={nav}
+        messages={en.header}
+        locale="en"
+        // What the layout hands over: the currency control at rest. The live
+        // one is a Server Component and cannot be rendered here — jsdom has no
+        // cookie jar — so what this test can say about it is where it sits,
+        // which is what the switcher assertions below are about.
+        navCurrency={<CurrencyTrigger currency="USD" placement="nav" />}
+        barCurrency={<CurrencyTrigger currency="USD" placement="bar" />}
+      />,
+    );
   });
 });
 
@@ -101,9 +130,14 @@ const button = (scope: ParentNode, label: string) => {
 };
 
 /** The collapse toggle. Its label flips between "Open menu" and "Close menu"
- *  with the state, so it is addressed by the attribute pairing instead. */
+ *  with the state, so either spelling addresses it — and it has to be the
+ *  label: the language switcher's trigger is the header's other
+ *  `aria-controls`/`aria-expanded` button, and the attribute pairing alone
+ *  would find whichever of the two came first in the document. */
 const toggle = () =>
-  header().querySelector<HTMLButtonElement>("button[aria-controls][aria-expanded]")!;
+  header().querySelector<HTMLButtonElement>(
+    'button[aria-label="Open menu"], button[aria-label="Close menu"]',
+  )!;
 
 const panel = () =>
   container.querySelector<HTMLElement>(
@@ -126,14 +160,38 @@ const links = (scope: ParentNode, label: string) =>
     (anchor) => name(anchor) === label,
   );
 
+/** Every button the accessibility tree would announce as `label`, in document
+ *  order. Same reason as `links` below: the language switcher's trigger exists
+ *  twice over, and only one of the two is ever displayed. */
+const buttons = (scope: ParentNode, label: string) =>
+  [...scope.querySelectorAll<HTMLButtonElement>("button")].filter(
+    (element) => name(element) === label,
+  );
+
 /** The desktop nav, the first `navigation` in the header. */
 const desktopNav = () => header().querySelectorAll("nav")[0];
+
+/** The two copies of one switcher, as the element that carries each copy's
+ *  placement — `lg:hidden` on the bar's, `lg:flex` on the nav's.
+ *
+ *  Both controls draw a copy as a trigger inside a wrapper, because both open
+ *  a menu: the trigger is what carries the name, and the wrapper what carries
+ *  the placement and anchors the menu, so the wrapper is what these assertions
+ *  read. The language switcher is rendered here as itself; the currency control
+ *  is the layout's fallback, `CurrencyTrigger`, whose trigger is a span rather
+ *  than a button because a fallback opens nothing. */
+const switcherCopies = (label: string) =>
+  label === "EN"
+    ? buttons(header(), "Language: EN").map((trigger) => trigger.parentElement!)
+    : [...header().querySelectorAll<HTMLSpanElement>("span")]
+        .filter((span) => name(span) === label)
+        .map((span) => span.parentElement!);
 
 /** The copy of a switcher that the nav collapsing does not take away: the one
  *  in the bar, which is the `lg:hidden` copy. */
 const barSwitcher = (label: string) => {
-  const found = links(header(), label).filter((anchor) =>
-    anchor.className.split(/\s+/).includes("lg:hidden"),
+  const found = switcherCopies(label).filter((element) =>
+    element.className.split(/\s+/).includes("lg:hidden"),
   );
   if (found.length !== 1) {
     throw new Error(`expected one "${label}" switcher in the bar, got ${found.length}`);
@@ -159,15 +217,12 @@ const click = async (element: Element) => {
   });
 };
 
-const isExpanded = () => {
-  const trigger = header().querySelector('button[aria-controls][aria-expanded]')!;
-  return trigger.getAttribute("aria-expanded") === "true";
-};
+const isExpanded = () => toggle().getAttribute("aria-expanded") === "true";
 
 describe("SiteHeader — desktop nav", () => {
   it("renders every storefront route in the desktop nav", () => {
     expect(desktopNav().className.split(/\s+/)).toContain("bar:flex");
-    for (const item of NAV) {
+    for (const item of nav) {
       expect(link(desktopNav(), item.label).getAttribute("href")).toBe(
         item.href,
       );
@@ -181,7 +236,7 @@ describe("SiteHeader — desktop nav", () => {
     // difference is found. Dropping `wide:px-[12.5px]` would leave the links
     // tight at every width; dropping `px-[8px]` would put the row back over
     // and collapse the nav at the width this breakpoint exists to serve.
-    for (const item of NAV) {
+    for (const item of nav) {
       const classes = link(desktopNav(), item.label).className.split(/\s+/);
       expect(classes).toContain("px-[8px]");
       expect(classes).toContain("wide:px-[12.5px]");
@@ -232,7 +287,7 @@ describe("SiteHeader — menu below bar", () => {
   it("offers every nav route inside the panel", async () => {
     await click(toggle());
 
-    for (const item of NAV) {
+    for (const item of nav) {
       expect(link(panel(), item.label).getAttribute("href")).toBe(item.href);
     }
   });
@@ -283,7 +338,7 @@ describe("SiteHeader — the row's columns", () => {
 
 describe("SiteHeader — what the 768 floor costs", () => {
   it("sheds the cart's amount between bar and wide", () => {
-    const cart = header().querySelector<HTMLAnchorElement>('a[href="/cart"]')!;
+    const cart = header().querySelector<HTMLAnchorElement>('a[href="/en/cart"]')!;
     const amount = [...cart.querySelectorAll("span")].find(
       (span) => name(span) === "$0.00",
     )!;
@@ -317,9 +372,12 @@ describe("SiteHeader — language and currency switchers", () => {
   it("leaves each switcher to exactly one of the two placements", () => {
     for (const label of ["EN", "USD"]) {
       // Two copies in the document — the bar's and the nav's — never three.
-      expect(links(header(), label)).toHaveLength(2);
+      expect(switcherCopies(label)).toHaveLength(2);
 
-      const classes = link(desktopNav(), label).className.split(/\s+/);
+      const navCopy = switcherCopies(label).find((element) =>
+        desktopNav().contains(element),
+      )!;
+      const classes = navCopy.className.split(/\s+/);
       expect(classes).not.toContain("lg:hidden");
       // The nav's copy is held back to `lg`: between `bar` and `lg` the nav is
       // on screen but too narrow for it, so the bar's pair is the one that
@@ -334,6 +392,9 @@ describe("SiteHeader — language and currency switchers", () => {
 
     for (const label of ["EN", "USD"]) {
       expect(links(panel(), label)).toHaveLength(0);
+      // Neither control is repeated behind the tap: both are in the bar, which
+      // stays on screen while this panel is open.
+      expect(switcherCopies(label).filter((copy) => panel().contains(copy))).toHaveLength(0);
     }
   });
 });

@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import { useId, useState } from "react";
+import { plural } from "@/lib/i18n/format";
+import type { Messages } from "@/lib/i18n/messages";
 
 /** The scale, in the order the stars are drawn. */
 const STARS = [1, 2, 3, 4, 5];
@@ -31,11 +33,14 @@ const STARS = [1, 2, 3, 4, 5];
 export function StarPicker({
   value,
   onChange,
+  messages,
   describedBy,
 }: {
   /** The chosen rating, or 0 when nothing has been chosen yet. */
   value: number;
   onChange: (rating: number) => void;
+  /** This locale's `reviews.form` slice of the catalog. */
+  messages: Messages["reviews"]["form"];
   /** The id of the element explaining why a rating is needed, when one is. */
   describedBy?: string;
 }) {
@@ -54,7 +59,7 @@ export function StarPicker({
         id={labelId}
         className="text-[13px] leading-[21.45px] font-medium tracking-[-0.076px] text-ink uppercase"
       >
-        Your rating{" "}
+        {messages.rating}{" "}
         <span aria-hidden className="text-[#cc0000]">
           *
         </span>
@@ -92,7 +97,7 @@ export function StarPicker({
               />
             </span>
             <span className="sr-only">
-              {star} star{star === 1 ? "" : "s"}
+              {plural(star, messages.star)}
             </span>
           </label>
         ))}

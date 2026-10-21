@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { BlogPostSummary } from "@/lib/blog/blog-rows";
+import { en } from "@/lib/i18n/messages/en";
 import { Journal, JournalFallback, JOURNAL_SIZE } from "./journal";
 
 /**
@@ -22,7 +23,9 @@ const post = (overrides: Partial<BlogPostSummary> = {}): BlogPostSummary => ({
 });
 
 const render = (posts: BlogPostSummary[]) =>
-  renderToStaticMarkup(<Journal posts={posts} />);
+  renderToStaticMarkup(
+    <Journal posts={posts} messages={en.journal} locale="en" />,
+  );
 
 describe("Journal", () => {
   it("frames the row with its heading and the way to the rest of it", () => {
@@ -30,7 +33,8 @@ describe("Journal", () => {
 
     expect(markup).toContain("From the journal");
     expect(markup).toContain("All articles →");
-    expect(markup).toContain('href="/journal"');
+    // The language leads every address, so English's journal is `/en/journal`.
+    expect(markup).toContain('href="/en/journal"');
   });
 
   it("draws a post's label, title, excerpt and date", () => {
@@ -48,7 +52,7 @@ describe("Journal", () => {
     const markup = render([post()]);
 
     expect(markup).toContain(
-      'href="/journal/how-to-judge-earphone-sound-quality"',
+      'href="/en/journal/how-to-judge-earphone-sound-quality"',
     );
   });
 

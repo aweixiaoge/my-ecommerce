@@ -133,7 +133,7 @@ describe("createReview", () => {
     // storefront and unidentifiable in the admin queue.
     db.product.findFirst.mockResolvedValue(null);
 
-    expect(await createReview(input)).toBeNull();
+    expect(await createReview(input, "en")).toBeNull();
     expect(db.review.create).not.toHaveBeenCalled();
     expect(db.product.findFirst).toHaveBeenCalledWith({
       where: { id: "prod_1", status: "active" },
@@ -144,7 +144,7 @@ describe("createReview", () => {
   it("stores a pending review in the display locale", async () => {
     db.product.findFirst.mockResolvedValue({ id: "prod_1" });
 
-    const id = await createReview(input);
+    const id = await createReview(input, "en");
 
     expect(id).toBe("rev_new");
     expect(db.review.create).toHaveBeenCalledWith({

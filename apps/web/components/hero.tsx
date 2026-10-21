@@ -1,6 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { HeroProduct } from "@/lib/catalog/featured-rows";
+import type { Messages } from "@/lib/i18n/messages";
+import { localePath } from "@/lib/i18n/paths";
+import type { Locale } from "@/lib/languages";
 
 /**
  * The home page's opening block, in two contents and one layout.
@@ -16,8 +19,22 @@ import type { HeroProduct } from "@/lib/catalog/featured-rows";
  * The eyebrow and "Read our story" never move. They are the shop's voice rather
  * than a product's, and a product that has no blurb written yet should not take
  * the sentence about the shop away with it.
+ *
+ * The image's dimensions and alt text are described in the design, and the
+ * copy is the catalog's — so a German hero draws a German sentence over a
+ * featured product whose name is still English, until someone translates the
+ * product. That is the fallback rule the whole storefront follows.
  */
-export function Hero({ product }: { product: HeroProduct | null }) {
+export function Hero({
+  product,
+  messages,
+  locale,
+}: {
+  product: HeroProduct | null;
+  /** This locale's `hero` slice of the catalog. */
+  messages: Messages["hero"];
+  locale: Locale;
+}) {
   return (
     <section className="bg-mist">
       {/*
@@ -37,11 +54,11 @@ export function Hero({ product }: { product: HeroProduct | null }) {
       <div className="container-content flex flex-col gap-10 py-[72px] bar:flex-row bar:items-center bar:gap-16">
         <div className="bar:w-[637.52px]">
           <p className="text-[13px] font-semibold tracking-[1.744px] uppercase leading-[21.45px] text-ink-55">
-            Hand-tested audio gear
+            {messages.eyebrow}
           </p>
 
           <h1 className="mt-[18px] text-[38px] leading-[1.1] font-bold tracking-[-0.658px] text-ink sm:text-[50px] sm:leading-[55px]">
-            {product ? product.name : "Sound that keeps up with your day."}
+            {product ? product.name : messages.fallbackTitle}
           </h1>
 
           {/*
@@ -57,28 +74,27 @@ export function Hero({ product }: { product: HeroProduct | null }) {
             )
           ) : (
             <p className="mt-5 text-[18px] leading-[29.7px] tracking-[-0.439px] text-ink-62">
-              Wireless earbuds, earphones and headphones — every one of them
-              tested by our own team before it reaches your cart.
+              {messages.fallbackBody}
             </p>
           )}
 
           <div className="mt-8 flex flex-wrap items-center gap-6">
             <Link
-              href={product ? product.href : "/shop"}
-              // `/shop` is built; a product page is built too, but the link
-              // here is the one the whole page exists to show, and a prefetch
-              // of it would race the read that decides where it points.
+              href={product ? product.href : localePath(locale, "/shop")}
+              // A product page is built and so is `/shop`, but the link here is
+              // the one the whole page exists to show, and a prefetch of it
+              // would race the read that decides where it points.
               prefetch={false}
               className="rounded-[3px] bg-ink px-5 py-[5px] text-[15px] font-medium leading-[24.75px] tracking-[-0.234px] text-paper"
             >
-              {product ? "Shop it now" : "Shop all products"}
+              {product ? messages.ctaProduct : messages.ctaFallback}
             </Link>
             <Link
-              href="/about"
+              href={localePath(locale, "/about")}
               prefetch={false}
               className="rounded-[3px] border-[1.818px] border-ink px-5 py-[5px] text-[15px] font-medium leading-[24.75px] tracking-[-0.234px] text-ink"
             >
-              Read our story
+              {messages.story}
             </Link>
           </div>
         </div>
@@ -105,7 +121,7 @@ export function Hero({ product }: { product: HeroProduct | null }) {
           ) : (
             <Image
               src="/images/hero-audio.jpg"
-              alt="Wireless over-ear headphones on a shoreline"
+              alt={messages.imageAlt}
               fill
               sizes="(min-width: 768px) 46vw, 100vw"
               className="object-cover"

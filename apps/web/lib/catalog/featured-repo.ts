@@ -1,5 +1,6 @@
 import { prisma } from "@my-ecommerce/db";
-import { FEATURED_SELECT, toHeroProduct, type HeroProduct } from "./featured-rows";
+import type { Locale } from "@/lib/languages";
+import { featuredSelect, toHeroProduct, type HeroProduct } from "./featured-rows";
 import { toSummary } from "./product-summary";
 import { getProductRatings } from "./reviews-repo";
 
@@ -20,7 +21,9 @@ import { getProductRatings } from "./reviews-repo";
  * survives those rules is the hero's product; if none does, there is no hero
  * product and the page keeps the copy it has always had.
  */
-export async function getHeroProduct(): Promise<HeroProduct | null> {
+export async function getHeroProduct(
+  locale: Locale,
+): Promise<HeroProduct | null> {
   const rows = await prisma.product.findMany({
     where: {
       // The same filter the shop applies, for the same reason: a draft is not
@@ -35,7 +38,7 @@ export async function getHeroProduct(): Promise<HeroProduct | null> {
     // featured in the same millisecond must not swap between two requests.
     // `listFeaturedProductIds` in the admin repo orders the same way.
     orderBy: [{ featuredProduct: { createdAt: "desc" } }, { id: "asc" }],
-    select: FEATURED_SELECT,
+    select: featuredSelect(locale),
   });
 
   // Every featured product's rating, in one query, exactly as the listing
@@ -45,8 +48,8 @@ export async function getHeroProduct(): Promise<HeroProduct | null> {
   const ratings = await getProductRatings(rows.map((row) => row.id));
 
   for (const row of rows) {
-    const summary = toSummary(row, ratings);
-    if (summary) return toHeroProduct(row, summary);
+    const summary = toSummary(row, ratings, locale);
+    if (summary) return toHeroProduct(row, summary, locale);
   }
 
   return null;

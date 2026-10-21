@@ -93,6 +93,12 @@ model ProductTranslation {
   id              String  @id @default(cuid())
   productId       String  @map("product_id")
   locale          String
+  /// Who wrote this row. `false` is a person — what every screen writes, and
+  /// what every row written before machine translation existed is — and `true`
+  /// is the translation pass (`lib/admin/translations.ts`). Only machine rows
+  /// are ever refreshed, which is what lets somebody correct a translation by
+  /// hand without the next English edit overwriting it.
+  autoTranslated  Boolean @default(false) @map("auto_translated")
   name            String
   slug            String
   description     String  @default("")
@@ -132,6 +138,12 @@ model ProductOptionTranslation {
   id       String @id @default(cuid())
   optionId String @map("option_id")
   locale   String
+  /// Who wrote this row. `false` is a person — what every screen writes, and
+  /// what every row written before machine translation existed is — and `true`
+  /// is the translation pass (`lib/admin/translations.ts`). Only machine rows
+  /// are ever refreshed, which is what lets somebody correct a translation by
+  /// hand without the next English edit overwriting it.
+  autoTranslated  Boolean @default(false) @map("auto_translated")
   name     String
 
   option ProductOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
@@ -158,6 +170,12 @@ model ProductOptionValueTranslation {
   id      String @id @default(cuid())
   valueId String @map("value_id")
   locale  String
+  /// Who wrote this row. `false` is a person — what every screen writes, and
+  /// what every row written before machine translation existed is — and `true`
+  /// is the translation pass (`lib/admin/translations.ts`). Only machine rows
+  /// are ever refreshed, which is what lets somebody correct a translation by
+  /// hand without the next English edit overwriting it.
+  autoTranslated  Boolean @default(false) @map("auto_translated")
   name    String
 
   value ProductOptionValue @relation(fields: [valueId], references: [id], onDelete: Cascade)
@@ -289,6 +307,12 @@ model CategoryTranslation {
   id              String  @id @default(cuid())
   categoryId      String  @map("category_id")
   locale          String
+  /// Who wrote this row. `false` is a person — what every screen writes, and
+  /// what every row written before machine translation existed is — and `true`
+  /// is the translation pass (`lib/admin/translations.ts`). Only machine rows
+  /// are ever refreshed, which is what lets somebody correct a translation by
+  /// hand without the next English edit overwriting it.
+  autoTranslated  Boolean @default(false) @map("auto_translated")
   name            String
   slug            String
   description     String  @default("")
@@ -454,6 +478,12 @@ model BlogTranslation {
   id               String  @id @default(cuid())
   blogId           String  @map("blog_id")
   locale           String
+  /// Who wrote this row. `false` is a person — what every screen writes, and
+  /// what every row written before machine translation existed is — and `true`
+  /// is the translation pass (`lib/admin/translations.ts`). Only machine rows
+  /// are ever refreshed, which is what lets somebody correct a translation by
+  /// hand without the next English edit overwriting it.
+  autoTranslated  Boolean @default(false) @map("auto_translated")
   title            String
   slug             String
   shortDescription String  @default("") @map("short_description")
@@ -492,6 +522,12 @@ model BlogCategoryTranslation {
   id              String  @id @default(cuid())
   categoryId      String  @map("category_id")
   locale          String
+  /// Who wrote this row. `false` is a person — what every screen writes, and
+  /// what every row written before machine translation existed is — and `true`
+  /// is the translation pass (`lib/admin/translations.ts`). Only machine rows
+  /// are ever refreshed, which is what lets somebody correct a translation by
+  /// hand without the next English edit overwriting it.
+  autoTranslated  Boolean @default(false) @map("auto_translated")
   name            String
   slug            String
   description     String  @default("")
@@ -503,4 +539,38 @@ model BlogCategoryTranslation {
   @@unique([categoryId, locale])
   @@unique([locale, slug])
   @@map("blog_category_translations")
+}
+
+/// What one currency costs in another: units of `quote_currency` per one
+/// `base_currency`.
+///
+/// plan.md files this under the i18n and currency infrastructure and gives it a
+/// `source` and a `fetched_at` for the reason the columns are here before the
+/// feature is: the rates are meant to come from a provider on a schedule
+/// (Phase 9), and a table shaped for that makes the provider a write rather
+/// than a migration. Until one is wired, the rows are seed data and `source`
+/// says so.
+///
+/// Keyed on the pair rather than given an id — a rate is a fact about two
+/// currencies and there is exactly one of it. The storefront reads the rows
+/// quoted from the shop's own currency, which is what lets it convert through a
+/// single cross rate with one rounding; see `apps/web/lib/currency/`.
+///
+/// There is no `currencies` table beside it, which plan.md's schema also names.
+/// The code is the whole of what the storefront needs: the symbol, the decimals
+/// and the rounding are `Intl`'s and the app's display rule, and a table nothing
+/// can populate is a table that has to be kept migrated for no reason.
+model ExchangeRate {
+  baseCurrency  String   @map("base_currency") @db.Char(3)
+  quoteCurrency String   @map("quote_currency") @db.Char(3)
+  /// Units of `quote_currency` per one `base_currency`. `Decimal`, never a
+  /// float — a rate is multiplied into every price on the page.
+  rate          Decimal  @db.Decimal(20, 10)
+  /// Who wrote the row: `seed` for the migration's own rows, a provider's name
+  /// once one is wired.
+  source        String
+  fetchedAt     DateTime @map("fetched_at")
+
+  @@id([baseCurrency, quoteCurrency])
+  @@map("exchange_rates")
 }

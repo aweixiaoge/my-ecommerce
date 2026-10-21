@@ -2,8 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useId, useState } from "react";
-import { NAV } from "@/lib/nav";
+import { Suspense, useEffect, useId, useState, type ReactNode } from "react";
+import type { Money } from "@my-ecommerce/shared";
+import { LanguageSwitcher, LanguageTrigger } from "@/components/language-switcher";
+import { formatMoney } from "@/lib/format";
+import { localePath } from "@/lib/i18n/paths";
+import type { Messages } from "@/lib/i18n/messages";
+import type { Locale } from "@/lib/languages";
 
 /**
  * The storefront header.
@@ -11,7 +16,9 @@ import { NAV } from "@/lib/nav";
  * Client-side because of the menu toggle below `bar`. Everything else here is
  * static and would work as a Server Component; the markup is cheap and the
  * whole component is small enough that splitting the toggle out on its own
- * would cost more than it saves.
+ * would cost more than it saves. The copy and the links arrive as props for the
+ * reason every client component here takes them that way: a catalog is
+ * server-side, and this component needs one language's worth of it, not five.
  *
  * Two widths decide the header's shape, and neither is a device class — both
  * are measurements of what the bar holds.
@@ -47,8 +54,61 @@ import { NAV } from "@/lib/nav";
  * Below `bar` the nav collapses into a panel and a toggle takes its place.
  * The switchers do not go into that panel: they are the only control for
  * either setting, so they stay in the bar rather than behind a tap.
+ *
+ * The language switcher is a dropdown whose menu hangs from the bar's bottom
+ * edge — not from the trigger's own box, which is a line of 13px text centred
+ * in a 100px row. That is what `h-full` on the nav and on the actions cluster
+ * below is for: `top-full` on the menu has to mean the bar's edge, and only a
+ * full-height wrapper puts the trigger's box there. The row's own height is
+ * fixed at 100px, so the two flanks growing to fill it moves nothing.
+ *
+ * Both of its copies sit inside a `<Suspense>` boundary, with the bare trigger
+ * as the fallback. The switcher reads the address it is on — that is what lets
+ * a row point at *this* page in another language — and on a route with dynamic
+ * segments the framework cannot resolve a pathname while prerendering, so the
+ * read suspends. The boundary keeps that suspension from reaching the bar
+ * around it; the fallback is the same trigger at the same size, so a static
+ * shell looks like the page it becomes.
+ *
+ * The currency switcher is the other half of that pair, and it is the one thing
+ * here this component does not render for itself: it arrives as `navCurrency`
+ * and `barCurrency`, already rendered, because the currency comes from a cookie
+ * and a cookie cannot be read in a client module. The boundary around *its*
+ * read, its fallback, and the classes that seat it in either place all travel
+ * with it — see the two props below and `app/[lang]/layout.tsx`.
  */
-export function SiteHeader() {
+export function SiteHeader({
+  nav,
+  messages,
+  locale,
+  navCurrency,
+  barCurrency,
+}: {
+  /** The seven routes, labelled and addressed for this locale. */
+  nav: readonly { label: string; href: string; prefetch: boolean }[];
+  /** This locale's `header` slice of the catalog. */
+  messages: Messages["header"];
+  locale: Locale;
+  /**
+   * The currency control, in the two seats it takes: the nav's copy and the
+   * bar's.
+   *
+   * Elements rather than the data they are drawn from, and that is the whole
+   * shape of the thing. Which currency a price is written in comes from a
+   * cookie, and a cookie can only be read on the server — so the control is a
+   * Server Component with a `<Suspense>` boundary around its read, which this
+   * module cannot be the parent of: a client module may not import a server
+   * one. `app/[lang]/layout.tsx` renders both and hands them over already
+   * rendered, which is how a Server Component reaches a client one at all.
+   *
+   * They arrive as two because the two seats differ: the nav's copy is held
+   * back to `lg` and the bar's shows below it, exactly as the language
+   * switcher's two copies do. The classes that do that live with the control,
+   * in `currency-switcher.tsx`.
+   */
+  navCurrency: ReactNode;
+  barCurrency: ReactNode;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const panelId = useId();
 
@@ -91,18 +151,18 @@ export function SiteHeader() {
       */}
       <div className="container-content grid h-[100px] grid-cols-[1fr_auto] items-center bar:grid-cols-[1fr_auto_1fr]">
         <Link
-          href="/"
+          href={localePath(locale, "/")}
           className="text-[25px] font-bold leading-[37.5px] tracking-[0.14px] text-ink"
         >
-          Smart Mall
+          {messages.brand}
         </Link>
 
-        <nav className="hidden items-center bar:flex">
-          {NAV.map((item) => (
+        <nav className="hidden h-full items-center bar:flex">
+          {nav.map((item) => (
             <Link
-              key={item.label}
+              key={item.href}
               href={item.href}
-              prefetch={false}
+              prefetch={item.prefetch}
               className="px-[8px] text-[13px] font-bold leading-[16.9px] tracking-[-0.076px] whitespace-nowrap text-ink wide:px-[12.5px]"
             >
               {item.label}
@@ -117,24 +177,18 @@ export function SiteHeader() {
             width. From `lg` the nav is wide enough to hold them again, and the
             bar's pair hides, so exactly one pair is ever displayed.
           */}
-          <Link
-            href="/"
-            className="hidden items-center gap-1.5 px-[12.5px] text-[13px] font-bold leading-[16.9px] tracking-[-0.076px] text-ink lg:flex"
-          >
-            EN
-            <Image src="/icons/chevron-down.svg" alt="" width={9} height={6} />
-          </Link>
+          <Suspense fallback={<LanguageTrigger locale={locale} placement="nav" />}>
+            <LanguageSwitcher
+              locale={locale}
+              messages={messages}
+              placement="nav"
+            />
+          </Suspense>
 
-          <Link
-            href="/"
-            className="hidden items-center gap-1.5 px-[12.5px] text-[13px] font-bold leading-[16.9px] tracking-[-0.076px] text-ink lg:flex"
-          >
-            USD
-            <Image src="/icons/chevron-down.svg" alt="" width={9} height={6} />
-          </Link>
+          {navCurrency}
         </nav>
 
-        <div className="flex items-center justify-end">
+        <div className="flex h-full items-center justify-end">
           {/*
             Both switchers appear twice in this header — here and in the nav
             above — because each is the only control for its setting, and
@@ -148,25 +202,24 @@ export function SiteHeader() {
             Below `sm` they shed the nav copy's 12.5px side padding and a point
             of type size, which is 41px off the pair — and 41px is what stands
             between the wordmark holding one line at 375px and breaking over
-            two.
+            two. Each control's half of that lives with its own trigger classes
+            — `language-switcher.tsx` and `currency-switcher.tsx` — which is
+            also where each menu hangs from.
           */}
-          <Link
-            href="/"
-            className="flex items-center gap-1 py-2 pr-2 text-[12px] font-bold leading-[16.9px] tracking-[-0.076px] whitespace-nowrap text-ink sm:gap-1.5 sm:pr-3 sm:text-[13px] lg:hidden"
-          >
-            EN
-            <Image src="/icons/chevron-down.svg" alt="" width={9} height={6} />
-          </Link>
+          <Suspense fallback={<LanguageTrigger locale={locale} placement="bar" />}>
+            <LanguageSwitcher
+              locale={locale}
+              messages={messages}
+              placement="bar"
+            />
+          </Suspense>
+
+          {barCurrency}
 
           <Link
-            href="/"
-            className="flex items-center gap-1 py-2 pr-2 text-[12px] font-bold leading-[16.9px] tracking-[-0.076px] whitespace-nowrap text-ink sm:gap-1.5 sm:pr-3 sm:text-[13px] lg:hidden"
+            href={localePath(locale, "/cart")}
+            className="flex items-center gap-2 pl-2.5"
           >
-            USD
-            <Image src="/icons/chevron-down.svg" alt="" width={9} height={6} />
-          </Link>
-
-          <Link href="/cart" className="flex items-center gap-2 pl-2.5">
             {/*
               The amount is the cheapest thing in the row to give up, so it is
               part of what pays for the nav staying in the bar: gone from
@@ -176,11 +229,20 @@ export function SiteHeader() {
               icon-only for the older reason too — there the wordmark has to
               hold one line in the 126px it needs, and the amount would push
               "Smart Mall" over two.
+
+              The amount itself is a placeholder until the cart exists (Phase
+              2): zero, in the shop's currency, formatted for the language the
+              page is being read in — `0,00 $` under `/de` rather than `$0.00`.
+              The shop's currency rather than the reader's, deliberately: the
+              currency switcher beside it is about what a shopper is quoted,
+              and this is a cart that does not exist yet, so converting zero
+              would buy a second cookie read and a second Suspense boundary
+              for nothing. It converts when the cart does.
             */}
             <span className="hidden text-[13px] font-semibold leading-[21.45px] tracking-[-0.076px] text-ink wide:inline">
-              $0.00
+              {formatMoney(CART_PLACEHOLDER, locale)}
             </span>
-            <Image src="/icons/cart.svg" alt="Cart" width={15} height={14} />
+            <Image src="/icons/cart.svg" alt={messages.cart} width={15} height={14} />
           </Link>
 
           {/*
@@ -193,7 +255,7 @@ export function SiteHeader() {
           */}
           <button
             type="button"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-label={menuOpen ? messages.closeMenu : messages.openMenu}
             aria-expanded={menuOpen}
             aria-controls={panelId}
             onClick={() => setMenuOpen((open) => !open)}
@@ -217,16 +279,16 @@ export function SiteHeader() {
       */}
       <nav
         id={panelId}
-        aria-label="Mobile"
+        aria-label={messages.mobileNav}
         className={`absolute inset-x-0 top-full z-50 flex-col border-b border-line bg-paper px-6 pt-2 pb-4 shadow-md bar:hidden ${
           menuOpen ? "flex" : "hidden"
         }`}
       >
-        {NAV.map((item) => (
+        {nav.map((item) => (
           <Link
-            key={item.label}
+            key={item.href}
             href={item.href}
-            prefetch={false}
+            prefetch={item.prefetch}
             onClick={() => setMenuOpen(false)}
             className="py-3 text-[15px] font-bold leading-[24.75px] tracking-[-0.234px] text-ink"
           >
@@ -237,3 +299,12 @@ export function SiteHeader() {
     </header>
   );
 }
+
+/**
+ * The cart's balance, until there is a cart.
+ *
+ * Zero, in the shop's currency. It exists as a value rather than as the string
+ * "$0.00" because money is formatted for the language being read: a German
+ * page writes the same amount as `0,00 $`, and a hardcoded string cannot.
+ */
+const CART_PLACEHOLDER: Money = { amount: "0", currency: "USD" };
