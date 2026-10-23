@@ -12,8 +12,11 @@
 //     row means something on its own.
 //
 // Deliberately absent: `media_translations` and every table from Phase 2
-// onwards. They arrive with the screens that write them; a table nothing can
-// populate is a table that has to be kept migrated for no reason.
+// onwards except the cart's two, the order's four and the account's three,
+// which arrived with the "Add to cart" buttons, the checkout and the My account
+// page that write them. The rest arrive with
+// the screens that write them; a table nothing can populate is a table that
+// has to be kept migrated for no reason.
 //
 // `reviews` is the one table here that plan.md files under a later phase
 // (Phase 5) — it arrived with the product page's review section. Two of that
@@ -82,6 +85,7 @@ model Product {
   categories      ProductCategory[]
   reviews         Review[]
   featuredProduct FeaturedProduct?
+  coupons         CouponProduct[]
 
   @@map("products")
 }
@@ -161,6 +165,7 @@ model ProductOptionValue {
   option       ProductOption                   @relation(fields: [optionId], references: [id], onDelete: Cascade)
   translations ProductOptionValueTranslation[]
   variants     VariantOptionValue[]
+  cartItems    CartItem[]
 
   @@index([optionId])
   @@map("product_option_values")
@@ -209,6 +214,8 @@ model ProductVariant {
   product      Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
   optionValues VariantOptionValue[]
   media        Media[]
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
 
   @@index([productId])
   @@map("product_variants")
@@ -241,11 +248,17 @@ model VariantOptionValue {
 /// of the three a row carries is the form's business — the product form gives
 /// its images to variants, the blog form to the post itself — and position is
 /// the order within that owner, with zero being the Main image.
+///
+/// `about_page` is the fourth owner, a flag rather than a key: the About page is
+/// one page with no row of its own to point at (its words are in
+/// `about_translations`, one row per language). Saving the About screen claims
+/// its images by setting it and deletes the ones taken off.
 model Media {
   id        String  @id @default(cuid())
   productId String? @map("product_id")
   variantId String? @map("variant_id")
   blogId    String? @map("blog_id")
+  aboutPage Boolean @default(false) @map("about_page")
   url       String
   position  Int     @default(0)
 
@@ -259,6 +272,7 @@ model Media {
   @@index([productId])
   @@index([variantId])
   @@index([blogId])
+  @@index([aboutPage])
   @@map("media")
 }
 
@@ -573,4 +587,449 @@ model ExchangeRate {
 
   @@id([baseCurrency, quoteCurrency])
   @@map("exchange_rates")
+}
+
+/// A shopper's cart: plan.md's list of intent, not a list of prices.
+///
+/// A guest cart is all there is — customer accounts are Phase 3 — so a cart is
+/// found by the token in the shopper's `cart` cookie. The column holds the
+/// token's SHA-256 rather than the token, the rule `lib/admin/session-store.ts`
+/// follows for admin sessions: a leaked row, backup or log line is then nothing
+/// anyone can replay as a cookie.
+///
+/// Three of plan.md's columns are absent on purpose. `customer_id` has no
+/// customers to point at yet. `currency` and `locale` would be snapshots of two
+/// preferences the request already carries — the currency cookie and the URL —
+/// and every figure in a cart is recomputed on read in the reader's language and
+/// currency anyway; checkout is where a currency gets fixed, and it is the order
+/// that records it (plan.md's decision 5).
+///
+/// `expires_at` slides forward on every write. Nothing sweeps expired rows yet:
+/// a read treats one as absent and the next add replaces it.
+model Cart {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  items CartItem[]
+
+  @@map("carts")
+}
+
+/// One variant in a cart, and how many of it.
+///
+/// No price column, and that is the design rather than an omission: the price
+/// is read from the variant every time the cart is, so a price change in the
+/// admin reaches every open cart and a tampered form has nothing to tamper with.
+///
+/// `option_value_id` is the shopper's pick from an option no variant stands
+/// behind — today, Size. The admin writes one variant per colour, so a size is
+/// a choice the catalogue offers without a variant (or a price, or stock) of
+/// its own; without this column the "M" a shopper chose would be lost the
+/// moment it reached the cart. Null for a product with no such option.
+///
+/// Adding the same variant in the same size raises the line's quantity rather
+/// than drawing it twice. That is enforced by `lib/cart/cart-repo.ts` rather
+/// than the index alone: Postgres treats two nulls as distinct, so the index
+/// below does not stop two size-less lines of one variant. Deleting a variant
+/// or the size value — which the admin does when an option value is removed —
+/// takes its cart lines with it.
+model CartItem {
+  id            String   @id @default(cuid())
+  cartId        String   @map("cart_id")
+  variantId     String   @map("variant_id")
+  optionValueId String?  @map("option_value_id")
+  quantity      Int
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  cart        Cart                @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant     ProductVariant      @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  optionValue ProductOptionValue? @relation(fields: [optionValueId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, variantId, optionValueId])
+  @@index([variantId])
+  @@index([optionValueId])
+  @@map("cart_items")
+}
+
+/// plan.md's order state machine. Every state is here because the machine is
+/// the plan's, but only `pending` is written yet: checkout places an order,
+/// and the transitions out of it are Phase 4's admin and the payment
+/// provider's webhook. `pending → paid` comes only from the provider, never
+/// from a browser — cash on delivery stays `pending` until it is collected.
+enum OrderStatus {
+  pending
+  paid
+  processing
+  shipped
+  delivered
+  failed
+  cancelled
+  refunded
+}
+
+enum AddressKind {
+  shipping
+  billing
+}
+
+/// An order: what was bought, for how much, and where it goes.
+///
+/// It snapshots everything (plan.md's decision 4). The money is stored, not
+/// recomputed — unlike a cart, an order is a record of a price that was
+/// agreed — and each line carries the product as it was in `product_snapshot`,
+/// so an order renders the same in ten years whatever happens to the catalogue.
+///
+/// Amounts are in `currency`, the shop's. `display_currency` and
+/// `exchange_rate` record what the shopper was reading in and at what rate
+/// (decision 5): units of the display currency per one of `currency`, `1` when
+/// they are the same.
+///
+/// `order_number` is the public, human number ("Order #1042"); `id` is never
+/// shown. `access_key` is the capability in the confirmation link — Woo's
+/// `order_key`. It is stored as it is rather than hashed, because a repeated
+/// submission of the same checkout has to be sent back to the same link, and
+/// a hash cannot be turned back into one. It opens a read-only page and
+/// nothing else.
+///
+/// `idempotency_key` is minted with the checkout form and sent with it, so a
+/// double-click or a retried request finds the order the first one made rather
+/// than placing a second.
+///
+/// `customer_id` is the account that was signed in when the order was placed,
+/// and null for a guest. It is the only thing that puts an order in a
+/// customer's history: a guest order is never matched to an account by its
+/// email, because anyone can open an account with anyone's address. Deleting
+/// a customer leaves their orders standing (decision 7), unowned.
+///
+/// `coupon_code` is the code the order was placed with, copied rather than a
+/// key to `coupons`: the order is a record of what was redeemed, and stays
+/// right if the coupon is later changed or deleted. Its discount is in
+/// `discount_total`.
+///
+/// Deliberately absent from plan.md's list: the per-line `tax_amount` /
+/// `discount_amount` (no tax yet, and a coupon's discount is the order's, not
+/// split across its lines).
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     Int         @unique @default(autoincrement()) @map("order_number")
+  accessKey       String      @unique @map("access_key")
+  idempotencyKey  String      @unique @map("idempotency_key")
+  customerId      String?     @map("customer_id")
+  email           String
+  status          OrderStatus @default(pending)
+  paymentMethod   String      @map("payment_method")
+  shippingMethod  String      @map("shipping_method")
+  locale          String
+  currency        String      @db.Char(3)
+  displayCurrency String      @map("display_currency") @db.Char(3)
+  exchangeRate    Decimal     @map("exchange_rate") @db.Decimal(20, 10)
+  subtotal        Decimal     @db.Decimal(10, 2)
+  discountTotal   Decimal     @map("discount_total") @db.Decimal(10, 2)
+  couponCode      String?     @map("coupon_code")
+  shippingTotal   Decimal     @map("shipping_total") @db.Decimal(10, 2)
+  taxTotal        Decimal     @map("tax_total") @db.Decimal(10, 2)
+  grandTotal      Decimal     @map("grand_total") @db.Decimal(10, 2)
+  note            String?
+  paidAt          DateTime?   @map("paid_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  customer      Customer?            @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items         OrderItem[]
+  addresses     OrderAddress[]
+  statusHistory OrderStatusHistory[]
+
+  @@index([email])
+  @@index([customerId, createdAt])
+  @@map("orders")
+}
+
+/// One line of an order, frozen.
+///
+/// `variant_id` is kept for reporting and set to null if the variant is ever
+/// deleted — the line must survive that, which is what the snapshot is for:
+/// `{ productId, name, slug, sku, options: [{ option, value }], imageId }`.
+model OrderItem {
+  id              String  @id @default(cuid())
+  orderId         String  @map("order_id")
+  variantId       String? @map("variant_id")
+  productSnapshot Json    @map("product_snapshot")
+  quantity        Int
+  unitPrice       Decimal @map("unit_price") @db.Decimal(10, 2)
+  lineTotal       Decimal @map("line_total") @db.Decimal(10, 2)
+
+  order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([variantId])
+  @@map("order_items")
+}
+
+/// An order's addresses, copied rather than referenced (plan.md: a
+/// denormalised copy). Billing is always written, as a copy of shipping when
+/// the shopper said they are the same, so nothing reading an order has to know
+/// about that checkbox.
+model OrderAddress {
+  id          String      @id @default(cuid())
+  orderId     String      @map("order_id")
+  kind        AddressKind
+  firstName   String      @map("first_name")
+  lastName    String      @map("last_name")
+  line1       String
+  line2       String?
+  city        String
+  region      String?
+  postalCode  String      @map("postal_code")
+  countryCode String      @map("country_code") @db.Char(2)
+  phone       String?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, kind])
+  @@map("order_addresses")
+}
+
+/// Every transition an order makes, starting with its creation (`from_status`
+/// null). plan.md: "every transition writes to order_status_history".
+model OrderStatusHistory {
+  id         String       @id @default(cuid())
+  orderId    String       @map("order_id")
+  fromStatus OrderStatus? @map("from_status")
+  toStatus   OrderStatus  @map("to_status")
+  actor      String
+  note       String?
+  changedAt  DateTime     @default(now()) @map("changed_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_status_history")
+}
+
+/// A shopper with an account (plan.md's `customers`).
+///
+/// Only what the register form writes: an email and a password hash. plan.md's
+/// `first_name`, `last_name`, `preferred_currency` and `email_verified_at`
+/// arrive with the screens that write them — account details, the currency
+/// preference, and the verification email — by the rule at the top of this
+/// file. `locale` is here because the form knows it: it is the language the
+/// account was opened in, which is what any future email should be written in.
+///
+/// `email` is stored lower-cased and trimmed by `apps/web/lib/account/` rather
+/// than as `citext`, so the unique index is what makes two spellings of one
+/// address one account, with no extension to install.
+///
+/// A different table from any admin identity, always (plan.md, decision 6).
+model Customer {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  locale       String
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  sessions  CustomerSession[]
+  orders    Order[]
+  addresses CustomerAddress[]
+
+  @@map("customers")
+}
+
+/// A signed-in browser (plan.md's `sessions`).
+///
+/// The column holds the SHA-256 of the token in the `account_session` cookie,
+/// the rule the cart and the admin follow: a leaked row is nothing anyone can
+/// replay. plan.md's `ip` and `user_agent` are left out until something shows
+/// a customer their sessions — a column of personal data nothing reads is a
+/// liability, not a feature.
+///
+/// Expired rows are treated as absent on read and removed on sign-in; nothing
+/// else sweeps them yet.
+model CustomerSession {
+  id         String   @id @default(cuid())
+  customerId String   @map("customer_id")
+  tokenHash  String   @unique @map("token_hash")
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("sessions")
+}
+
+/// A customer's saved address (plan.md's `addresses`): one billing and one
+/// shipping, which is what My account → Addresses edits and what the checkout
+/// starts its boxes from.
+///
+/// The order's columns rather than plan.md's single `name`, so an address
+/// goes from the book to the checkout form to `order_addresses` without being
+/// split or joined anywhere. An order never points here — it copies (decision
+/// 4) — so editing an address changes no order already placed.
+model CustomerAddress {
+  id          String      @id @default(cuid())
+  customerId  String      @map("customer_id")
+  kind        AddressKind
+  firstName   String      @map("first_name")
+  lastName    String      @map("last_name")
+  line1       String
+  line2       String?
+  city        String
+  region      String?
+  postalCode  String      @map("postal_code")
+  countryCode String      @map("country_code") @db.Char(2)
+  phone       String?
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, kind])
+  @@map("addresses")
+}
+
+enum CouponType {
+  fixed_amount
+  percentage
+}
+
+/// A discount code, as the admin's create-coupon screen writes it.
+///
+/// `amount` is read by `type`: money in `currency` (the shop's) for
+/// `fixed_amount`, and a percentage from 0 to 100 for `percentage`, when
+/// `currency` is null. `code` is stored upper-cased, so the unique index is
+/// what makes "save10" and "SAVE10" one coupon.
+///
+/// `applies_to_all_products` rather than "no rows in coupon_products means
+/// all": an empty selection and "everything" are two different decisions, and
+/// a coupon whose last product was deleted must not quietly start applying to
+/// the whole catalogue.
+///
+/// Redeemed at the checkout (`couponDiscount` in `@my-ecommerce/shared`); an
+/// order keeps the code it used in `orders.coupon_code`.
+model Coupon {
+  id                   String     @id @default(cuid())
+  code                 String     @unique
+  type                 CouponType
+  amount               Decimal    @db.Decimal(10, 2)
+  currency             String?    @db.Char(3)
+  appliesToAllProducts Boolean    @map("applies_to_all_products")
+  expiresAt            DateTime   @map("expires_at")
+  createdAt            DateTime   @default(now()) @map("created_at")
+  updatedAt            DateTime   @updatedAt @map("updated_at")
+
+  products CouponProduct[]
+
+  @@map("coupons")
+}
+
+/// The products a coupon applies to, when it does not apply to all of them.
+model CouponProduct {
+  couponId  String @map("coupon_id")
+  productId String @map("product_id")
+
+  coupon  Coupon  @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([couponId, productId])
+  @@index([productId])
+  @@map("coupon_products")
+}
+
+/// A message sent from the storefront's Contact page.
+///
+/// Kept rather than mailed: there is no mail yet, and a row is what an inbox
+/// in the admin can later read. `locale` is the language the sender wrote from,
+/// so a reply can be written in it. `handledAt` is null until someone answers.
+model ContactMessage {
+  id        String    @id @default(cuid())
+  name      String
+  email     String
+  subject   String?
+  message   String
+  locale    String
+  createdAt DateTime  @default(now()) @map("created_at")
+  handledAt DateTime? @map("handled_at")
+
+  @@index([createdAt])
+  @@map("contact_messages")
+}
+
+/// How the shop can be reached — the admin's Contact → Info screen, read by
+/// the storefront's "Get in Touch" column and footer.
+///
+/// One row, always `id = 1`: there is one shop. The migration that creates the
+/// table writes it, so a read never has to invent defaults. A null field is one
+/// the storefront leaves out.
+model StoreContact {
+  id           Int      @id @default(1)
+  phone        String?
+  email        String?
+  whatsapp     String?
+  address      String?
+  facebookUrl  String?  @map("facebook_url")
+  instagramUrl String?  @map("instagram_url")
+  youtubeUrl   String?  @map("youtube_url")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("store_contact")
+}
+
+/// The storefront's FAQ page: one markdown description per language.
+///
+/// English is what the admin's Contact → FAQ screen writes; the other four are
+/// written by the translation pass after a save. `autoTranslated` is the rule
+/// every `*_translations` table keeps: a row the machine wrote may be
+/// refreshed, a row a person wrote never is.
+model FaqTranslation {
+  locale         String   @id
+  description    String
+  autoTranslated Boolean  @default(false) @map("auto_translated")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("faq_translations")
+}
+
+/// The storefront's About page: one markdown description per language — the
+/// FAQ's arrangement, for its reasons. English is what the admin's
+/// Contact → About screen writes; the translation pass writes the rest. The
+/// page's images are `media` rows with `about_page` set.
+model AboutTranslation {
+  locale         String   @id
+  description    String
+  autoTranslated Boolean  @default(false) @map("auto_translated")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("about_translations")
+}
+
+enum AdminRole {
+  owner
+  staff
+}
+
+/// An admin account (plan.md's `admin_users`), as the admin's User → Create
+/// user screen writes it. Not a customer, and never joined to one (plan.md,
+/// decision 6).
+///
+/// `name` rather than plan.md's `email`, for the reason `AdminLoginSchema`
+/// gives. Names compare case-insensitively at sign-in, so the repository
+/// refuses a name that differs from an existing one only in case; the unique
+/// index is the backstop for two saves racing.
+///
+/// The two dev accounts in `lib/mock/admin-users.ts` are not rows: outside a
+/// production build they are read alongside this table.
+model AdminUser {
+  id           String    @id @default(cuid())
+  name         String    @unique
+  passwordHash String    @map("password_hash")
+  role         AdminRole @default(staff)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("admin_users")
 }

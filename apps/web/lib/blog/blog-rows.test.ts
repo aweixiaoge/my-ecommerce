@@ -24,6 +24,7 @@ function row(overrides: Partial<BlogRow> = {}): BlogRow {
       },
     ],
     category: { translations: [{ locale: "en", name: "Engineer" }] },
+    media: [{ id: "media_cover" }],
     ...overrides,
   } as BlogRow;
 }
@@ -37,7 +38,12 @@ describe("toBlogPost", () => {
       excerpt: "Bass, treble and soundstage, explained without the jargon.",
       category: "Engineer",
       publishedAt: "2026-10-15T17:41:12.326Z",
+      coverId: "media_cover",
     });
+  });
+
+  it("has no cover for a post with no images", () => {
+    expect(toBlogPost(row({ media: [] }), "en")?.coverId).toBeNull();
   });
 
   it("leaves the label empty for a post in no category", () => {

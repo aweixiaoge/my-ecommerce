@@ -1,9 +1,10 @@
 import { prisma, type PrismaClient, type ProductStatus } from "@my-ecommerce/db";
-import type {
-  AdminProductCreate,
-  AttributeKind,
-  Money,
-  VariantDraft,
+import {
+  isVideoType,
+  type AdminProductCreate,
+  type AttributeKind,
+  type Money,
+  type VariantDraft,
 } from "@my-ecommerce/shared";
 import { DEFAULT_LOCALE } from "../locale";
 import { ATTRIBUTE_LABELS } from "./product-form";
@@ -233,6 +234,11 @@ export interface ProductForEdit {
     stock: string;
     mediaIds: string[];
   }[];
+  /**
+   * Which of the variants' media are videos, so the form can draw a video's
+   * thumbnail as one — an id alone does not say.
+   */
+  videoIds: string[];
 }
 
 /**
@@ -271,7 +277,7 @@ export async function getProductForEdit(
           optionValues: {
             include: { optionValue: { include: { translations: true } } },
           },
-          media: { orderBy: { position: "asc" }, select: { id: true } },
+          media: { orderBy: { position: "asc" }, select: { id: true, mimeType: true } },
         },
       },
     },
@@ -314,6 +320,9 @@ export async function getProductForEdit(
     description: translation?.description ?? "",
     slug: translation?.slug ?? "",
     categoryId: product.categories[0]?.categoryId ?? null,
+    videoIds: product.variants.flatMap((variant) =>
+      variant.media.filter((media) => isVideoType(media.mimeType)).map((media) => media.id),
+    ),
   };
 }
 

@@ -47,3 +47,34 @@ export const AdminUserSchema = z.object({
 });
 
 export type AdminUser = z.infer<typeof AdminUserSchema>;
+
+/**
+ * The admin's create-user form: a name, a password, and the password again.
+ *
+ * Unlike the login schema this one *is* the creation policy, so it is where the
+ * password's minimum length lives. The name is held to characters that read
+ * the same everywhere they are shown and typed — no spaces, nothing that looks
+ * like another letter — and it is trimmed first, as at sign-in.
+ *
+ * A mismatched confirmation is reported on `confirmPassword`, the box the
+ * person has to retype.
+ */
+export const ADMIN_PASSWORD_MIN_LENGTH = 8;
+
+export const AdminUserCreateSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(1)
+      .max(64)
+      .regex(/^[A-Za-z0-9._-]+$/),
+    password: z.string().min(ADMIN_PASSWORD_MIN_LENGTH).max(200),
+    confirmPassword: z.string(),
+  })
+  .refine((input) => input.password === input.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "mismatch",
+  });
+
+export type AdminUserCreateInput = z.infer<typeof AdminUserCreateSchema>;

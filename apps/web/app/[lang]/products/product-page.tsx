@@ -151,6 +151,7 @@ export async function ProductPage({
         imagesByVariant={imagesByVariant}
         messages={messages.product}
         ratingMessages={messages.reviews}
+        cartMessages={messages.cart.add}
         locale={locale}
         currency={currency}
       />

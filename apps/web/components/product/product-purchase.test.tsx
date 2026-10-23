@@ -15,6 +15,11 @@ import { ProductPurchase } from "./product-purchase";
  * button by its label.
  */
 
+// The button posts to a Server Action, which reaches the database. What the
+// buy box decides is *which variant* the form names, so that is what the
+// tests below read; `add-to-cart-button.test.tsx` covers the round trip.
+vi.mock("@/app/[lang]/cart/actions", () => ({ addToCartAction: vi.fn() }));
+
 vi.mock("next/image", () => ({
   default: ({ src, alt }: { src?: unknown; alt?: string }) => (
     // eslint-disable-next-line @next/next/no-img-element
@@ -138,6 +143,7 @@ function mount(
         imagesByVariant={images}
         messages={en.product}
         ratingMessages={en.reviews}
+        cartMessages={en.cart.add}
         locale="en"
         currency={currency}
       />,
@@ -155,6 +161,14 @@ afterEach(async () => {
 });
 
 const buttons = () => [...container.querySelectorAll("button")];
+
+/** The variant the cart form would post. */
+const chosenVariant = () =>
+  container.querySelector<HTMLInputElement>('input[name="variantId"]')?.value;
+
+/** …and the size beside it, when there is one. */
+const chosenSize = () =>
+  container.querySelector<HTMLInputElement>('input[name="optionValueId"]')?.value;
 
 /** A pill, addressed by the word on it. */
 const pill = (label: string) => {
@@ -293,20 +307,91 @@ describe("choosing", () => {
     expect(thumbnails()[1]!.getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("renders a pill nothing can be bought in as unavailable", () => {
-    // Size M is an option the product offers and no variant stands behind. It
-    // is shown — it is part of what the product says it is — and it cannot be
-    // chosen, which is the difference a shopper needs to see.
-    expect(pill("M")).toHaveProperty("disabled", true);
+  it("lets a size be chosen, though no variant stands behind it", () => {
+    // Size is an option no variant carries — the admin writes one variant per
+    // colour — so it is a choice the cart records beside the variant, and its
+    // pills are live.
+    expect(pill("M")).toHaveProperty("disabled", false);
     expect(pill("Onyx")).toHaveProperty("disabled", false);
   });
 
-  it("leaves the size out of the choice, since no variant carries it", () => {
-    // Clicking a disabled pill must not blank the price: the rule matches on
-    // the values that select a variant, not on every value on the page.
-    click(pill("M"));
+  it("opens on the first size, and sends it with the variant", () => {
+    expect(pill("M").getAttribute("aria-pressed")).toBe("true");
+    expect(chosenSize()).toBe("val_m");
+    expect(chosenVariant()).toBe("var_sand");
+  });
 
+  it("sends the size that was picked", () => {
+    mount({
+      options: [
+        product.options[0]!,
+        {
+          ...product.options[1]!,
+          values: [
+            { id: "val_m", name: "M" },
+            { id: "val_l", name: "L" },
+          ],
+        },
+      ],
+    });
+
+    click(pill("L"));
+
+    expect(pill("L").getAttribute("aria-pressed")).toBe("true");
+    expect(chosenSize()).toBe("val_l");
+    // The size picks no variant, so the price stays the colour's.
     expect(selectedPrice()).toBe("$87.00");
+  });
+
+  it("sends no size for a product without one", () => {
+    mount({ options: [product.options[0]!] });
+
+    expect(chosenSize()).toBeUndefined();
+  });
+
+  it("still disables a colour no variant carries", () => {
+    // A gap in a variant-selecting option is not a choice: picking it would
+    // name no variant. Only a wholly free option is live.
+    mount({
+      options: [
+        {
+          ...product.options[0]!,
+          values: [...product.options[0]!.values, { id: "val_clay", name: "Clay" }],
+        },
+        product.options[1]!,
+      ],
+    });
+
+    expect(pill("Clay")).toHaveProperty("disabled", true);
+    expect(pill("M")).toHaveProperty("disabled", false);
+  });
+});
+
+describe("the counter", () => {
+  const quantity = () =>
+    container.querySelector<HTMLInputElement>('input[name="quantity"]')!;
+  const stepper = (label: string) =>
+    container.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+
+  it("starts at one and steps within the variant's stock", () => {
+    // Sand has 5 in stock in the fixture.
+    expect(quantity().value).toBe("1");
+    expect(stepper("One fewer").disabled).toBe(true);
+
+    for (let i = 0; i < 6; i++) click(stepper("One more"));
+
+    expect(quantity().value).toBe("5");
+    expect(stepper("One more").disabled).toBe(true);
+
+    click(stepper("One fewer"));
+    expect(quantity().value).toBe("4");
+  });
+
+  it("starts over when another colour is picked", () => {
+    click(stepper("One more"));
+    click(pill("Onyx"));
+
+    expect(quantity().value).toBe("1");
   });
 });
 
@@ -343,13 +428,33 @@ describe("the rest of the buy box", () => {
     expect(link?.textContent).toBe("Earphone");
   });
 
-  it("offers a cart button that is disabled, and says why", () => {
-    // There is no cart yet, and a button that looks live but does nothing is
-    // worse than one that says so.
+  it("adds the variant the shopper is looking at", () => {
     const add = buttons().find((button) => button.textContent === "Add to cart");
 
+    expect(add).toHaveProperty("disabled", false);
+    expect(chosenVariant()).toBe("var_sand");
+  });
+
+  it("adds the other colour once it is picked", () => {
+    click(pill("Onyx"));
+
+    expect(chosenVariant()).toBe("var_onyx");
+  });
+
+  it("says sold out, and adds nothing, for a variant with no stock", () => {
+    mount({
+      variants: product.variants.map((v) => ({ ...v, stock: 0, inStock: false })),
+    });
+
+    const add = buttons().find((button) => button.textContent === "Sold out");
     expect(add).toHaveProperty("disabled", true);
-    expect(container.textContent).toContain("Phase 2");
+  });
+
+  it("adds nothing when no variant stands behind the selection", () => {
+    mount({ variants: [] });
+
+    const add = buttons().find((button) => button.textContent === "Add to cart");
+    expect(add).toHaveProperty("disabled", true);
   });
 
   it("renders no stars for a product nobody has reviewed", () => {
@@ -383,6 +488,33 @@ describe("a product with very little", () => {
 
     expect(container.textContent).toContain("Studio Over-Ear");
     expect(container.querySelectorAll("img[src^='/media/']")).toHaveLength(0);
+  });
+});
+
+describe("a product video", () => {
+  const clip: Media = { ...media("media_clip", 1), kind: "video" };
+
+  it("shows a video thumbnail as its first frame, not as a picture", () => {
+    mount({}, { ...imagesByVariant, var_sand: [media("media_sand"), clip] });
+
+    expect(container.querySelector("button video")?.getAttribute("src")).toBe("/media/media_clip#t=0.1");
+  });
+
+  it("plays the video in the main frame once its thumbnail is chosen", () => {
+    mount({}, { ...imagesByVariant, var_sand: [media("media_sand"), clip] });
+
+    click(thumbnails()[1]!);
+
+    const player = container.querySelector<HTMLVideoElement>("video[controls]");
+    expect(player?.getAttribute("src")).toBe("/media/media_clip");
+    // Muted, so the browser lets it start without a click.
+    expect(player?.muted).toBe(true);
+  });
+
+  it("opens on the video when the admin put it first", () => {
+    mount({}, { ...imagesByVariant, var_sand: [{ ...clip, position: 0 }, media("media_sand", 1)] });
+
+    expect(container.querySelector("video[controls]")?.getAttribute("src")).toBe("/media/media_clip");
   });
 });
 

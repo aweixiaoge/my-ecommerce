@@ -1,5 +1,5 @@
 import type { Prisma } from "@my-ecommerce/db";
-import type { CategoryRef, Media, ProductSummary } from "@my-ecommerce/shared";
+import { isVideoType, type CategoryRef, type Media, type ProductSummary } from "@my-ecommerce/shared";
 import type { Locale } from "@/lib/languages";
 import { publicMediaUrl } from "./media-repo";
 import { priceOf, variantPriceSpan } from "./pricing";
@@ -60,9 +60,13 @@ export function shopProductSelect(locale: Locale) {
       // can share a position, and an arbitrary winner would let a card's
       // photograph change between two identical requests.
       orderBy: [{ position: "asc" }, { id: "asc" }],
+      // Photographs only. A card, a cart line and an order are drawn with
+      // `next/image`, and a product video is for the product page's gallery —
+      // so "the first image" skips one even when the admin put it first.
+      where: IMAGES_ONLY,
       // No `data`, and no `url` either — the bytes are megabytes and the route
       // that serves them builds its own URL. See `publicMediaUrl`.
-      select: { id: true, position: true },
+      select: { id: true, position: true, mimeType: true },
     },
     categories: {
       // The same tie-break as the images, for the same reason and a worse one:
@@ -129,7 +133,9 @@ export function toSummary(
   const span = variantPriceSpan(row.variants.flatMap(priceOf));
   if (!span) return null;
 
-  const image = row.media.at(0);
+  // A filter rather than `at(0)`: the product page's read selects the videos
+  // too (`productDetailSelect`), and its summary is still a picture.
+  const image = row.media.find((media) => !isVideoType(media.mimeType));
 
   return {
     id: row.id,
@@ -167,6 +173,8 @@ export function toSummary(
 export function mediaRef(media: {
   id: string;
   position: number;
+  /** The stored type, when the read selected it; what decides `kind`. */
+  mimeType?: string | null;
 }): Media {
   return {
     id: media.id,
@@ -175,8 +183,19 @@ export function mediaRef(media: {
     width: null,
     height: null,
     position: media.position,
+    kind: isVideoType(media.mimeType) ? "video" : "image",
   };
 }
+
+/**
+ * Media that is not a video. Untyped rows count as images: rows written before
+ * the type column was filled have no type, and every one of those is a
+ * photograph — and a bare `NOT startsWith` would drop them, since SQL's answer
+ * for NULL is neither.
+ */
+export const IMAGES_ONLY = {
+  OR: [{ mimeType: null }, { NOT: { mimeType: { startsWith: "video/" } } }],
+} as const satisfies Prisma.MediaWhereInput;
 
 /**
  * A product's link to a category, as a card reads it — or nothing when the

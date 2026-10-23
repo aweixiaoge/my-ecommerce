@@ -23,6 +23,8 @@ function media(overrides: Record<string, unknown> = {}) {
     data: BYTES,
     mimeType: "image/png",
     product: { status: "active" },
+    blogId: null,
+    aboutPage: false,
     ...overrides,
   };
 }
@@ -46,7 +48,7 @@ describe("getPublicMedia", () => {
     expect(result!.type).toBe("image/png");
   });
 
-  it("asks for the bytes, the type and the product's status, in one read", async () => {
+  it("asks for the bytes, the type, and every owner that publishes, in one read", async () => {
     await getPublicMedia("media_1");
 
     expect(db.media.findUnique).toHaveBeenCalledWith({
@@ -55,6 +57,8 @@ describe("getPublicMedia", () => {
         data: true,
         mimeType: true,
         product: { select: { status: true } },
+        blogId: true,
+        aboutPage: true,
       },
     });
   });
@@ -81,9 +85,21 @@ describe("getPublicMedia", () => {
     expect(await getPublicMedia("media_1")).toBeNull();
   });
 
-  it("answers nothing for an upload no product claims", async () => {
+  it("serves a journal post's photograph — posts have no draft state", async () => {
+    db.media.findUnique.mockResolvedValue(media({ product: null, blogId: "blog_1" }));
+
+    expect(await getPublicMedia("media_1")).not.toBeNull();
+  });
+
+  it("serves an About page photograph — the page is always up", async () => {
+    db.media.findUnique.mockResolvedValue(media({ product: null, aboutPage: true }));
+
+    expect(await getPublicMedia("media_1")).not.toBeNull();
+  });
+
+  it("answers nothing for an upload no product or post claims", async () => {
     // An image is stored before the form it was chosen in has been saved, so
-    // rows with no product are the ordinary case rather than a corrupt one.
+    // rows with no owner are the ordinary case rather than a corrupt one.
     db.media.findUnique.mockResolvedValue(media({ product: null }));
 
     expect(await getPublicMedia("media_1")).toBeNull();

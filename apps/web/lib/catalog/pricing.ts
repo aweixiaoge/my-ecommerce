@@ -79,3 +79,30 @@ export function variantPriceSpan(
     priceMax: compareMoney(cheapest, dearest) === 0 ? null : dearest,
   };
 }
+
+/**
+ * The variant a product stands for when nobody has picked one: the cheapest
+ * that can actually be bought, or the cheapest of all when none can.
+ *
+ * Two readers, and they must agree. The product page opens with it selected,
+ * and a shop card's "Add to cart" adds it — so the variant a card puts in the
+ * cart is the one its "from" price advertises, and the one its product page
+ * would have shown. Cheapest, because the card has just told the shopper what
+ * the product costs *from*. In stock, because a sold-out colour would open the
+ * page on a disabled button and put nothing in the cart.
+ *
+ * The first of equal prices wins, so callers hand variants over in a stable
+ * order and the answer does not change between two identical requests.
+ */
+export function defaultVariant<T extends { price: Money; inStock: boolean }>(
+  variants: readonly T[],
+): T | undefined {
+  const inStock = variants.filter((variant) => variant.inStock);
+  const pool = inStock.length > 0 ? inStock : variants;
+
+  return pool.reduce<T | undefined>(
+    (cheapest, variant) =>
+      !cheapest || compareMoney(variant.price, cheapest.price) < 0 ? variant : cheapest,
+    undefined,
+  );
+}

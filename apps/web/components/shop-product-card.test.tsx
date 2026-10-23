@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ProductSummary } from "@my-ecommerce/shared";
 import { displayCurrency, type DisplayCurrency } from "@/lib/currency/display";
 import { en } from "@/lib/i18n/messages/en";
 import { ShopProductCard } from "./shop-product-card";
+
+// The button posts to a Server Action, which reaches the database; the card's
+// business is what the form names, not the round trip.
+vi.mock("@/app/[lang]/cart/actions", () => ({ addToCartAction: vi.fn() }));
 
 const base: ProductSummary = {
   id: "prod_earbud-wireless-bluetooth",
@@ -104,17 +108,31 @@ describe("ShopProductCard", () => {
     expect(render({ rating: null })).not.toContain("star-filled");
   });
 
-  it("routes every pointer to the product page, under its category", () => {
-    // There is no cart yet, so the button is a link. Three of them: the image,
-    // the title and the button must all reach the same product — and that
-    // address carries the category the card names, because a product's URL is
-    // where it is filed (see `productPath`).
+  it("routes the image and the title to the product page, under its category", () => {
+    // Both reach the same product — and that address carries the category
+    // the card names, because a product's URL is where it is filed (see
+    // `productPath`). The button is no longer a third link: it adds to the cart.
     const markup = render();
 
     expect(
       markup.match(/href="\/en\/products\/earbuds\/earbud-wireless-bluetooth"/g),
-    ).toHaveLength(3);
-    expect(markup).toContain("Add to Cart");
+    ).toHaveLength(2);
+  });
+
+  it("adds the product to the cart, leaving the variant to the server", () => {
+    // A card has no picker. It sends the product, and the server adds the
+    // variant the card's "from" price is for.
+    const markup = render();
+
+    expect(markup).toContain('name="productId" value="prod_earbud-wireless-bluetooth"');
+    expect(markup).not.toContain('name="variantId"');
+    expect(markup).toMatch(/<button type="submit"[^>]*>Add to Cart<\/button>/);
+  });
+
+  it("says sold out, and adds nothing, when no variant is in stock", () => {
+    const markup = render({ inStock: false });
+
+    expect(markup).toMatch(/<button type="submit" disabled=""[^>]*>Sold out<\/button>/);
   });
 
   it("links an unfiled product at the short address", () => {

@@ -15,6 +15,12 @@ export const MediaSchema = z.object({
   width: z.number().int().positive().nullable(),
   height: z.number().int().positive().nullable(),
   position: z.number().int().nonnegative(),
+  /**
+   * What to draw it with. Absent means an image — every reader that predates
+   * product videos, and every surface that only ever shows images, can leave
+   * it out.
+   */
+  kind: z.enum(["image", "video"]).optional(),
 });
 
 export type Media = z.infer<typeof MediaSchema>;

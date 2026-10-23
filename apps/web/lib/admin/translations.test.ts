@@ -5,6 +5,8 @@ import {
   translateBlogCategory,
   translateCategory,
   translateEntity,
+  translateAbout,
+  translateFaq,
   translateProduct,
 } from "./translations";
 
@@ -24,6 +26,8 @@ const db = vi.hoisted(() => ({
   categoryTranslation: { findMany: vi.fn(), findUnique: vi.fn(), upsert: vi.fn() },
   blogTranslation: { findMany: vi.fn(), findUnique: vi.fn(), upsert: vi.fn() },
   blogCategoryTranslation: { findMany: vi.fn(), findUnique: vi.fn(), upsert: vi.fn() },
+  faqTranslation: { findMany: vi.fn(), findUnique: vi.fn(), upsert: vi.fn() },
+  aboutTranslation: { findMany: vi.fn(), findUnique: vi.fn(), upsert: vi.fn() },
 }));
 
 vi.mock("@my-ecommerce/db", () => ({ prisma: db }));
@@ -643,5 +647,102 @@ describe("when every slug is taken", () => {
 
     expect(result.translated).toEqual([]);
     expect(result.failed).toHaveLength(4);
+  });
+});
+
+describe("translateFaq", () => {
+  beforeEach(() => {
+    db.faqTranslation.findMany.mockResolvedValue([{ locale: "en", autoTranslated: false }]);
+    db.faqTranslation.findUnique.mockResolvedValue({ description: "## Shipping" });
+    db.faqTranslation.upsert.mockResolvedValue({});
+  });
+
+  it("writes the description into all four languages, marked as the machine's", async () => {
+    const result = await translateFaq({ translate: translator() });
+
+    expect(result).toEqual({ translated: ["de", "fr", "pt", "es"], kept: [], failed: [] });
+    expect(callOf(db.faqTranslation.upsert, 0)).toEqual({
+      where: { locale: "de" },
+      create: { locale: "de", description: "[de] ## Shipping", autoTranslated: true },
+      update: { description: "[de] ## Shipping", autoTranslated: true },
+    });
+  });
+
+  it("leaves a language a person wrote alone", async () => {
+    db.faqTranslation.findMany.mockResolvedValue([
+      { locale: "en", autoTranslated: false },
+      { locale: "fr", autoTranslated: false },
+      { locale: "de", autoTranslated: true },
+    ]);
+
+    const result = await translateFaq({ translate: translator() });
+
+    expect(result.kept).toEqual(["fr"]);
+    expect(result.translated).toEqual(["de", "pt", "es"]);
+    const written = db.faqTranslation.upsert.mock.calls.map(
+      ([args]) => (args as { where: { locale: string } }).where.locale,
+    );
+    expect(written).not.toContain("fr");
+  });
+
+  it("empties the machine's copies when English is emptied, without asking the translator", async () => {
+    db.faqTranslation.findUnique.mockResolvedValue({ description: "" });
+    const translate = translator();
+
+    await translateFaq({ translate });
+
+    expect(translate).not.toHaveBeenCalled();
+    expect(callOf(db.faqTranslation.upsert, 0)).toMatchObject({ update: { description: "" } });
+  });
+
+  it("has nothing to do before English has been written", async () => {
+    db.faqTranslation.findUnique.mockResolvedValue(null);
+
+    expect(await translateFaq({ translate: translator() })).toEqual({
+      translated: [],
+      kept: [],
+      failed: [],
+    });
+  });
+
+  it("reports one language's failure without losing the others", async () => {
+    const result = await translateFaq({ translate: translator({}, "pt") });
+
+    expect(result.translated).toEqual(["de", "fr", "es"]);
+    expect(result.failed).toEqual([{ locale: "pt", kind: "rate" }]);
+  });
+});
+
+describe("translateAbout", () => {
+  beforeEach(() => {
+    db.aboutTranslation.findMany.mockResolvedValue([
+      { locale: "en", autoTranslated: false },
+      { locale: "fr", autoTranslated: false },
+    ]);
+    db.aboutTranslation.findUnique.mockResolvedValue({ description: "## Who we are" });
+    db.aboutTranslation.upsert.mockResolvedValue({});
+  });
+
+  it("writes the About table, as the machine's, and leaves a language a person wrote", async () => {
+    const result = await translateAbout({ translate: translator() });
+
+    expect(result).toEqual({ translated: ["de", "pt", "es"], kept: ["fr"], failed: [] });
+    expect(callOf(db.aboutTranslation.upsert, 0)).toEqual({
+      where: { locale: "de" },
+      create: { locale: "de", description: "[de] ## Who we are", autoTranslated: true },
+      update: { description: "[de] ## Who we are", autoTranslated: true },
+    });
+    expect(db.faqTranslation.upsert).not.toHaveBeenCalled();
+  });
+
+  it("does nothing before English is written", async () => {
+    db.aboutTranslation.findUnique.mockResolvedValue(null);
+
+    expect(await translateAbout({ translate: translator() })).toEqual({
+      translated: [],
+      kept: [],
+      failed: [],
+    });
+    expect(db.aboutTranslation.upsert).not.toHaveBeenCalled();
   });
 });

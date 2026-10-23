@@ -48,14 +48,13 @@ const nextConfig: NextConfig = {
     globalNotFound: true,
     serverActions: {
       /*
-       * Sized for ONE image per request — the 3 MB cap in the shared schema,
-       * plus the multipart overhead the docs put at 10–20 KB.
-       *
-       * Not the whole selection: the admin uploads each file as it is chosen
-       * and submits only the resulting ids, so nothing the create form sends is
-       * ever near this. The limit is global, so raising it for a batch would
-       * raise it for every action in the app, sign-in included — which is the
-       * reason the images do not travel inside the payload in the first place.
+       * Files no longer travel through an action: uploads go to the
+       * `POST /admin/media` route handler, which reads its own body, so a 50 MB
+       * product video never meets this limit. It was sized for one 3 MB image
+       * when they did, and is left there rather than lowered blind — the
+       * limit is global, and the forms that remain send a few hundred bytes of
+       * ids and text. Raising it for uploads would raise it for every action
+       * in the app, sign-in included, which is why uploads moved instead.
        */
       bodySizeLimit: "5mb",
     },

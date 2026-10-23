@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import {
   ACCEPTED_IMAGE_TYPES,
+  ACCEPTED_VIDEO_TYPES,
   IMAGES_PER_VARIANT_MAX,
 } from "@my-ecommerce/shared";
 import {
@@ -11,7 +12,7 @@ import {
   updateProductAction,
   type ProductFormState,
 } from "@/app/admin/(shell)/products/actions";
-import { uploadMediaAction } from "@/app/admin/media/actions";
+import { uploadMedia } from "@/lib/admin/upload-media";
 import { toFormAttributes, toFormDrafts } from "@/lib/admin/product-edit";
 import { mediaUrl, planUploads } from "@/lib/admin/product-media";
 import type { ProductForEdit } from "@/lib/admin/products-repo";
@@ -105,6 +106,11 @@ export function ProductForm({
     product ? toFormDrafts(product.variants) : {},
   );
   const [uploads, setUploads] = useState<Record<string, UploadState>>({});
+  // Which of the ids are videos: the thumbnail is a `<video>` for those, and an
+  // id alone cannot say. Seeded from the stored product, grown by each upload.
+  const [videoIds, setVideoIds] = useState<ReadonlySet<string>>(
+    () => new Set(product?.videoIds ?? []),
+  );
 
   /*
    * Every field on this form is controlled, including the two plain ones.
@@ -226,7 +232,7 @@ export function ProductForm({
       IMAGES_PER_VARIANT_MAX -
       draftFor(drafts, color).mediaIds.length -
       uploadStateFor(uploads, color).pending;
-    const { accepted, problems } = planUploads(files, room);
+    const { accepted, problems } = planUploads(files, room, { video: true });
 
     // Replaced, not appended: what is shown is about the selection just made,
     // and yesterday's rejection is not news.
@@ -238,9 +244,12 @@ export function ProductForm({
 
     for (const file of accepted) {
       try {
-        const result = await uploadMediaAction(file);
+        const result = await uploadMedia(file);
 
         if (result.ok) {
+          if (result.media.kind === "video") {
+            setVideoIds((current) => new Set(current).add(result.media.id));
+          }
           setDrafts((current) => {
             const draft = draftFor(current, color);
             return {
@@ -461,6 +470,7 @@ export function ProductForm({
                     colors={parseAttributeValues(attribute.values)}
                     drafts={drafts}
                     uploads={uploads}
+                    videoIds={videoIds}
                     onPatch={patchDraft}
                     onPickFiles={(color, files) => void addImages(color, files)}
                     onMove={(color, id, delta) =>
@@ -557,6 +567,29 @@ export function ProductForm({
 }
 
 /**
+ * A video's thumbnail: its first frame, and a play mark so it does not pass for
+ * a photograph.
+ *
+ * `#t=0.1` asks for a frame a moment in — Safari draws nothing for a muted
+ * video at 0 until it plays — and `preload="metadata"` fetches only enough of
+ * the file to draw it.
+ */
+function VideoThumbnail({ src }: { src: string }) {
+  return (
+    <div className="relative h-[72px] w-[104px] overflow-hidden rounded-control border border-line bg-ink">
+      <video src={`${src}#t=0.1`} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+      <span
+        aria-hidden
+        className="absolute inset-0 m-auto flex h-6 w-6 items-center justify-center rounded-full bg-paper/85 text-[10px] text-ink"
+      >
+        ▶
+      </span>
+      <span className="sr-only">Video</span>
+    </div>
+  );
+}
+
+/**
  * One row per colour, with what that colour ships as.
  *
  * The colour's own name is the row's legend rather than a label on a field:
@@ -568,6 +601,7 @@ function ColorRows({
   colors,
   drafts,
   uploads,
+  videoIds,
   onPatch,
   onPickFiles,
   onMove,
@@ -576,6 +610,7 @@ function ColorRows({
   colors: string[];
   drafts: Record<string, FormColorDraft>;
   uploads: Record<string, UploadState>;
+  videoIds: ReadonlySet<string>;
   onPatch: (color: string, patch: Partial<FormColorDraft>) => void;
   onPickFiles: (color: string, files: File[]) => void;
   onMove: (color: string, id: string, delta: number) => void;
@@ -635,15 +670,19 @@ function ColorRows({
                 <ul className="flex flex-wrap gap-2">
                   {draft.mediaIds.map((id, index) => (
                     <li key={id} className="w-[104px]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={mediaUrl(id)}
-                        // Empty and decorative: the colour's name is already
-                        // the legend, and describing the same photograph six
-                        // times helps nobody.
-                        alt=""
-                        className="h-[72px] w-[104px] rounded-control border border-line object-cover"
-                      />
+                      {videoIds.has(id) ? (
+                        <VideoThumbnail src={mediaUrl(id)} />
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={mediaUrl(id)}
+                          // Empty and decorative: the colour's name is already
+                          // the legend, and describing the same photograph six
+                          // times helps nobody.
+                          alt=""
+                          className="h-[72px] w-[104px] rounded-control border border-line object-cover"
+                        />
+                      )}
 
                       <div className="mt-1 flex items-center gap-1">
                         <ImageButton
@@ -682,13 +721,13 @@ function ColorRows({
                   htmlFor={`${colorKey(color)}-images`}
                   className="text-[12px] leading-[19.8px] text-ink-62"
                 >
-                  Images
+                  Images and videos
                 </label>
                 <input
                   id={`${colorKey(color)}-images`}
                   type="file"
                   multiple
-                  accept={ACCEPTED_IMAGE_TYPES.join(",")}
+                  accept={[...ACCEPTED_IMAGE_TYPES, ...ACCEPTED_VIDEO_TYPES].join(",")}
                   disabled={full}
                   // Deliberately nameless: a named file input would have React
                   // copy the chosen Files into the submitted form *as well as*

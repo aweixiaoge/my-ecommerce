@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fill, plural } from "./format";
+import { fill, fillParts, plural } from "./format";
 
 describe("fill", () => {
   it("puts values where the placeholders are", () => {
@@ -58,5 +58,30 @@ describe("plural", () => {
     // The count is filled first and then overridden, so a caller that needs a
     // formatted number — "1,5" in German — can say so.
     expect(plural(2, forms, { count: "zwei" })).toBe("zwei reviews");
+  });
+});
+
+describe("fillParts", () => {
+  const bold = { kind: "bold" };
+  const link = { kind: "link" };
+
+  it("splits a sentence around its values, keeping their order and repeats", () => {
+    expect(fillParts("Hello {email} (not {email}? {logOut})", { email: bold, logOut: link })).toEqual([
+      "Hello ",
+      bold,
+      " (not ",
+      bold,
+      "? ",
+      link,
+      ")",
+    ]);
+  });
+
+  it("takes a value at either end without empty strings around it", () => {
+    expect(fillParts("{a} and {a}", { a: bold })).toEqual([bold, " and ", bold]);
+  });
+
+  it("leaves a placeholder with no value as text", () => {
+    expect(fillParts("View {orders} or {other}", { orders: link })).toEqual(["View ", link, " or {other}"]);
   });
 });

@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { authenticateLogin } from "./authenticate";
+
+// An empty `admin_users` table, so the dev accounts are what signs in.
+vi.mock("@my-ecommerce/db", () => ({
+  prisma: { adminUser: { findFirst: vi.fn(async () => null) } },
+}));
 
 const NAME = "admin";
 

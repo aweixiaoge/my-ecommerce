@@ -52,6 +52,7 @@ export type {
   BlogCategoryTranslation,
   BlogTranslation,
   Category,
+  CouponType,
   CategoryTranslation,
   FeaturedProduct,
   Media,

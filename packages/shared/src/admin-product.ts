@@ -88,6 +88,27 @@ export const ACCEPTED_IMAGE_TYPES = [
   "image/avif",
 ] as const;
 
+/**
+ * The video types a product's gallery accepts, and their own, larger cap.
+ *
+ * MP4 and WebM because they are what every browser plays in a `<video>`
+ * without a plugin; a `.mov` plays in Safari and nowhere else. The cap is a
+ * short clip's worth — a 30–60 second 1080p product video — and it is separate
+ * from the image cap because the two differ by more than an order of magnitude:
+ * one limit for both would either refuse every video or let a 50 MB "photo"
+ * through.
+ *
+ * Only the product form offers them. The blog and About pickers stay
+ * image-only, so their galleries never have to draw one.
+ */
+export const ACCEPTED_VIDEO_TYPES = ["video/mp4", "video/webm"] as const;
+export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+
+/** Whether a stored type is one of the video types — what decides `<video>` over `<img>`. */
+export function isVideoType(type: string | null | undefined): boolean {
+  return (ACCEPTED_VIDEO_TYPES as readonly string[]).includes(type ?? "");
+}
+
 const AttributeValueSchema = z.string().trim().min(1).max(ATTRIBUTE_VALUE_MAX);
 
 export const ProductAttributeSchema = z

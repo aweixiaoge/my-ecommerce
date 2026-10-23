@@ -2,26 +2,23 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import {
-  ACCEPTED_IMAGE_TYPES,
-  IMAGES_PER_BLOG_MAX,
-} from "@my-ecommerce/shared";
+import { IMAGES_PER_BLOG_MAX } from "@my-ecommerce/shared";
 import {
   createBlogAction,
+  updateBlogAction,
   type BlogFormState,
 } from "@/app/admin/(shell)/blogs/actions";
-import { uploadMediaAction } from "@/app/admin/media/actions";
-import { mediaUrl, planUploads } from "@/lib/admin/product-media";
-import {
-  addMediaId,
-  moveMediaId,
-  removeMediaId,
-} from "@/lib/admin/product-variants";
+import type { BlogForEdit } from "@/lib/admin/blogs-repo";
 import { DescriptionEditor } from "./description-editor";
 import { FieldErrors, inputClass, LABEL } from "./form-controls";
+import { ImageListField, useImageList } from "./image-list-field";
 
 /**
- * The create-blog form.
+ * The blog form — the same one for creating and for editing.
+ *
+ * Handed a post, it edits it, as the product form does: the same fields in the
+ * same order, seeded from the post, posting to the update action with the id
+ * in a hidden field.
  *
  * A Client Component for the two reasons the product form is one: the
  * description editor's preview has to be immediate, and an image is uploaded
@@ -35,17 +32,12 @@ import { FieldErrors, inputClass, LABEL } from "./form-controls";
  * arrives, the post's cover.
  */
 
-/** What is on its way up, and what came back refused. */
-interface UploadState {
-  pending: number;
-  problems: string[];
-}
-
-const NO_UPLOADS: UploadState = { pending: 0, problems: [] };
-
 export function BlogForm({
   categories,
+  blog,
 }: {
+  /** The post to edit; absent on the create screen. */
+  blog?: BlogForEdit;
   /**
    * Every blog category, in the order the Category screen shows them. Passed in
    * rather than fetched here: this is a Client Component, and the page above it
@@ -56,7 +48,7 @@ export function BlogForm({
   const [state, formAction, pending] = useActionState<
     BlogFormState | undefined,
     FormData
-  >(createBlogAction, undefined);
+  >(blog ? updateBlogAction : createBlogAction, undefined);
 
   /*
    * Every field is controlled, for the reason the product form's are: React 19
@@ -65,91 +57,23 @@ export function BlogForm({
    * one without firing it, which reads as a broken button and has lost what was
    * typed.
    */
-  const [title, setTitle] = useState("");
-  const [shortDescription, setShortDescription] = useState("");
-  const [description, setDescription] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [mediaIds, setMediaIds] = useState<readonly string[]>([]);
-  const [uploads, setUploads] = useState<UploadState>(NO_UPLOADS);
-
-  /**
-   * Whether an image is still on its way.
-   *
-   * The hidden field is built from state, so submitting mid-upload would send
-   * the ids that had arrived and none of the others — and the post would be
-   * saved, and the page changed, before anyone could tell. Waiting is the
-   * honest option: the ids are not known yet.
-   */
-  const uploading = uploads.pending > 0;
-  const full = mediaIds.length >= IMAGES_PER_BLOG_MAX;
-
-  /** Counts an upload in or out, so the field can say how many are still going. */
-  function bumpPending(delta: number) {
-    setUploads((current) => ({
-      ...current,
-      pending: Math.max(0, current.pending + delta),
-    }));
-  }
-
-  function addUploadProblem(problem: string) {
-    setUploads((current) => ({
-      ...current,
-      problems: [...current.problems, problem],
-    }));
-  }
-
-  /**
-   * Uploads the files that were chosen, one request each.
-   *
-   * Sequentially rather than all at once: a batch of photographs is bounded by
-   * the connection, and firing six requests at a dev server to watch them
-   * arrive in a different order than they were picked is worse than waiting.
-   * Each id is appended as it comes back, so the order on the screen is the
-   * order the files were chosen.
-   */
-  async function addImages(files: File[]) {
-    // Still-in-flight uploads count against the cap, because the ids they will
-    // bring back are already spoken for. Counting only what has arrived lets a
-    // second selection take the list past the limit, and the refusal then lands
-    // on the submit button rather than on the file that was one too many.
-    const room = IMAGES_PER_BLOG_MAX - mediaIds.length - uploads.pending;
-    const { accepted, problems } = planUploads(files, room, {
-      holder: "a blog post",
-      limit: IMAGES_PER_BLOG_MAX,
-    });
-
-    // Replaced, not appended: what is shown is about the selection just made,
-    // and yesterday's rejection is not news.
-    setUploads((current) => ({ ...current, problems }));
-
-    if (accepted.length === 0) return;
-
-    bumpPending(accepted.length);
-
-    for (const file of accepted) {
-      try {
-        const result = await uploadMediaAction(file);
-
-        if (result.ok) {
-          setMediaIds((current) => addMediaId(current, result.media.id));
-        } else {
-          addUploadProblem(result.message);
-        }
-      } catch {
-        // A request that never came back — the dev server restarted, the
-        // connection dropped — is still a file that did not upload. The action
-        // returns its refusals as messages precisely so this path is rare; the
-        // catch is here so that when it happens the field says so instead of
-        // sitting on "Uploading…" for the rest of the session.
-        addUploadProblem("That upload did not finish. Try again.");
-      } finally {
-        bumpPending(-1);
-      }
-    }
-  }
+  const [title, setTitle] = useState(blog?.title ?? "");
+  const [shortDescription, setShortDescription] = useState(blog?.shortDescription ?? "");
+  const [description, setDescription] = useState(blog?.description ?? "");
+  // A post whose category was deleted from under it has none, and the
+  // placeholder asks for one — saving requires it, as creating does.
+  const [categoryId, setCategoryId] = useState(blog?.categoryId ?? "");
+  const images = useImageList({
+    initial: blog?.mediaIds ?? [],
+    limit: IMAGES_PER_BLOG_MAX,
+    holder: "a blog post",
+  });
+  const uploading = images.uploading;
 
   return (
     <form action={formAction} className="flex max-w-[640px] flex-col gap-8">
+      {blog && <input type="hidden" name="id" value={blog.id} />}
+
       {state?.message && (
         <p
           role="alert"
@@ -261,123 +185,7 @@ export function BlogForm({
         <FieldErrors id="category-id-error" messages={state?.errors?.categoryId} />
       </div>
 
-      <section className="flex flex-col gap-3">
-        <h2 className={LABEL}>Images</h2>
-
-        {mediaIds.length > 0 && (
-          <ul className="flex flex-wrap gap-2">
-            {mediaIds.map((id, index) => (
-              <li key={id} className="w-[104px]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={mediaUrl(id)}
-                  // Empty and decorative: the buttons below name what each
-                  // image is in the order, and describing the same photograph
-                  // six times helps nobody.
-                  alt=""
-                  className="h-[72px] w-[104px] rounded-control border border-line object-cover"
-                />
-
-                <div className="mt-1 flex items-center gap-1">
-                  <ImageButton
-                    label={`Move image ${index + 1} earlier`}
-                    disabled={index === 0}
-                    onClick={() =>
-                      setMediaIds((current) => moveMediaId(current, id, -1))
-                    }
-                  >
-                    ←
-                  </ImageButton>
-                  <ImageButton
-                    label={`Move image ${index + 1} later`}
-                    disabled={index === mediaIds.length - 1}
-                    onClick={() =>
-                      setMediaIds((current) => moveMediaId(current, id, 1))
-                    }
-                  >
-                    →
-                  </ImageButton>
-                  <ImageButton
-                    label={`Remove image ${index + 1}`}
-                    onClick={() =>
-                      setMediaIds((current) => removeMediaId(current, id))
-                    }
-                  >
-                    ×
-                  </ImageButton>
-                  {index === 0 && (
-                    <span className="ml-auto text-[11px] leading-[18.15px] text-ink-55">
-                      Main
-                    </span>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className="flex flex-col gap-1.5">
-          <label
-            htmlFor="images"
-            className="text-[12px] leading-[19.8px] text-ink-62"
-          >
-            Add images
-          </label>
-          <input
-            id="images"
-            type="file"
-            multiple
-            accept={ACCEPTED_IMAGE_TYPES.join(",")}
-            disabled={full}
-            // Deliberately nameless: a named file input would have React copy
-            // the chosen Files into the submitted form *as well as* the ids
-            // below, which is the whole payload this design avoids.
-            onChange={(event) => {
-              const files = [...(event.target.files ?? [])];
-              // Cleared so choosing the same file again still fires a change —
-              // a file input that keeps its value reports nothing the second
-              // time.
-              event.target.value = "";
-              addImages(files);
-            }}
-            className="text-[12px] leading-[19.8px] text-ink-62 file:mr-2 file:h-8 file:rounded-control file:border file:border-line file:bg-paper file:px-3 file:text-[12px] file:font-medium file:text-ink hover:file:bg-mist disabled:opacity-50"
-          />
-
-          {full && (
-            <p className="text-[12px] leading-[19.8px] text-ink-55">
-              {IMAGES_PER_BLOG_MAX} images is the limit — remove one to add
-              another.
-            </p>
-          )}
-          {uploads.pending > 0 && (
-            <p
-              aria-live="polite"
-              className="text-[12px] leading-[19.8px] text-ink-55"
-            >
-              Uploading {uploads.pending}…
-            </p>
-          )}
-          {uploads.problems.length > 0 && (
-            <ul role="alert" className="text-[12px] leading-[19.8px] text-red-600">
-              {uploads.problems.map((problem) => (
-                <li key={problem}>{problem}</li>
-              ))}
-            </ul>
-          )}
-          <FieldErrors
-            id="media-ids-error"
-            messages={state?.errors?.mediaIds}
-            announce
-          />
-        </div>
-
-        {/*
-          The ids of the uploads, in the order shown. The files themselves were
-          sent one request each the moment they were chosen — this is what the
-          create action claims them by.
-        */}
-        <input type="hidden" name="mediaIds" value={JSON.stringify(mediaIds)} />
-      </section>
+      <ImageListField list={images} errors={state?.errors?.mediaIds} />
 
       <DescriptionEditor
         value={description}
@@ -395,7 +203,7 @@ export function BlogForm({
           disabled={pending || uploading || categories.length === 0}
           className="h-11 rounded-control bg-ink px-5 text-[14px] font-medium text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {pending ? "Creating…" : "Create blog"}
+          {blog ? (pending ? "Saving…" : "Save changes") : pending ? "Creating…" : "Create blog"}
         </button>
 
         {uploading && (
@@ -415,30 +223,5 @@ export function BlogForm({
         </Link>
       </div>
     </form>
-  );
-}
-
-/** One of the thumbnail's small move-or-remove controls. */
-function ImageButton({
-  label,
-  disabled,
-  onClick,
-  children,
-}: {
-  label: string;
-  disabled?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="h-6 w-6 rounded-[3px] border border-line bg-paper text-[12px] leading-none text-ink transition-colors hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {children}
-    </button>
   );
 }

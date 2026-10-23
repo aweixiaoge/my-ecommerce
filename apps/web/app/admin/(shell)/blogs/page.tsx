@@ -9,9 +9,8 @@ import { listBlogs } from "@/lib/admin/blogs-repo";
  * The post list.
  *
  * Newest first, with the category each post is filed under and the day it was
- * written. Today the screen's job is the button and the proof it worked — a
- * post can be created and seen; editing arrives as its own step, the way it did
- * for products.
+ * written, and a way into each one: Translate, and Edit — the same form as
+ * Create blog, filled in.
  *
  * It reads the database at request time, which the shell layout has already
  * allowed for the whole admin area.
@@ -97,7 +96,22 @@ export default async function AdminBlogsPage({
                 {formatDate(blog.createdAt)}
               </td>
               <td className="py-3">
-                <TranslateButton kind="blog" id={blog.id} name={blog.title} />
+                <div className="flex items-center gap-1.5">
+                  <TranslateButton kind="blog" id={blog.id} name={blog.title} />
+                  {/*
+                    An anchor rather than a `<Link>`, for the product list's
+                    reason: a document load builds the edit form from what the
+                    server just sent, where a client navigation would first
+                    restore the form as it was before the last save.
+                  */}
+                  <a
+                    href={`/admin/blogs/${blog.id}/edit`}
+                    aria-label={`Edit ${blog.title}`}
+                    className="flex h-7 items-center rounded-control border border-line px-2 text-[12px] leading-[19.8px] text-ink transition-colors hover:bg-mist"
+                  >
+                    Edit
+                  </a>
+                </div>
               </td>
             </tr>
           ))}

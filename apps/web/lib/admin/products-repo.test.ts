@@ -579,6 +579,7 @@ describe("getProductForEdit", () => {
           mediaIds: ["media_1", "media_2"],
         },
       ],
+      videoIds: [],
     });
   });
 

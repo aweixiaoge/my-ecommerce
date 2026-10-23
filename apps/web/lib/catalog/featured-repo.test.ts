@@ -81,6 +81,7 @@ describe("getHeroProduct", () => {
         width: null,
         height: null,
         position: 0,
+        kind: "image",
       },
       href: "/en/products/earbuds/earbud-wireless",
     });

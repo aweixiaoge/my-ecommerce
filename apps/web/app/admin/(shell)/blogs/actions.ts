@@ -5,7 +5,12 @@ import {
   AdminBlogCreateSchema,
   IMAGES_PER_BLOG_MAX,
 } from "@my-ecommerce/shared";
-import { createBlog, UnknownCategoryError } from "@/lib/admin/blogs-repo";
+import {
+  BlogNotFoundError,
+  createBlog,
+  UnknownCategoryError,
+  updateBlog,
+} from "@/lib/admin/blogs-repo";
 import { getSession } from "@/lib/admin/session";
 import { SlugExhaustedError } from "@/lib/admin/slug";
 import { noticeFor } from "@/lib/admin/translation-notice";
@@ -82,6 +87,42 @@ export async function createBlogAction(
 }
 
 /**
+ * Saves a post that already exists.
+ *
+ * The same form and the same schema as the create action — the edit screen is
+ * the create screen with the post's values in it — plus the id, which travels
+ * in a hidden field. Like a product edit, it translates afterwards: languages
+ * the machine wrote are refreshed from the new English, and a language
+ * somebody corrected by hand is left as they wrote it.
+ */
+export async function updateBlogAction(
+  _prevState: BlogFormState | undefined,
+  formData: FormData,
+): Promise<BlogFormState | undefined> {
+  if (!(await getSession())) {
+    return { message: "Your session has expired. Sign in again." };
+  }
+
+  const id = formData.get("id");
+  if (typeof id !== "string" || id === "") {
+    return { message: "That post could not be identified. Reload and try again." };
+  }
+
+  const parsed = AdminBlogCreateSchema.safeParse(readBlogForm(formData));
+
+  if (!parsed.success) return { errors: fieldErrors(parsed.error.issues) };
+
+  try {
+    await updateBlog(id, parsed.data);
+  } catch (error) {
+    return blogSaveFailure(error);
+  }
+
+  // Outside the `try`: `redirect` signals by throwing.
+  redirect(`/admin/blogs?translated=${noticeFor(await translateBlog(id))}`);
+}
+
+/**
  * The form, as the schema wants it.
  *
  * `?? ""` for the fields a draft may leave blank: a post submitted before its
@@ -115,8 +156,9 @@ function blogSaveFailure(error: unknown): BlogFormState {
   }
 
   if (error instanceof SlugExhaustedError) return { message: error.message };
+  if (error instanceof BlogNotFoundError) return { message: error.message };
 
-  console.error("Creating a blog post failed:", error);
+  console.error("Saving a blog post failed:", error);
   return {
     message:
       "The post could not be saved. Try again, and check the server is running if it keeps failing.",

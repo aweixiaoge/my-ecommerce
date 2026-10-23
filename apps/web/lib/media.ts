@@ -43,3 +43,16 @@ export function toStoredMedia(row: MediaBytes): StoredMedia | null {
 
   return { bytes: new Uint8Array(row.data), type: row.mimeType };
 }
+
+/**
+ * Where a shopper's browser fetches an image from.
+ *
+ * Not the `url` column. That column holds `/admin/media/{id}`, written by the
+ * admin's uploader, and it is gated behind an admin session — a card pointing at
+ * it would render a 404 for every shopper. The column is in any case write-only
+ * today: the admin form builds its thumbnails from the id through `mediaUrl()`,
+ * so nothing reads what was stored there.
+ */
+export function publicMediaUrl(id: string): string {
+  return `/media/${id}`;
+}

@@ -1,6 +1,6 @@
 import { AdminLoginSchema, type AdminUser } from "@my-ecommerce/shared";
-import { findAdminByName } from "../mock/admin-users";
-import { verifyPassword } from "./password";
+import { findAdminByName } from "./admin-users-repo";
+import { verifyPassword } from "@/lib/auth/password";
 
 /**
  * The credential check, deliberately free of Next.js.

@@ -12,13 +12,17 @@ const MIN_KEY_BYTES = 16;
 const MAX_KEY_BYTES = 1024;
 
 /**
- * Password hashing for the mock admin store, on `node:crypto` alone.
+ * Password hashing, on `node:crypto` alone — for both identities.
  *
- * scrypt is a memory-hard KDF and is already in the runtime, so the mock store
- * can hold real hashes instead of plaintext without adding a dependency. The
- * real API uses bcrypt (plan.md, stack table) and this module goes away with
- * the rest of the mock — which is why the parameters here are the defaults
- * rather than something tuned: none of this is meant to outlive the mock.
+ * scrypt is a memory-hard KDF and is already in the runtime, so customer
+ * accounts and the mock admin store hold real hashes without adding a
+ * dependency. plan.md's stack table names bcrypt for the eventual API; a
+ * stored hash is self-describing enough (`salt:key`) that a move can verify
+ * these and rehash on the next sign-in rather than forcing resets.
+ *
+ * Sharing this module does not share an identity (plan.md, decision 6): the
+ * admin and the customer keep separate tables, separate cookies and separate
+ * sessions. Only the arithmetic is common.
  */
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(SALT_BYTES);

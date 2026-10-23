@@ -300,6 +300,7 @@ describe("the product a page renders", () => {
           width: null,
           height: null,
           position: 0,
+          kind: "image",
         },
       ],
     });

@@ -19,7 +19,7 @@ import type { AdminRole } from "@my-ecommerce/shared";
  *   name: staff   password: staff-dev-password   (staff)
  *
  * The hashes are real scrypt output, generated once with the same parameters
- * `lib/admin/password.ts` uses, so there is no hashing cost at import:
+ * `lib/auth/password.ts` uses, so there is no hashing cost at import:
  *
  *   node -e "const{randomBytes,scryptSync}=require('node:crypto');
  *     const s=randomBytes(16);
@@ -106,4 +106,11 @@ export async function findAdminById(
   assertMockAdminStoreAllowed();
 
   return ADMIN_USERS.find((user) => user.id === id) ?? null;
+}
+
+/** Every mock admin, for the user list. */
+export async function listMockAdmins(): Promise<AdminUserRecord[]> {
+  assertMockAdminStoreAllowed();
+
+  return [...ADMIN_USERS];
 }

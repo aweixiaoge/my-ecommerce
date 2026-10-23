@@ -61,6 +61,36 @@ export const ADMIN_NAV: readonly AdminNavGroup[] = [
     label: "Reviews",
     items: [{ label: "Review", href: "/admin/reviews" }],
   },
+  {
+    // The shop's side of a sale: who bought, what they bought, and what they
+    // paid less. Flat routes, for the reason the blog screens give.
+    id: "commerce",
+    label: "Commerce",
+    items: [
+      { label: "Customer", href: "/admin/customers" },
+      { label: "Order", href: "/admin/orders" },
+      { label: "Coupon", href: "/admin/coupons" },
+    ],
+  },
+  {
+    // What the storefront's Contact page sends in, and what it and the FAQ
+    // and About pages show. Flat routes, for the reason the blog screens give.
+    id: "contact",
+    label: "Contact",
+    items: [
+      { label: "Message", href: "/admin/contact-messages" },
+      { label: "Info", href: "/admin/contact-info" },
+      { label: "FAQ", href: "/admin/contact-faq" },
+      { label: "About", href: "/admin/contact-about" },
+    ],
+  },
+  {
+    // Who can sign in to this admin. Not the shop's customers — those are
+    // Commerce → Customer, and a different table (plan.md, decision 6).
+    id: "users",
+    label: "User",
+    items: [{ label: "User", href: "/admin/users" }],
+  },
 ];
 
 /**

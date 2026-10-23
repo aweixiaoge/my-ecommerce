@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Money } from "@my-ecommerce/shared";
-import { priceOf, variantPriceSpan } from "./pricing";
+import { defaultVariant, priceOf, variantPriceSpan } from "./pricing";
 
 /**
  * The pricing rules, with no database anywhere near them.
@@ -94,5 +94,33 @@ describe("variantPriceSpan", () => {
     // `compareMoney` throws on mixed currencies rather than guessing an order,
     // and one contradictory row must not take a page down with it.
     expect(variantPriceSpan([usd("79.00"), { amount: "79.00", currency: "EUR" }])).toBeNull();
+  });
+});
+
+describe("defaultVariant", () => {
+  const v = (id: string, amount: string, inStock = true) => ({
+    id,
+    price: usd(amount),
+    inStock,
+  });
+
+  it("picks the cheapest variant that is in stock", () => {
+    expect(defaultVariant([v("a", "333.00"), v("b", "87.00")])?.id).toBe("b");
+  });
+
+  it("passes over a cheaper variant that is sold out", () => {
+    expect(defaultVariant([v("a", "9.00", false), v("b", "87.00")])?.id).toBe("b");
+  });
+
+  it("falls back to the cheapest of all when nothing is in stock", () => {
+    expect(defaultVariant([v("a", "90.00", false), v("b", "87.00", false)])?.id).toBe("b");
+  });
+
+  it("keeps the first of two equal prices, so ties do not flip", () => {
+    expect(defaultVariant([v("a", "87.00"), v("b", "87")])?.id).toBe("a");
+  });
+
+  it("has nothing to pick from no variants", () => {
+    expect(defaultVariant([])).toBeUndefined();
   });
 });

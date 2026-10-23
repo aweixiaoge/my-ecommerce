@@ -18,9 +18,8 @@ import {
  *
  * A `select` rather than an `include`, as everywhere else: an `include` brings
  * every scalar on the relation, and a post's `description` is its whole body —
- * markdown for a page the card does not draw a line of. The cover image is not
- * here either, for the same reason: the design's card is a label, a title, an
- * excerpt and a date.
+ * markdown for a page the card does not draw a line of. Of the images, only the
+ * cover: the card shows it under the label, and the rest are the post's page's.
  */
 export function blogSelect(locale: Locale) {
   return {
@@ -39,6 +38,8 @@ export function blogSelect(locale: Locale) {
         },
       },
     },
+    // The admin's first image is the cover — the order the post's page uses.
+    media: { orderBy: [{ position: "asc" }, { id: "asc" }], take: 1, select: { id: true } },
   } as const satisfies Prisma.BlogSelect;
 }
 
@@ -74,6 +75,8 @@ export interface BlogPostSummary {
    * it.
    */
   publishedAt: string;
+  /** The cover's media id, null when the post has no images. */
+  coverId: string | null;
 }
 
 /**
@@ -108,5 +111,58 @@ export function toBlogPost(
     excerpt: translation.shortDescription,
     category: shownTranslation(row.category?.translations ?? [], locale)?.name ?? "",
     publishedAt: row.createdAt.toISOString(),
+    coverId: row.media[0]?.id ?? null,
+  };
+}
+
+/**
+ * The columns a post's own page is made of: the card's, plus the body, the
+ * search-result copy and the images in the order the admin arranged them.
+ */
+export function blogDetailSelect(locale: Locale) {
+  const card = blogSelect(locale);
+
+  return {
+    ...card,
+    translations: {
+      ...card.translations,
+      select: {
+        ...card.translations.select,
+        description: true,
+        metaTitle: true,
+        metaDescription: true,
+      },
+    },
+    media: { orderBy: [{ position: "asc" }, { id: "asc" }], select: { id: true } },
+  } as const satisfies Prisma.BlogSelect;
+}
+
+export type BlogDetailRow = Prisma.BlogGetPayload<{
+  select: ReturnType<typeof blogDetailSelect>;
+}>;
+
+/** A post, as its own page draws it. */
+export interface BlogPostDetail extends BlogPostSummary {
+  /** The body, as markdown. */
+  description: string;
+  /** What a search result shows; the title and excerpt when nobody wrote one. */
+  metaTitle: string;
+  metaDescription: string;
+  /** Media ids, the first one being the cover. */
+  imageIds: string[];
+}
+
+/** The row as a page, or null for the reason `toBlogPost` gives. */
+export function toBlogPostDetail(row: BlogDetailRow, locale: Locale): BlogPostDetail | null {
+  const summary = toBlogPost(row, locale);
+  const translation = shownTranslation(row.translations, locale);
+  if (!summary || !translation) return null;
+
+  return {
+    ...summary,
+    description: translation.description,
+    metaTitle: translation.metaTitle || summary.title,
+    metaDescription: translation.metaDescription || summary.excerpt,
+    imageIds: row.media.map((media) => media.id),
   };
 }

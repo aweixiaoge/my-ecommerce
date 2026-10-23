@@ -26,6 +26,32 @@ export function fill(
 }
 
 /**
+ * `fill` for a sentence with markup in it: the values may be elements, and the
+ * result is the sentence as a list of pieces for React to render in order.
+ *
+ * The catalog keeps the whole sentence — "Hello {email} (not {email}? {logOut})"
+ * — so a language can move the link or the bold name to wherever its grammar
+ * puts them. Splitting it into fragments in the catalog would fix the English
+ * word order into every language. A placeholder with no value is left as
+ * text, as `fill` leaves it.
+ */
+export function fillParts<T>(template: string, values: Record<string, T>): (string | T)[] {
+  const parts: (string | T)[] = [];
+  let last = 0;
+
+  for (const match of template.matchAll(/\{(\w+)\}/g)) {
+    const key = match[1]!;
+    if (!(key in values)) continue;
+    if (match.index > last) parts.push(template.slice(last, match.index));
+    parts.push(values[key]!);
+    last = match.index + match[0].length;
+  }
+
+  if (last < template.length) parts.push(template.slice(last));
+  return parts;
+}
+
+/**
  * The form for a count, filled in: `{ one, other }` plus the number.
  *
  * Two forms rather than a plural-rules library, and that is a measurement

@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import "../globals.css";
+import { CartLink } from "@/components/cart/cart-link";
+import { CartMenu } from "@/components/cart/cart-menu";
 import {
   CurrencySwitcher,
   CurrencyTrigger,
@@ -8,12 +10,14 @@ import {
 } from "@/components/currency-switcher";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { requestCart } from "@/lib/cart/request";
 import { SHOP_CURRENCY } from "@/lib/currency/display";
 import { requestDisplayCurrency } from "@/lib/currency/request";
+import { formatMoney, formatPrice } from "@/lib/format";
 import { getMessages, type Messages } from "@/lib/i18n/messages";
 import { localePath } from "@/lib/i18n/paths";
 import { requestLocale } from "@/lib/i18n/request";
-import { LOCALES } from "@/lib/languages";
+import { LOCALES, type Locale } from "@/lib/languages";
 import { NAV } from "@/lib/nav";
 
 /**
@@ -110,11 +114,32 @@ export default async function StorefrontLayout({
           locale={locale}
           navCurrency={currencyControl("nav")}
           barCurrency={currencyControl("bar")}
+          cart={
+            /*
+             * The same arrangement as the currency control, for the same
+             * reason: the cart is behind a cookie. The fallback is an empty
+             * cart — zero, no badge — which is what a shopper who has added
+             * nothing sees anyway, so for most readers nothing changes when
+             * the real one lands.
+             */
+            <Suspense
+              fallback={
+                <CartLink
+                  href={localePath(locale, "/cart")}
+                  amount={formatMoney({ amount: "0", currency: SHOP_CURRENCY }, locale)}
+                  count={0}
+                  messages={messages.header}
+                />
+              }
+            >
+              <HeaderCart locale={locale} messages={messages} />
+            </Suspense>
+          }
         />
 
         <main className="flex-1">{children}</main>
 
-        <SiteFooter nav={nav} messages={messages.footer} locale={locale} />
+        <SiteFooter nav={nav} messages={messages.footer} />
       </body>
     </html>
   );
@@ -146,6 +171,40 @@ async function HeaderCurrency({
       display={await requestDisplayCurrency()}
       messages={messages}
       placement={placement}
+    />
+  );
+}
+
+/**
+ * The shopper's cart, as the header's link — the subtotal in their currency and
+ * the count on the badge — and the panel that opens from it.
+ *
+ * Request-time for the reason `HeaderCurrency` is, and a component of its own
+ * for the same reason — it awaits, and the shell around it must not.
+ */
+async function HeaderCart({
+  locale,
+  messages,
+}: {
+  locale: Locale;
+  messages: Messages;
+}) {
+  const [cart, currency] = await Promise.all([
+    requestCart(locale),
+    requestDisplayCurrency(),
+  ]);
+
+  return (
+    <CartMenu
+      cart={cart}
+      amount={formatPrice(
+        cart?.subtotal ?? { amount: "0", currency: SHOP_CURRENCY },
+        currency,
+        locale,
+      )}
+      messages={messages}
+      locale={locale}
+      currency={currency}
     />
   );
 }

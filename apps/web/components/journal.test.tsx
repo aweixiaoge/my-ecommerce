@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { BlogPostSummary } from "@/lib/blog/blog-rows";
 import { en } from "@/lib/i18n/messages/en";
@@ -12,6 +12,13 @@ import { Journal, JournalFallback, JOURNAL_SIZE } from "./journal";
  * — label, title, excerpt, date — and the two fields a post is allowed to be
  * without.
  */
+vi.mock("next/image", () => ({
+  default: ({ src, alt }: { src?: unknown; alt?: string }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={typeof src === "string" ? src : "mock"} alt={alt ?? ""} />
+  ),
+}));
+
 const post = (overrides: Partial<BlogPostSummary> = {}): BlogPostSummary => ({
   id: "blog_1",
   slug: "how-to-judge-earphone-sound-quality",
@@ -19,6 +26,7 @@ const post = (overrides: Partial<BlogPostSummary> = {}): BlogPostSummary => ({
   excerpt: "Bass, treble and soundstage, explained without the jargon.",
   category: "Engineer",
   publishedAt: "2026-10-15T17:41:12.326Z",
+  coverId: null,
   ...overrides,
 });
 
@@ -73,8 +81,27 @@ describe("Journal", () => {
     const markup = render([post({ category: "" })]);
 
     expect(markup).toContain("How to judge earphone sound quality");
-    // The underlined label is the only thing that would have carried it.
+    // The label is the only semibold line in the card.
+    expect(markup).not.toContain("font-semibold");
+  });
+
+  it("shows the category as it was written, not in capitals", () => {
+    const markup = render([post()]);
+
+    expect(markup).toContain(">Engineer<");
     expect(markup).not.toContain("uppercase");
+  });
+
+  it("draws the cover under the label, linking to the post", () => {
+    const markup = render([post({ coverId: "media_cover" })]);
+
+    expect(markup).toContain('src="/media/media_cover"');
+    expect(markup.indexOf("Engineer")).toBeLessThan(markup.indexOf('src="/media/media_cover"'));
+    expect(markup.indexOf('src="/media/media_cover"')).toBeLessThan(markup.indexOf("<h3"));
+  });
+
+  it("draws no image for a post without one", () => {
+    expect(render([post()])).not.toContain("<img");
   });
 
   it("draws no excerpt for a post that has none", () => {

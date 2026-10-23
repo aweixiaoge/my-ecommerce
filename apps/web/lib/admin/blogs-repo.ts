@@ -101,6 +101,126 @@ async function insertBlog(input: AdminBlogCreate, slug: string): Promise<string>
   });
 }
 
+/**
+ * The post that was asked to be edited is not a row — deleted in another tab
+ * between the edit screen loading and the save, or an id somebody typed.
+ */
+export class BlogNotFoundError extends Error {
+  constructor() {
+    super("That post no longer exists. Go back to the list and reload it.");
+    this.name = "BlogNotFoundError";
+  }
+}
+
+/** A post as the edit screen loads it: the create form's fields, filled in. */
+export interface BlogForEdit {
+  id: string;
+  /** The form is keyed by it — see the edit page. */
+  updatedAt: string;
+  title: string;
+  shortDescription: string;
+  description: string;
+  /** Null when the post's category was deleted from under it. */
+  categoryId: string | null;
+  /** In the order the form showed them, the first being the Main image. */
+  mediaIds: string[];
+}
+
+/**
+ * The post, or null when there is no such row — the id is in the URL, and the
+ * page turns a wrong one into a 404, as the product edit screen does.
+ */
+export async function getBlogForEdit(id: string): Promise<BlogForEdit | null> {
+  const blog = await prisma.blog.findUnique({
+    where: { id },
+    include: {
+      translations: { where: { locale: DEFAULT_LOCALE } },
+      media: { orderBy: [{ position: "asc" }, { id: "asc" }], select: { id: true } },
+    },
+  });
+
+  if (!blog) return null;
+
+  // A post with no English row is not something this app writes; an empty
+  // form beats a crash, and saving writes the row it was missing.
+  const translation = blog.translations[0];
+
+  return {
+    id: blog.id,
+    updatedAt: blog.updatedAt.toISOString(),
+    title: translation?.title ?? "",
+    shortDescription: translation?.shortDescription ?? "",
+    description: translation?.description ?? "",
+    categoryId: blog.categoryId,
+    mediaIds: blog.media.map((media) => media.id),
+  };
+}
+
+/**
+ * Rewrites a post: its English copy, its category and its images.
+ *
+ * The slug follows the title, as on create and as a product's does on edit —
+ * retried the same way, because a renamed post can land on another post's
+ * slug. Saving an unchanged title regenerates the slug the row already holds,
+ * which the unique index accepts as the same row.
+ */
+export async function updateBlog(id: string, input: AdminBlogCreate): Promise<void> {
+  const base = slugify(input.title, "blog");
+
+  for (let attempt = 1; attempt <= SLUG_ATTEMPTS; attempt++) {
+    try {
+      await writeBlog(id, input, slugAttempt(base, attempt));
+      return;
+    } catch (error) {
+      if (isMissingRow(error)) throw new BlogNotFoundError();
+      if (isMissingCategory(error)) throw new UnknownCategoryError();
+      if (isSlugTaken(error)) continue;
+      throw error;
+    }
+  }
+
+  throw new SlugExhaustedError(base);
+}
+
+/**
+ * One save, one transaction — the product edit's reasoning: a post that is
+ * half of what was on screen is worse than one that did not change.
+ */
+async function writeBlog(id: string, input: AdminBlogCreate, slug: string): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    // The category lives on the row itself, and `updatedAt` moves with any
+    // update — which the edit screen's key depends on.
+    await tx.blog.update({ where: { id }, data: { categoryId: input.categoryId } });
+
+    await tx.blogTranslation.upsert({
+      where: { blogId_locale: { blogId: id, locale: DEFAULT_LOCALE } },
+      create: {
+        blogId: id,
+        locale: DEFAULT_LOCALE,
+        title: input.title,
+        slug,
+        shortDescription: input.shortDescription,
+        description: input.description,
+      },
+      update: {
+        title: input.title,
+        slug,
+        shortDescription: input.shortDescription,
+        description: input.description,
+      },
+    });
+
+    // Re-claimed in the order on screen, so a reorder is a save like any other.
+    for (const [position, mediaId] of input.mediaIds.entries()) {
+      await tx.media.updateMany({ where: { id: mediaId }, data: { blogId: id, position } });
+    }
+
+    // Images taken off the form. An upload is made for one post and claimed by
+    // one save, so a removed one has no other reader — the product edit's rule.
+    await tx.media.deleteMany({ where: { blogId: id, id: { notIn: [...input.mediaIds] } } });
+  });
+}
+
 /** What the post list needs, one row per post. */
 export interface AdminBlogSummary {
   id: string;
@@ -173,4 +293,11 @@ function isMissingCategory(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
 
   return (error as { code?: unknown }).code === "P2003";
+}
+
+/** Whether the post being updated is gone — Prisma's "record to update not found". */
+function isMissingRow(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+
+  return (error as { code?: unknown }).code === "P2025";
 }

@@ -9,6 +9,7 @@ import {
 } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { CartLink } from "@/components/cart/cart-link";
 import { CurrencyTrigger } from "@/components/currency-switcher";
 import { en } from "@/lib/i18n/messages/en";
 import { localePath } from "@/lib/i18n/paths";
@@ -100,6 +101,9 @@ beforeEach(() => {
         // which is what the switcher assertions below are about.
         navCurrency={<CurrencyTrigger currency="USD" placement="nav" />}
         barCurrency={<CurrencyTrigger currency="USD" placement="bar" />}
+        // …and the cart the same way: the layout's empty-cart fallback, since
+        // the live one reads a cookie.
+        cart={<CartLink href="/en/cart" amount="$0.00" count={0} messages={en.header} />}
       />,
     );
   });

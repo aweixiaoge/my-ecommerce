@@ -351,6 +351,78 @@ export async function translateBlogCategory(
 }
 
 /**
+ * The FAQ page: one description per language, and no slug — the page has one
+ * address, `/faq`, in every language.
+ *
+ * Not `translateRow`, which exists for the slug retry this has no use for. The
+ * skip rule is the same: a language a person wrote is left alone. An English
+ * description emptied by the admin empties the machine's copies too —
+ * `translateFields` passes an empty field through untranslated — so the page
+ * is not left answering in four languages after it was cleared in the fifth.
+ */
+export async function translateFaq(deps: TranslationDeps = {}): Promise<TranslationRun> {
+  return translateDescriptionPage(deps, {
+    rows: () => prisma.faqTranslation.findMany({ select: { locale: true, autoTranslated: true } }),
+    english: () =>
+      prisma.faqTranslation.findUnique({
+        where: { locale: DEFAULT_LOCALE },
+        select: { description: true },
+      }),
+    write: (locale, description) =>
+      prisma.faqTranslation.upsert({
+        where: { locale },
+        create: { locale, description, autoTranslated: true },
+        update: { description, autoTranslated: true },
+      }),
+  });
+}
+
+/** The About page's description: the FAQ's arrangement, in its own table. */
+export async function translateAbout(deps: TranslationDeps = {}): Promise<TranslationRun> {
+  return translateDescriptionPage(deps, {
+    rows: () => prisma.aboutTranslation.findMany({ select: { locale: true, autoTranslated: true } }),
+    english: () =>
+      prisma.aboutTranslation.findUnique({
+        where: { locale: DEFAULT_LOCALE },
+        select: { description: true },
+      }),
+    write: (locale, description) =>
+      prisma.aboutTranslation.upsert({
+        where: { locale },
+        create: { locale, description, autoTranslated: true },
+        update: { description, autoTranslated: true },
+      }),
+  });
+}
+
+/**
+ * A page that is one markdown description per language, keyed by locale —
+ * FAQ and About. The two differ only in their table.
+ */
+async function translateDescriptionPage(
+  deps: TranslationDeps,
+  table: {
+    rows: () => Promise<{ locale: string; autoTranslated: boolean }[]>;
+    english: () => Promise<{ description: string } | null>;
+    write: (locale: string, description: string) => Promise<unknown>;
+  },
+): Promise<TranslationRun> {
+  const [rows, english] = await Promise.all([table.rows(), table.english()]);
+
+  if (!english) return { translated: [], kept: [], failed: [] };
+
+  return run(deps, async (target, translate) => {
+    const existing = rowFor(rows, target);
+    if (existing && !existing.autoTranslated) return false;
+
+    const translated = await translateFields({ description: english.description }, target, translate);
+    await table.write(target, text(translated.description, ""));
+
+    return true;
+  });
+}
+
+/**
  * The three kinds that are one row with a name and some copy — category, post,
  * blog category — in the shape they share.
  *

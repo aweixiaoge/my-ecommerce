@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
-import { findAdminById } from "@/lib/mock/admin-users";
+import { findAdminById } from "@/lib/admin/admin-users-repo";
 import { getSession } from "@/lib/admin/session";
 
 /**

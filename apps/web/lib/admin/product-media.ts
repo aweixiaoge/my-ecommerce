@@ -1,7 +1,9 @@
 import {
   ACCEPTED_IMAGE_TYPES,
   IMAGES_PER_VARIANT_MAX,
+  isVideoType,
   MAX_IMAGE_BYTES,
+  MAX_VIDEO_BYTES,
 } from "@my-ecommerce/shared";
 
 /**
@@ -32,11 +34,24 @@ export function mediaUrl(id: string): string {
 }
 
 const MAX_IMAGE_MB = MAX_IMAGE_BYTES / (1024 * 1024);
+const MAX_VIDEO_MB = MAX_VIDEO_BYTES / (1024 * 1024);
 
-/** What is wrong with this file, or null when nothing is. */
-export function fileProblem(file: File): string | null {
+/**
+ * What is wrong with this file, or null when nothing is.
+ *
+ * `video` is whether the picker takes videos as well — the product form's does,
+ * the blog's and the About page's do not — and a video is held to its own,
+ * larger cap.
+ */
+export function fileProblem(file: File, { video = false } = {}): string | null {
+  if (video && isVideoType(file.type)) {
+    return file.size > MAX_VIDEO_BYTES ? `${file.name} is over the ${MAX_VIDEO_MB} MB video limit.` : null;
+  }
+
   if (!(ACCEPTED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
-    return `${file.name} is not an image we can store — PNG, JPEG, WebP, GIF or AVIF.`;
+    return video
+      ? `${file.name} is not a file we can store — PNG, JPEG, WebP, GIF, AVIF, MP4 or WebM.`
+      : `${file.name} is not an image we can store — PNG, JPEG, WebP, GIF or AVIF.`;
   }
 
   if (file.size > MAX_IMAGE_BYTES) {
@@ -64,14 +79,14 @@ export function fileProblem(file: File): string | null {
 export function planUploads(
   files: readonly File[],
   room: number,
-  { holder = "a colour", limit = IMAGES_PER_VARIANT_MAX } = {},
+  { holder = "a colour", limit = IMAGES_PER_VARIANT_MAX, video = false } = {},
 ): { accepted: File[]; problems: string[] } {
   const accepted: File[] = [];
   const problems: string[] = [];
   let overflowed = 0;
 
   for (const file of files) {
-    const problem = fileProblem(file);
+    const problem = fileProblem(file, { video });
     if (problem) {
       problems.push(problem);
       continue;

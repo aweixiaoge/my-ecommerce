@@ -1,10 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { ProductSummary } from "@my-ecommerce/shared";
+import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 import { StarRating } from "@/components/star-rating";
 import { productPath } from "@/lib/catalog/product-path";
 import type { DisplayCurrency } from "@/lib/currency/display";
 import { formatPrice } from "@/lib/format";
+import { localePath } from "@/lib/i18n/paths";
 import type { Messages } from "@/lib/i18n/messages";
 import type { Locale } from "@/lib/languages";
 
@@ -18,10 +20,12 @@ import type { Locale } from "@/lib/languages";
  * and the 40px button. The gaps are the design's own paddings, not eyeballed
  * from the raster.
  *
- * There is no cart to add to yet, so the button routes to the product page
- * where a size is chosen — which is what the design's own layer name says it
- * does ("Link - Select options for ...") even though the label reads "Add to
- * Cart". See the note in the handover.
+ * The button adds to the cart from here, as its label says. The design's layer
+ * name reads "Link - Select options for ...", which is what a card does when a
+ * shopper must choose first; this one does not ask, and adds the variant its
+ * price is for — the cheapest in stock, the same one the product page opens
+ * on (`defaultVariant`). A shopper who wants another colour is one tap away
+ * from it on the image or the title, and the cart names the variant it holds.
  */
 export function ShopProductCard({
   product,
@@ -117,12 +121,15 @@ export function ShopProductCard({
         of buttons stays on one line instead of stepping with the longest title.
       */}
       <div className="mt-auto pt-[9.5px]">
-        <Link
-          href={href}
-          className="inline-flex h-10 items-center justify-center rounded-[3px] bg-ink px-5 text-[15px] leading-[24.75px] font-medium tracking-[-0.2344px] text-paper"
-        >
-          {messages.listing.addToCart}
-        </Link>
+        <AddToCartButton
+          target={{ productId: product.id }}
+          label={product.inStock ? messages.listing.addToCart : messages.cart.add.soldOut}
+          disabled={!product.inStock}
+          messages={messages.cart.add}
+          cartHref={localePath(locale, "/cart")}
+          placement="card"
+          className="inline-flex h-10 items-center justify-center rounded-[3px] bg-ink px-5 text-[15px] leading-[24.75px] font-medium tracking-[-0.2344px] text-paper disabled:cursor-not-allowed disabled:opacity-40"
+        />
       </div>
     </article>
   );

@@ -17,19 +17,19 @@ import type { Messages } from "@/lib/i18n/messages";
  *
  * `prefetch: false` marks the routes that do not exist yet: Next prefetches
  * eagerly, and five prefetches against unbuilt routes produce five 404s in the
- * console on every page load, burying real errors. `/shop` no longer carries
- * it — that route is built. Remove the flag from each as its route lands, and
+ * console on every page load, burying real errors. `/shop`, `/about`, `/journal`, `/contact`, `/faq` and `/account` no
+ * longer carry it — those routes are built. Remove the flag from each as its route lands, and
  * note that a link that *does* prefetch is the point of the flag rather than an
  * oversight.
  */
 export const NAV = [
   { key: "home", href: "/", prefetch: true },
   { key: "shop", href: "/shop", prefetch: true },
-  { key: "about", href: "/about", prefetch: false },
-  { key: "journal", href: "/journal", prefetch: false },
-  { key: "contact", href: "/contact", prefetch: false },
-  { key: "faq", href: "/faq", prefetch: false },
-  { key: "account", href: "/account", prefetch: false },
+  { key: "about", href: "/about", prefetch: true },
+  { key: "journal", href: "/journal", prefetch: true },
+  { key: "contact", href: "/contact", prefetch: true },
+  { key: "faq", href: "/faq", prefetch: true },
+  { key: "account", href: "/account", prefetch: true },
 ] as const satisfies ReadonlyArray<{
   key: keyof Messages["nav"];
   href: string;

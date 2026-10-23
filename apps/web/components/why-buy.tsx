@@ -47,7 +47,6 @@ export function WhyBuy({
 
           <Link
             href={localePath(locale, "/about")}
-            prefetch={false}
             className="mt-7 inline-block rounded-[3px] bg-ink px-5 py-[5px] text-[15px] font-medium leading-[24.75px] tracking-[-0.234px] text-paper"
           >
             {messages.cta}

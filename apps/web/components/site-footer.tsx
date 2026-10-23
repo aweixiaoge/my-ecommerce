@@ -1,31 +1,20 @@
-import Image from "next/image";
+import { Suspense } from "react";
 import Link from "next/link";
+import { connection } from "next/server";
+import { SocialLinks } from "@/components/social-links";
+import { getStoreContact } from "@/lib/contact/store-contact-repo";
 import type { Messages } from "@/lib/i18n/messages";
-import { localePath } from "@/lib/i18n/paths";
-import type { Locale } from "@/lib/languages";
-
-/*
- * Social network names, which are the same in every language — a proper noun
- * that happened to be coined in English. They are labels, not copy, so they do
- * not belong in a catalog.
- */
-const SOCIALS = [
-  { label: "Facebook", src: "/icons/social-facebook.svg" },
-  { label: "Instagram", src: "/icons/social-instagram.svg" },
-  { label: "YouTube", src: "/icons/social-youtube.svg" },
-];
+import { socialLinks } from "@/lib/store-contact";
 
 export function SiteFooter({
   nav,
   messages,
-  locale,
 }: {
   /** The seven routes, labelled and addressed for this locale — resolved once
    *  in `app/[lang]/layout.tsx` and shared with the header. */
   nav: readonly { label: string; href: string; prefetch: boolean }[];
   /** This locale's `footer` slice of the catalog. */
   messages: Messages["footer"];
-  locale: Locale;
 }) {
   return (
     <footer className="bg-mist">
@@ -52,22 +41,23 @@ export function SiteFooter({
           ))}
         </nav>
 
-        <div className="flex items-start gap-[15px] sm:justify-end">
-          {SOCIALS.map((social) => (
-            /* The profiles do not exist yet, so the address is the page's own
-               language root — the same placeholder the currency switcher uses.
-               Left bare, a reader on `/de` would be sent to `/en` by the proxy
-               and lose the language they were reading in. */
-            <Link
-              key={social.label}
-              href={localePath(locale, "/")}
-              aria-label={social.label}
-            >
-              <Image src={social.src} alt="" width={15} height={15} />
-            </Link>
-          ))}
+        {/*
+          The profiles are the admin's Contact → Info links, read per request —
+          so behind a boundary, as every request-time read in the shared
+          chrome is. The fallback is the empty column, the same size.
+        */}
+        <div className="flex items-start sm:justify-end">
+          <Suspense fallback={null}>
+            <FooterSocials />
+          </Suspense>
         </div>
       </div>
     </footer>
   );
+}
+
+async function FooterSocials() {
+  await connection();
+
+  return <SocialLinks links={socialLinks(await getStoreContact())} />;
 }

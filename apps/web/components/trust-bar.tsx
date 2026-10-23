@@ -1,4 +1,4 @@
-import type { Money } from "@my-ecommerce/shared";
+import { FREE_SHIPPING_THRESHOLD } from "@/lib/cart/shipping";
 import { formatMoney } from "@/lib/format";
 import { fill } from "@/lib/i18n/format";
 import type { Messages } from "@/lib/i18n/messages";
@@ -39,13 +39,3 @@ export function TrustBar({
     </section>
   );
 }
-
-/**
- * The threshold the first promise names.
- *
- * A value rather than the "$50" the copy used to carry: the currency is the
- * shop's, and what changes per language is how it is written. It belongs to
- * the shop rather than to a catalog — moving the number between languages
- * would be moving a price.
- */
-const FREE_SHIPPING_THRESHOLD: Money = { amount: "50", currency: "USD" };

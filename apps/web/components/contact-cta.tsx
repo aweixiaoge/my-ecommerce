@@ -25,7 +25,6 @@ export function ContactCta({
         <div className="mt-8 flex flex-wrap items-center justify-center gap-6">
           <Link
             href={localePath(locale, "/contact")}
-            prefetch={false}
             className="rounded-[3px] bg-paper px-5 py-[5px] text-[15px] font-medium leading-[24.75px] tracking-[-0.234px] text-ink"
           >
             {messages.contact}
@@ -39,7 +38,6 @@ export function ContactCta({
           */}
           <Link
             href={localePath(locale, "/faq")}
-            prefetch={false}
             className="rounded-[3px] px-5 py-[5px] text-[15px] font-medium leading-[24.75px] tracking-[-0.234px] text-paper"
           >
             {messages.faq}

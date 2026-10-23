@@ -228,7 +228,7 @@ describe("what the form does with the answer", () => {
     expect(alert?.textContent).toContain("no longer available");
   });
 
-  it("says the review is waiting once it is stored", async () => {
+  it("thanks the reviewer once the review is stored", async () => {
     actions.createReview.mockResolvedValue({ ok: true });
 
     await fillIn();
@@ -237,7 +237,7 @@ describe("what the form does with the answer", () => {
     // The form is gone rather than sitting filled-in behind a message, which
     // would read as a submit that did not work.
     expect(form()).toBeNull();
-    expect(container.textContent).toContain("approved");
+    expect(container.textContent).toContain("Thank you for your review");
   });
 
   it("reads as sending while the action is still in flight", async () => {
@@ -258,6 +258,6 @@ describe("what the form does with the answer", () => {
       settle({ ok: true });
     });
 
-    expect(container.textContent).toContain("approved");
+    expect(container.textContent).toContain("Thank you for your review");
   });
 });

@@ -15,7 +15,7 @@ describe("hashPassword / verifyPassword", () => {
   });
 
   it("never stores the plaintext password", async () => {
-    // The whole point of hashing here. If this ever fails, the mock store has
+    // The whole point of hashing here. If this ever fails, an account or the mock store has
     // started writing credentials in the clear.
     const hash = await hashPassword(PASSWORD);
     expect(hash).not.toContain(PASSWORD);

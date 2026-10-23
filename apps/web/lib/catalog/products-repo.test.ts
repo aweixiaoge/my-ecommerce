@@ -141,6 +141,16 @@ describe("getShopProducts", () => {
     );
   });
 
+  it("draws the card from a photograph, never a product video", async () => {
+    // A card is an `<Image>`; the video belongs to the product page's gallery.
+    await getShopProducts({ page: 1, sort: "default" }, "en");
+
+    const [query] = db.product.findMany.mock.calls[0] as [{ select: { media: { where: unknown } } }];
+    expect(query.select.media.where).toEqual({
+      OR: [{ mimeType: null }, { NOT: { mimeType: { startsWith: "video/" } } }],
+    });
+  });
+
   it("does not read the image bytes", async () => {
     // `Media.data` is the file. An `include` here would drag every photograph
     // through the connection and drop it — measured at 19 MB for two products
@@ -152,7 +162,7 @@ describe("getShopProducts", () => {
       { select: { media: { select: Record<string, unknown> } } },
     ];
 
-    expect(query.select.media.select).toEqual({ id: true, position: true });
+    expect(query.select.media.select).toEqual({ id: true, position: true, mimeType: true });
     expect(query.select.media.select).not.toHaveProperty("data");
   });
 
@@ -169,10 +179,9 @@ describe("getShopProducts", () => {
     expect(db.product.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         select: expect.objectContaining({
-          media: {
+          media: expect.objectContaining({
             orderBy: [{ position: "asc" }, { id: "asc" }],
-            select: { id: true, position: true },
-          },
+          }),
         }),
       }),
     );
@@ -393,6 +402,7 @@ describe("what else the card reads", () => {
       width: null,
       height: null,
       position: 0,
+      kind: "image",
     });
   });
 

@@ -3,13 +3,16 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { compareMoney, type Media, type Product, type Variant } from "@my-ecommerce/shared";
+import type { Media, Product, Variant } from "@my-ecommerce/shared";
+import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 import { StarRating } from "@/components/star-rating";
+import { defaultVariant } from "@/lib/catalog/pricing";
 import { categoryPath } from "@/lib/catalog/product-path";
 import type { DisplayCurrency } from "@/lib/currency/display";
 import { formatPrice } from "@/lib/format";
 import { fill, plural } from "@/lib/i18n/format";
 import type { Messages } from "@/lib/i18n/messages";
+import { localePath } from "@/lib/i18n/paths";
 import type { Locale } from "@/lib/languages";
 
 /**
@@ -36,6 +39,7 @@ export function ProductPurchase({
   imagesByVariant,
   messages,
   ratingMessages,
+  cartMessages,
   locale,
   currency,
 }: {
@@ -49,6 +53,8 @@ export function ProductPurchase({
    * sentence the review rows below state their own figures with.
    */
   ratingMessages: Messages["reviews"];
+  /** …and its `cart.add` slice, for what the button says once pressed. */
+  cartMessages: Messages["cart"]["add"];
   locale: Locale;
   /**
    * The currency prices are written in.
@@ -66,6 +72,12 @@ export function ProductPurchase({
   const [imageId, setImageId] = useState<string | null>(null);
 
   const variant = matchVariant(product.variants, selected);
+
+  const free = freeOptions(product);
+  // The size goes to the cart beside the variant. One free option at most is
+  // what the admin writes; the first is the one the cart records.
+  const sizeOption = product.options.find((option) => free.has(option.id));
+  const sizeId = sizeOption ? selected[sizeOption.id] : undefined;
 
   /*
    * The chosen variant's photographs lead, and the product's own follow.
@@ -138,11 +150,15 @@ export function ProductPurchase({
 
               <div className="flex flex-wrap gap-[20px] pt-[10px]">
                 {option.values.map((value) => {
-                  // A value no variant is selected by cannot be chosen — the
-                  // Size on a product sold only in colours, say.
-                  const available = product.variants.some((candidate) =>
-                    candidate.optionValues.some((chosen) => chosen.id === value.id),
-                  );
+                  // Every value of a free option can be chosen — that is what
+                  // Size is: a pick the cart records beside the variant (see
+                  // `CartItem` in the schema). A value of a variant-selecting
+                  // option that no variant carries cannot.
+                  const available =
+                    free.has(option.id) ||
+                    product.variants.some((candidate) =>
+                      candidate.optionValues.some((chosen) => chosen.id === value.id),
+                    );
                   const isSelected = selected[option.id] === value.id;
 
                   return (
@@ -185,16 +201,24 @@ export function ProductPurchase({
         </p>
 
         <div className="pt-[20px]">
-          <button
-            type="button"
-            disabled
+          {/*
+            Keyed by the variant and the size, so choosing another colour or
+            size starts the button and its counter over: "Added to your cart"
+            under the sand pair in M is not true of the onyx pair, or of L.
+          */}
+          <AddToCartButton
+            key={`${variant?.id ?? "none"}:${sizeId ?? ""}`}
+            target={{ variantId: variant?.id ?? "", optionValueId: sizeId }}
+            quantityMax={variant?.stock ?? 1}
+            label={
+              variant && !variant.inStock ? cartMessages.soldOut : messages.addToCart
+            }
+            disabled={!variant?.inStock}
+            messages={cartMessages}
+            cartHref={localePath(locale, "/cart")}
+            placement="page"
             className="flex h-[50px] w-full items-center justify-center rounded-control bg-ink text-[15px] leading-[24.75px] font-medium tracking-[-0.234px] text-paper disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {messages.addToCart}
-          </button>
-          <p className="pt-2 text-center text-[13px] leading-[21.45px] text-ink-55">
-            {messages.cartNote}
-          </p>
+          />
         </div>
 
         <hr className="mt-[35px] border-line" />
@@ -231,6 +255,11 @@ export function ProductPurchase({
  *
  * The design puts four thumbs on a 16px gap under a main image, both inside the
  * left column — 12px corners on the thumbs, square on the main image.
+ *
+ * A product video takes either slot as a `<video>` rather than an `<Image>` —
+ * the optimizer only reads pictures. In the main frame it plays muted and
+ * looping, the way a product clip is shown, with controls to unmute or pause;
+ * as a thumbnail it is its first frame with a play mark.
  */
 function Figure({
   product,
@@ -248,7 +277,22 @@ function Figure({
   return (
     <div className="flex flex-col gap-[25px]">
       <div className="relative aspect-[625/659] w-full overflow-hidden bg-mist">
-        {mainImage ? (
+        {mainImage?.kind === "video" ? (
+          <video
+            // Keyed so choosing another video starts it from the top instead
+            // of swapping the source under a player mid-play.
+            key={mainImage.id}
+            src={mainImage.url}
+            aria-label={mainImage.alt ?? product.name}
+            autoPlay
+            muted
+            loop
+            playsInline
+            controls
+            preload="metadata"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : mainImage ? (
           <Image
             src={mainImage.url}
             // The design's alt text is `media_translations`, which is not
@@ -282,13 +326,31 @@ function Figure({
                 image.id === mainImage?.id ? "border-ink" : "border-transparent"
               }`}
             >
-              <Image
-                src={image.url}
-                alt=""
-                fill
-                sizes="(min-width: 768px) 12vw, 25vw"
-                className="object-cover"
-              />
+              {image.kind === "video" ? (
+                <>
+                  <video
+                    src={`${image.url}#t=0.1`}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <span
+                    aria-hidden
+                    className="absolute inset-0 m-auto flex h-8 w-8 items-center justify-center rounded-full bg-paper/85 text-[12px] text-ink"
+                  >
+                    ▶
+                  </span>
+                </>
+              ) : (
+                <Image
+                  src={image.url}
+                  alt=""
+                  fill
+                  sizes="(min-width: 768px) 12vw, 25vw"
+                  className="object-cover"
+                />
+              )}
             </button>
           ))}
         </div>
@@ -307,35 +369,56 @@ function Figure({
  * opening on the dearest colour would contradict the page they came from. In
  * stock, because a sold-out colour would open the page with a disabled button
  * and no explanation. When nothing is in stock, the cheapest, so the page shows
- * a price rather than a blank.
+ * a price rather than a blank. `defaultVariant` holds that rule.
  *
  * The options are what map a value back to the option that offers it: a
  * `Variant` carries the values that select it and nothing about which option
  * each came from.
  */
 function firstSelection(product: Product): Record<string, string> {
-  const inStock = product.variants.filter((variant) => variant.inStock);
-  const pool = inStock.length > 0 ? inStock : product.variants;
-
-  const chosen = pool.reduce<Variant | undefined>(
-    (cheapest, variant) =>
-      !cheapest || compareMoney(variant.price, cheapest.price) < 0 ? variant : cheapest,
-    undefined,
-  );
+  // The rule is `defaultVariant`'s, because a shop card's "Add to cart" adds
+  // the same variant this page opens on — see its note.
+  const chosen = defaultVariant(product.variants);
 
   if (!chosen) return {};
 
+  const free = freeOptions(product);
   const selection: Record<string, string> = {};
 
   for (const option of product.options) {
-    const value = option.values.find((candidate) =>
-      chosen.optionValues.some((chosenValue) => chosenValue.id === candidate.id),
-    );
+    // A free option opens on its first value — the size the server falls back
+    // to when a card adds the product, so a card and this page agree.
+    const value = free.has(option.id)
+      ? option.values.at(0)
+      : option.values.find((candidate) =>
+          chosen.optionValues.some((chosenValue) => chosenValue.id === candidate.id),
+        );
 
     if (value) selection[option.id] = value.id;
   }
 
   return selection;
+}
+
+/**
+ * The options no variant stands behind — Size, on the catalogue the admin
+ * writes, which is one variant per colour. Their values are choices the cart
+ * records beside the variant rather than a way of picking one.
+ *
+ * An option whose values *some* variant carries is not free, even when one of
+ * its values is carried by none: that value is a gap in the matrix, not a
+ * choice, and stays disabled.
+ */
+function freeOptions(product: Product): Set<string> {
+  const used = new Set(
+    product.variants.flatMap((variant) => variant.optionValues.map((value) => value.id)),
+  );
+
+  return new Set(
+    product.options
+      .filter((option) => option.values.every((value) => !used.has(value.id)))
+      .map((option) => option.id),
+  );
 }
 
 /**

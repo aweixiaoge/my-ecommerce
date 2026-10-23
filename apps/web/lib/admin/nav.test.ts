@@ -213,6 +213,33 @@ describe("ADMIN_NAV", () => {
     expect(reviews?.items.map((item) => item.href)).toEqual(["/admin/reviews"]);
   });
 
+  it("carries the three commerce screens", () => {
+    const commerce = groups.find((group) => group.id === "commerce");
+    expect(commerce?.label).toBe("Commerce");
+    expect(commerce?.items.map((item) => item.href)).toEqual([
+      "/admin/customers",
+      "/admin/orders",
+      "/admin/coupons",
+    ]);
+  });
+
+  it("carries the admin user screen", () => {
+    const users = groups.find((group) => group.id === "users");
+    expect(users?.label).toBe("User");
+    expect(users?.items).toEqual([{ label: "User", href: "/admin/users" }]);
+  });
+
+  it("carries the three contact screens", () => {
+    const contact = groups.find((group) => group.id === "contact");
+    expect(contact?.label).toBe("Contact");
+    expect(contact?.items).toEqual([
+      { label: "Message", href: "/admin/contact-messages" },
+      { label: "Info", href: "/admin/contact-info" },
+      { label: "FAQ", href: "/admin/contact-faq" },
+      { label: "About", href: "/admin/contact-about" },
+    ]);
+  });
+
   it("carries the two blog screens", () => {
     const blogs = groups.find((group) => group.id === "blogs");
     expect(blogs?.items.map((item) => item.href)).toEqual([

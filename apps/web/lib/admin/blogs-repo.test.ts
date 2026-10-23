@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AdminBlogCreate } from "@my-ecommerce/shared";
-import { createBlog, listBlogs, UnknownCategoryError } from "./blogs-repo";
+import {
+  BlogNotFoundError,
+  createBlog,
+  getBlogForEdit,
+  listBlogs,
+  UnknownCategoryError,
+  updateBlog,
+} from "./blogs-repo";
 import { DEFAULT_LOCALE } from "../locale";
 import { SlugExhaustedError } from "./slug";
 
@@ -12,14 +19,16 @@ import { SlugExhaustedError } from "./slug";
  * the insert can be refused that a retry must not absorb.
  */
 const db = vi.hoisted(() => ({
-  blog: { create: vi.fn(), findMany: vi.fn() },
-  media: { updateMany: vi.fn() },
+  blog: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+  blogTranslation: { upsert: vi.fn() },
+  media: { updateMany: vi.fn(), deleteMany: vi.fn() },
   $transaction: vi.fn(),
 }));
 
 vi.mock("@my-ecommerce/db", () => ({
   prisma: {
     blog: db.blog,
+    blogTranslation: db.blogTranslation,
     media: db.media,
     $transaction: db.$transaction,
   },
@@ -74,11 +83,14 @@ beforeEach(() => {
   // The transaction hands its callback the same stand-ins the repository would
   // get from a real client, so the claiming loop runs for real in the tests.
   db.$transaction.mockImplementation(async (fn: (tx: unknown) => unknown) =>
-    fn({ blog: db.blog, media: db.media }),
+    fn({ blog: db.blog, blogTranslation: db.blogTranslation, media: db.media }),
   );
   db.blog.create.mockResolvedValue({ id: "blog_1" });
   db.blog.findMany.mockResolvedValue([]);
   db.media.updateMany.mockResolvedValue({ count: 1 });
+  db.media.deleteMany.mockResolvedValue({ count: 0 });
+  db.blog.update.mockResolvedValue({ id: "blog_1" });
+  db.blogTranslation.upsert.mockResolvedValue({});
 });
 
 describe("createBlog", () => {
@@ -305,5 +317,93 @@ describe("listBlogs", () => {
         createdAt: "2026-10-01T09:30:00.000Z",
       },
     ]);
+  });
+});
+
+describe("getBlogForEdit", () => {
+  it("loads the English copy, the category and the images in order", async () => {
+    db.blog.findUnique.mockResolvedValue({
+      id: "blog_1",
+      categoryId: "cat_1",
+      updatedAt: new Date("2026-10-22T08:00:00.000Z"),
+      translations: [
+        {
+          title: "How to judge earphone sound quality",
+          shortDescription: "Bass, treble and soundstage.",
+          description: "## The basics",
+        },
+      ],
+      media: [{ id: "media_a" }, { id: "media_b" }],
+    });
+
+    expect(await getBlogForEdit("blog_1")).toEqual({
+      id: "blog_1",
+      updatedAt: "2026-10-22T08:00:00.000Z",
+      title: "How to judge earphone sound quality",
+      shortDescription: "Bass, treble and soundstage.",
+      description: "## The basics",
+      categoryId: "cat_1",
+      mediaIds: ["media_a", "media_b"],
+    });
+  });
+
+  it("is null for an id that names no post", async () => {
+    db.blog.findUnique.mockResolvedValue(null);
+
+    expect(await getBlogForEdit("nope")).toBeNull();
+  });
+});
+
+describe("updateBlog", () => {
+  it("rewrites the category and the English row, with the slug following the title", async () => {
+    await updateBlog("blog_1", payload({ title: "A new title", categoryId: "cat_2" }));
+
+    expect(db.blog.update).toHaveBeenCalledWith({ where: { id: "blog_1" }, data: { categoryId: "cat_2" } });
+    expect(db.blogTranslation.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { blogId_locale: { blogId: "blog_1", locale: DEFAULT_LOCALE } },
+        update: {
+          title: "A new title",
+          slug: "a-new-title",
+          shortDescription: "Bass, treble and soundstage.",
+          description: "## The basics",
+        },
+      }),
+    );
+  });
+
+  it("claims the images in their new order and deletes the ones taken off the form", async () => {
+    await updateBlog("blog_1", payload({ mediaIds: ["media_b", "media_a"] }));
+
+    expect(db.media.updateMany.mock.calls.map(([args]) => args)).toEqual([
+      { where: { id: "media_b" }, data: { blogId: "blog_1", position: 0 } },
+      { where: { id: "media_a" }, data: { blogId: "blog_1", position: 1 } },
+    ]);
+    expect(db.media.deleteMany).toHaveBeenCalledWith({
+      where: { blogId: "blog_1", id: { notIn: ["media_b", "media_a"] } },
+    });
+  });
+
+  it("retries the slug when the new title collides with another post's", async () => {
+    db.blogTranslation.upsert.mockRejectedValueOnce(uniqueViolation());
+
+    await updateBlog("blog_1", payload({ title: "Taken" }));
+
+    const slugs = db.blogTranslation.upsert.mock.calls.map(
+      ([args]) => (args as { update: { slug: string } }).update.slug,
+    );
+    expect(slugs).toEqual(["taken", "taken-2"]);
+  });
+
+  it("names a category that is no longer a row", async () => {
+    db.blog.update.mockRejectedValue(missingCategory());
+
+    await expect(updateBlog("blog_1", payload())).rejects.toBeInstanceOf(UnknownCategoryError);
+  });
+
+  it("names a post that is no longer a row", async () => {
+    db.blog.update.mockRejectedValue(Object.assign(new Error("Record to update not found"), { code: "P2025" }));
+
+    await expect(updateBlog("gone", payload())).rejects.toBeInstanceOf(BlogNotFoundError);
   });
 });

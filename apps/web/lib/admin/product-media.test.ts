@@ -3,6 +3,7 @@ import {
   IMAGES_PER_BLOG_MAX,
   IMAGES_PER_VARIANT_MAX,
   MAX_IMAGE_BYTES,
+  MAX_VIDEO_BYTES,
 } from "@my-ecommerce/shared";
 import { fileProblem, mediaUrl, planUploads } from "./product-media";
 
@@ -55,6 +56,31 @@ describe("fileProblem", () => {
     expect(fileProblem(file("huge.png", "image/png", MAX_IMAGE_BYTES + 1))).toContain(
       "3 MB",
     );
+  });
+});
+
+describe("fileProblem with videos", () => {
+  it("refuses a video where the picker takes images only", () => {
+    expect(fileProblem(file("clip.mp4", "video/mp4"))).toContain("not an image");
+  });
+
+  it("accepts MP4 and WebM where videos are allowed", () => {
+    expect(fileProblem(file("clip.mp4", "video/mp4"), { video: true })).toBeNull();
+    expect(fileProblem(file("clip.webm", "video/webm"), { video: true })).toBeNull();
+  });
+
+  it("refuses a video type browsers cannot all play", () => {
+    expect(fileProblem(file("clip.mov", "video/quicktime"), { video: true })).toContain("MP4 or WebM");
+  });
+
+  it("holds a video to its own cap, not the image one", () => {
+    expect(fileProblem(file("clip.mp4", "video/mp4", MAX_IMAGE_BYTES + 1), { video: true })).toBeNull();
+    expect(fileProblem(file("clip.mp4", "video/mp4", MAX_VIDEO_BYTES), { video: true })).toBeNull();
+    expect(fileProblem(file("clip.mp4", "video/mp4", MAX_VIDEO_BYTES + 1), { video: true })).toContain("50 MB");
+  });
+
+  it("keeps images to the image cap even where videos are allowed", () => {
+    expect(fileProblem(file("huge.png", "image/png", MAX_IMAGE_BYTES + 1), { video: true })).toContain("3 MB");
   });
 });
 

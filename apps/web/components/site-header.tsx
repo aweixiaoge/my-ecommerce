@@ -3,9 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense, useEffect, useId, useState, type ReactNode } from "react";
-import type { Money } from "@my-ecommerce/shared";
 import { LanguageSwitcher, LanguageTrigger } from "@/components/language-switcher";
-import { formatMoney } from "@/lib/format";
 import { localePath } from "@/lib/i18n/paths";
 import type { Messages } from "@/lib/i18n/messages";
 import type { Locale } from "@/lib/languages";
@@ -83,6 +81,7 @@ export function SiteHeader({
   locale,
   navCurrency,
   barCurrency,
+  cart,
 }: {
   /** The seven routes, labelled and addressed for this locale. */
   nav: readonly { label: string; href: string; prefetch: boolean }[];
@@ -108,6 +107,11 @@ export function SiteHeader({
    */
   navCurrency: ReactNode;
   barCurrency: ReactNode;
+  /**
+   * The cart link, already rendered, for the same reason: what is in the cart
+   * comes from a cookie. See `components/cart/cart-link.tsx`.
+   */
+  cart: ReactNode;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const panelId = useId();
@@ -216,34 +220,7 @@ export function SiteHeader({
 
           {barCurrency}
 
-          <Link
-            href={localePath(locale, "/cart")}
-            className="flex items-center gap-2 pl-2.5"
-          >
-            {/*
-              The amount is the cheapest thing in the row to give up, so it is
-              part of what pays for the nav staying in the bar: gone from
-              `bar` to `wide`, back above it. Keeping it would put the row
-              11.23px over what 768 offers even with the links tightened, and
-              74.23px over at the design's spacing. Below `bar` the cart is
-              icon-only for the older reason too — there the wordmark has to
-              hold one line in the 126px it needs, and the amount would push
-              "Smart Mall" over two.
-
-              The amount itself is a placeholder until the cart exists (Phase
-              2): zero, in the shop's currency, formatted for the language the
-              page is being read in — `0,00 $` under `/de` rather than `$0.00`.
-              The shop's currency rather than the reader's, deliberately: the
-              currency switcher beside it is about what a shopper is quoted,
-              and this is a cart that does not exist yet, so converting zero
-              would buy a second cookie read and a second Suspense boundary
-              for nothing. It converts when the cart does.
-            */}
-            <span className="hidden text-[13px] font-semibold leading-[21.45px] tracking-[-0.076px] text-ink wide:inline">
-              {formatMoney(CART_PLACEHOLDER, locale)}
-            </span>
-            <Image src="/icons/cart.svg" alt={messages.cart} width={15} height={14} />
-          </Link>
+          {cart}
 
           {/*
             Last in the row so the cart keeps its place next to the price.
@@ -299,12 +276,3 @@ export function SiteHeader({
     </header>
   );
 }
-
-/**
- * The cart's balance, until there is a cart.
- *
- * Zero, in the shop's currency. It exists as a value rather than as the string
- * "$0.00" because money is formatted for the language being read: a German
- * page writes the same amount as `0,00 $`, and a hardcoded string cannot.
- */
-const CART_PLACEHOLDER: Money = { amount: "0", currency: "USD" };

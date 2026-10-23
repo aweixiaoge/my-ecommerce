@@ -43,8 +43,8 @@ vi.mock("@/app/admin/(shell)/products/actions", () => ({
 // The upload action is its own module — one door for every form that stores an
 // image — so the component reaches it by a second import, mocked here at the
 // same place.
-vi.mock("@/app/admin/media/actions", () => ({
-  uploadMediaAction: actions.uploadMedia,
+vi.mock("@/lib/admin/upload-media", () => ({
+  uploadMedia: actions.uploadMedia,
 }));
 
 let container: HTMLDivElement;
@@ -79,6 +79,7 @@ const saved: ProductForEdit = {
       mediaIds: ["media_old"],
     },
   ],
+  videoIds: [],
 };
 
 /** What the Category screen would hand the form: the names it shows. */
@@ -93,7 +94,11 @@ beforeEach(() => {
   actions.uploadMedia.mockReset();
   actions.uploadMedia.mockImplementation(async (file: File) => ({
     ok: true,
-    media: { id: `media_${file.name}`, url: `/admin/media/media_${file.name}` },
+    media: {
+      id: `media_${file.name}`,
+      url: `/admin/media/media_${file.name}`,
+      kind: file.type.startsWith("video/") ? "video" : "image",
+    },
   }));
 
   container = document.createElement("div");
@@ -234,6 +239,8 @@ async function pickFiles(color: string, files: File[]) {
 const image = (name: string) =>
   new File(["fake bytes"], name, { type: "image/png" });
 
+const video = (name: string) => new File(["fake bytes"], name, { type: "video/mp4" });
+
 const legends = () =>
   [...container.querySelectorAll("legend")].map((l) => l.textContent);
 
@@ -294,6 +301,37 @@ describe("ProductForm — colour rows", () => {
     await addColors("Black, Sand");
 
     expect(variantsJson()).toEqual([]);
+  });
+});
+
+describe("ProductForm — colour videos", () => {
+  it("offers videos as well as images", async () => {
+    await addColors("Black");
+
+    expect(container.querySelector("#black-images")!.getAttribute("accept")).toContain("video/mp4");
+  });
+
+  it("uploads a video and draws it as one, in the order it was chosen", async () => {
+    await addColors("Black");
+    await pickFiles("black", [image("a.png"), video("clip.mp4")]);
+
+    expect(variantsJson()).toEqual([{ color: "Black", mediaIds: ["media_a.png", "media_clip.mp4"] }]);
+    expect(container.querySelector("video")?.getAttribute("src")).toBe("/admin/media/media_clip.mp4#t=0.1");
+    expect(container.querySelectorAll("li img")).toHaveLength(1);
+  });
+
+  it("refuses a video type browsers cannot all play, without asking the server", async () => {
+    await addColors("Black");
+    await pickFiles("black", [new File(["x"], "clip.mov", { type: "video/quicktime" })]);
+
+    expect(actions.uploadMedia).not.toHaveBeenCalled();
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain("clip.mov");
+  });
+
+  it("draws a stored video as a video when the product is edited", async () => {
+    await renderEditing({ ...saved, videoIds: ["media_old"] });
+
+    expect(container.querySelector("video")?.getAttribute("src")).toBe("/admin/media/media_old#t=0.1");
   });
 });
 

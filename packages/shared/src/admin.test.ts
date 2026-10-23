@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { AdminLoginSchema } from "./admin";
+import {
+  ADMIN_PASSWORD_MIN_LENGTH,
+  AdminLoginSchema,
+  AdminUserCreateSchema,
+} from "./admin";
 
 describe("AdminLoginSchema", () => {
   it("accepts a name and password", () => {
@@ -68,5 +72,44 @@ describe("AdminLoginSchema", () => {
     ]) {
       expect(AdminLoginSchema.safeParse(input).success).toBe(false);
     }
+  });
+});
+
+describe("AdminUserCreateSchema", () => {
+  const valid = { name: "jane", password: "long-enough", confirmPassword: "long-enough" };
+
+  it("accepts a name and a matching password", () => {
+    expect(AdminUserCreateSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("trims the name", () => {
+    const result = AdminUserCreateSchema.safeParse({ ...valid, name: "  jane  " });
+    expect(result.success && result.data.name).toBe("jane");
+  });
+
+  it.each(["", "   ", "jane doe", "jané", "a".repeat(65)])(
+    "refuses the name %j",
+    (name) => {
+      const result = AdminUserCreateSchema.safeParse({ ...valid, name });
+      expect(result.success).toBe(false);
+      expect(new Set(result.error?.issues.map((issue) => issue.path[0]))).toEqual(
+        new Set(["name"]),
+      );
+    },
+  );
+
+  it("refuses a password shorter than the minimum", () => {
+    const short = "a".repeat(ADMIN_PASSWORD_MIN_LENGTH - 1);
+    const result = AdminUserCreateSchema.safeParse({
+      ...valid,
+      password: short,
+      confirmPassword: short,
+    });
+    expect(result.error?.issues.map((issue) => issue.path[0])).toEqual(["password"]);
+  });
+
+  it("reports a mismatched confirmation on the confirmation", () => {
+    const result = AdminUserCreateSchema.safeParse({ ...valid, confirmPassword: "something-else" });
+    expect(result.error?.issues.map((issue) => issue.path[0])).toEqual(["confirmPassword"]);
   });
 });

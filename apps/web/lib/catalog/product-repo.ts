@@ -34,6 +34,12 @@ import { fallbackLocales, shownTranslation } from "./translation";
 export function productDetailSelect(locale: Locale) {
   return {
     ...shopProductSelect(locale),
+    // Every medium, videos included — the shop's select keeps to photographs,
+    // and this page's gallery is where a product video plays.
+    media: {
+      orderBy: [{ position: "asc" }, { id: "asc" }],
+      select: { id: true, position: true, mimeType: true },
+    },
     translations: {
       where: { locale: { in: fallbackLocales(locale) } },
       select: {
@@ -90,11 +96,11 @@ export function productDetailSelect(locale: Locale) {
             },
           },
         },
-        // The images that belong to this variant — the gallery follows the
-        // selection.
+        // The images and videos that belong to this variant — the gallery
+        // follows the selection.
         media: {
           orderBy: [{ position: "asc" }, { id: "asc" }],
-          select: { id: true, position: true },
+          select: { id: true, position: true, mimeType: true },
         },
       },
     },

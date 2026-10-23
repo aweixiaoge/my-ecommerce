@@ -15,7 +15,7 @@ import { listingHref, pageNumbers } from "@/lib/shop";
  * The pager keeps the active sort in every href — paging is a move within a
  * sorted list, not a way to lose the sort — and `path` keeps every href on the
  * listing it was rendered for: the shop's pages under `/shop`, a category's
- * under `/products/<category>`.
+ * under `/products/<category>`, the Journal's under `/journal`.
  */
 export function ShopPagination({
   pagination,
@@ -24,7 +24,8 @@ export function ShopPagination({
   messages,
 }: {
   pagination: Pagination;
-  sort: ProductSort;
+  /** The listing's sort, kept across pages; the Journal has none. */
+  sort?: ProductSort;
   /** The listing these pages belong to, e.g. `/shop`. Query state is added to it. */
   path: string;
   /** This locale's `listing` slice of the catalog. */

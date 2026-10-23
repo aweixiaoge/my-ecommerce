@@ -21,6 +21,15 @@
   --color-ink-60: rgb(0 0 0 / 0.6);
   --color-ink-62: rgb(0 0 0 / 0.62);
 
+  /*
+   * Two values the checkout frame (178:7839) introduces: the tint its main
+   * area sits on, sampled from the frame, and a colour for a refused field.
+   * The design draws no error state; this red is chosen to clear 4.5:1 on
+   * both `paper` and `wash`, so a sentence under a box stays readable.
+   */
+  --color-wash: #fafbfc;
+  --color-danger: #b3261e;
+
   --radius-card: 12px;
   --radius-control: 3px;
 

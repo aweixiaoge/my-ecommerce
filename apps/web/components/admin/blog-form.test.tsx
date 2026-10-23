@@ -16,6 +16,7 @@ import { BlogForm } from "./blog-form";
  */
 const actions = vi.hoisted(() => ({
   createBlog: vi.fn(),
+  updateBlog: vi.fn(),
   uploadMedia: vi.fn(),
 }));
 
@@ -31,13 +32,14 @@ const actions = vi.hoisted(() => ({
 
 vi.mock("@/app/admin/(shell)/blogs/actions", () => ({
   createBlogAction: actions.createBlog,
+  updateBlogAction: actions.updateBlog,
 }));
 
 // One door for every form that stores an image: the blog form reaches the
 // upload action through the same module the product form does, mocked at the
 // same place.
-vi.mock("@/app/admin/media/actions", () => ({
-  uploadMediaAction: actions.uploadMedia,
+vi.mock("@/lib/admin/upload-media", () => ({
+  uploadMedia: actions.uploadMedia,
 }));
 
 const CATEGORIES = [
@@ -50,6 +52,7 @@ let root: Root;
 
 beforeEach(() => {
   actions.createBlog.mockReset();
+  actions.updateBlog.mockReset();
   actions.uploadMedia.mockReset();
   actions.uploadMedia.mockImplementation(async (file: File) => ({
     ok: true,
@@ -422,5 +425,46 @@ describe("BlogForm", () => {
       field<HTMLAnchorElement>('a[href="/admin/blog-categories/new"]')
         .textContent,
     ).toBe("Create one");
+  });
+});
+
+describe("BlogForm, editing a post", () => {
+  const BLOG = {
+    id: "blog_1",
+    updatedAt: "2026-10-22T08:00:00.000Z",
+    title: "How to judge earphone sound quality",
+    shortDescription: "Bass, treble and soundstage.",
+    description: "## The basics",
+    categoryId: "cat_2",
+    mediaIds: ["media_a", "media_b"],
+  };
+
+  beforeEach(() => {
+    // Keyed, as the edit page keys it: the form seeds its state once, so a
+    // re-render of the create form's instance would keep its empty fields.
+    act(() => root.render(<BlogForm key={BLOG.updatedAt} categories={CATEGORIES} blog={BLOG} />));
+  });
+
+  it("opens with the post's values in every field", () => {
+    expect(field<HTMLInputElement>("#title").value).toBe(BLOG.title);
+    expect(field<HTMLInputElement>("#shortDescription").value).toBe(BLOG.shortDescription);
+    expect(field<HTMLTextAreaElement>("#description").value).toBe(BLOG.description);
+    expect(field<HTMLSelectElement>("#categoryId").value).toBe("cat_2");
+    expect(submittedMediaIds()).toEqual(["media_a", "media_b"]);
+  });
+
+  it("posts the edit, with the id, to the update action rather than the create one", async () => {
+    await typeInto(field("#title"), "A better title");
+    await submit();
+
+    expect(actions.createBlog).not.toHaveBeenCalled();
+    const [, formData] = actions.updateBlog.mock.calls[0] as [unknown, FormData];
+    expect(formData.get("id")).toBe("blog_1");
+    expect(formData.get("title")).toBe("A better title");
+    expect(formData.get("mediaIds")).toBe(JSON.stringify(["media_a", "media_b"]));
+  });
+
+  it("says Save changes rather than Create blog", () => {
+    findByText("button", "Save changes");
   });
 });
