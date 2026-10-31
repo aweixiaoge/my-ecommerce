@@ -24,9 +24,12 @@ export function AccountFrame({
 }) {
   return (
     <div className={wash ? "bg-wash" : "bg-paper"}>
-      <div className="container-content pt-[60px] pb-[60px]">
-        <h1 className="text-[30px] leading-[45px] font-bold tracking-[0.396px] text-ink">{title}</h1>
-        <div className="pt-[40px]">{children}</div>
+      <div className="container-content pt-[72px] pb-[96px]">
+        <h1 className="text-center font-display text-[36px] leading-[44px] font-normal text-ink sm:text-[44px] sm:leading-[52px]">
+          {title}
+        </h1>
+        <div aria-hidden className="mx-auto mt-5 h-px w-8 bg-gold/50" />
+        <div className="pt-[56px]">{children}</div>
       </div>
     </div>
   );
@@ -73,24 +76,24 @@ export function AccountShell({
   return (
     <div className="flex flex-col gap-[30px] bar:flex-row bar:gap-0">
       <div className="shrink-0 bar:w-[220px] bar:pr-[24px] lg:w-[288px] lg:pr-[30px]">
-        <nav aria-label={messages.menu} className="overflow-hidden rounded-[5px] bg-paper">
+        <nav aria-label={messages.menu} className="border-t border-line bg-paper">
           <ul>
             {tabs.map((tab) => (
-              <li key={tab.key} className="border-b-[0.91px] border-black/5">
+              <li key={tab.key} className="border-b border-line">
                 <Link
                   href={tab.href}
                   aria-current={tab.key === active ? "page" : undefined}
-                  className={`${ROW} ${tab.key === active ? "bg-ink text-paper" : "text-ink"}`}
+                  className={`${ROW} ${tab.key === active ? "border-gold text-ink" : "border-transparent text-ink-55 hover:text-ink"}`}
                 >
                   {tab.label}
                 </Link>
               </li>
             ))}
-            <li>
+            <li className="border-b border-line">
               {/* A form post, never a link — see `logoutAction`. */}
               <form action={logoutAction}>
                 <input type="hidden" name="locale" value={locale} />
-                <button type="submit" className={`${ROW} w-full text-left text-ink`}>
+                <button type="submit" className={`${ROW} w-full border-transparent text-left text-ink-55 hover:text-ink`}>
                   {messages.logOut}
                 </button>
               </form>
@@ -104,6 +107,9 @@ export function AccountShell({
   );
 }
 
-/** 55px rows, 20px in plus the 35px icon slot, 15px medium type. */
+/**
+ * 55px rows of small tracked capitals. The open row is marked by a gold rule
+ * on its left edge rather than the design's black fill.
+ */
 const ROW =
-  "flex h-[55px] items-center pr-[20px] pl-[55px] text-[15px] leading-[24.75px] font-medium tracking-[-0.234px]";
+  "flex h-[55px] items-center border-l-2 pr-[20px] pl-[20px] text-[12px] leading-5 font-medium tracking-[0.16em] uppercase transition-colors duration-300";

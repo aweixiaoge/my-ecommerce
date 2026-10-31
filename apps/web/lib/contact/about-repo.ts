@@ -1,5 +1,5 @@
 import { prisma } from "@my-ecommerce/db";
-import type { About } from "@my-ecommerce/shared";
+import { isVideoType, type About } from "@my-ecommerce/shared";
 import type { Locale } from "@/lib/languages";
 import { DEFAULT_LOCALE } from "@/lib/locale";
 
@@ -28,6 +28,13 @@ export interface AboutPage {
   description: string;
   /** In the order the admin set; the first is the main image. */
   imageIds: string[];
+  /** Which of `imageIds` are videos, which the gallery plays rather than shows. */
+  videoIds: string[];
+}
+
+/** The page as the admin edits it: the save's fields, and which ids are videos. */
+export interface AboutForEdit extends About {
+  videoIds: string[];
 }
 
 export async function getAboutPage(locale: Locale): Promise<AboutPage> {
@@ -36,7 +43,7 @@ export async function getAboutPage(locale: Locale): Promise<AboutPage> {
       where: { locale: { in: [locale, DEFAULT_LOCALE] } },
       select: { locale: true, description: true },
     }),
-    aboutImageIds(),
+    aboutMedia(),
   ]);
 
   // The storefront's content rule (`lib/catalog/translation.ts`): the reader's
@@ -44,20 +51,20 @@ export async function getAboutPage(locale: Locale): Promise<AboutPage> {
   const shown =
     rows.find((row) => row.locale === locale) ?? rows.find((row) => row.locale === DEFAULT_LOCALE);
 
-  return { description: shown?.description ?? "", imageIds: images };
+  return { description: shown?.description ?? "", ...images };
 }
 
 /** The page as the admin edits it: the English, and the images. */
-export async function getAboutForEdit(): Promise<About> {
+export async function getAboutForEdit(): Promise<AboutForEdit> {
   const [row, images] = await Promise.all([
     prisma.aboutTranslation.findUnique({
       where: { locale: DEFAULT_LOCALE },
       select: { description: true },
     }),
-    aboutImageIds(),
+    aboutMedia(),
   ]);
 
-  return { description: row?.description ?? "", mediaIds: images };
+  return { description: row?.description ?? "", mediaIds: images.imageIds, videoIds: images.videoIds };
 }
 
 /**
@@ -93,12 +100,15 @@ export async function saveAbout(input: About): Promise<void> {
   });
 }
 
-async function aboutImageIds(): Promise<string[]> {
+async function aboutMedia(): Promise<{ imageIds: string[]; videoIds: string[] }> {
   const rows = await prisma.media.findMany({
     where: { aboutPage: true },
     orderBy: [{ position: "asc" }, { id: "asc" }],
-    select: { id: true },
+    select: { id: true, mimeType: true },
   });
 
-  return rows.map((row) => row.id);
+  return {
+    imageIds: rows.map((row) => row.id),
+    videoIds: rows.filter((row) => isVideoType(row.mimeType)).map((row) => row.id),
+  };
 }

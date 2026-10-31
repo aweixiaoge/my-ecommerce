@@ -39,9 +39,9 @@ const MAX_VIDEO_MB = MAX_VIDEO_BYTES / (1024 * 1024);
 /**
  * What is wrong with this file, or null when nothing is.
  *
- * `video` is whether the picker takes videos as well — the product form's does,
- * the blog's and the About page's do not — and a video is held to its own,
- * larger cap.
+ * `video` is whether the picker takes videos as well — every admin picker does
+ * today, the product form's, the blog's and the About page's — and a video is
+ * held to its own, larger cap.
  */
 export function fileProblem(file: File, { video = false } = {}): string | null {
   if (video && isVideoType(file.type)) {

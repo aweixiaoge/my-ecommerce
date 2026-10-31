@@ -32,28 +32,30 @@ export function ProductCard({
     product.priceMax !== null && product.priceMax.amount !== product.price.amount;
 
   return (
-    <Link href={productPath(product, locale)} className="group flex flex-col pb-6">
-      <div className="relative aspect-[4/3] overflow-hidden rounded-[3px] bg-mist">
+    <Link href={productPath(product, locale)} className="group flex min-w-0 flex-col text-center">
+      <div className="relative aspect-[4/3] overflow-hidden bg-ivory">
         {product.image ? (
           <Image
             src={product.image.url}
             alt={product.image.alt ?? product.name}
             fill
             sizes="(min-width: 768px) 25vw, (min-width: 640px) 50vw, 100vw"
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            className="object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.04]"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center p-6 text-center text-xs font-medium tracking-wide text-ink-55 uppercase">
+          <div className="flex h-full w-full items-center justify-center p-6 text-center font-display text-sm text-ink-55 italic">
             {product.name}
           </div>
         )}
       </div>
 
-      <h3 className="mt-3 text-[20px] leading-[30px] font-bold tracking-[-0.449px] text-ink">
-        {product.name}
+      <h3 className="mt-5 font-display text-[19px] leading-[26px] font-normal [overflow-wrap:anywhere] text-ink">
+        <span className="bg-[linear-gradient(currentColor,currentColor)] bg-[length:0_1px] bg-bottom bg-no-repeat transition-[background-size] duration-500 group-hover:bg-[length:100%_1px]">
+          {product.name}
+        </span>
       </h3>
 
-      <p className="text-[13px] leading-[21.45px] tracking-[-0.076px] text-ink">
+      <p className="mt-2 text-[14px] leading-[22px] tracking-[0.06em] text-ink-60 tabular-nums">
         {hasRange && product.priceMax ? (
           <>
             {formatPrice(product.price, currency, locale)}

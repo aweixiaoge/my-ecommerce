@@ -141,7 +141,7 @@ export function SiteHeader({
 
   return (
     // `relative` anchors the panel to the header rather than the page.
-    <header className="relative bg-paper">
+    <header className="relative border-b border-line bg-paper">
       {/*
         The design's container is a 1fr / auto / 1fr grid: the nav column is
         auto-sized and the two flanks are equal, which is what centres it.
@@ -156,7 +156,11 @@ export function SiteHeader({
       <div className="container-content grid h-[100px] grid-cols-[1fr_auto] items-center bar:grid-cols-[1fr_auto_1fr]">
         <Link
           href={localePath(locale, "/")}
-          className="text-[25px] font-bold leading-[37.5px] tracking-[0.14px] text-ink"
+          // The wordmark in the storefront's serif, at the size that keeps it
+          // the width of the bold sans it replaces (~125px), so the row's
+          // budget above still holds. At 27px it measured 135 and left the
+          // wordmark 7px from the nav at 768.
+          className="font-display text-[25px] leading-[37.5px] font-normal tracking-[0.01em] whitespace-nowrap text-ink"
         >
           {messages.brand}
         </Link>
@@ -167,7 +171,10 @@ export function SiteHeader({
               key={item.href}
               href={item.href}
               prefetch={item.prefetch}
-              className="px-[8px] text-[13px] font-bold leading-[16.9px] tracking-[-0.076px] whitespace-nowrap text-ink wide:px-[12.5px]"
+              // Medium weight in a softer ink rather than bold, and not in
+              // tracked capitals like the rest of the luxury type: capitals
+              // would cost ~55px, and the row has ~34px to spare at 768.
+              className="px-[8px] text-[13px] font-medium leading-[16.9px] tracking-[0.02em] whitespace-nowrap text-ink-62 transition-colors duration-300 hover:text-ink wide:px-[12.5px]"
             >
               {item.label}
             </Link>
@@ -267,7 +274,7 @@ export function SiteHeader({
             href={item.href}
             prefetch={item.prefetch}
             onClick={() => setMenuOpen(false)}
-            className="py-3 text-[15px] font-bold leading-[24.75px] tracking-[-0.234px] text-ink"
+            className="border-b border-line py-3 font-display text-[20px] leading-[28px] text-ink last:border-b-0"
           >
             {item.label}
           </Link>

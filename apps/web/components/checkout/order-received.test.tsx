@@ -69,7 +69,7 @@ describe("OrderReceived", () => {
 
     expect(markup).toContain("xihsudhudf");
     expect(markup).toContain("Color: red");
-    expect(markup).toContain("<p>L</p>");
+    expect(markup).toMatch(/<p[^>]*>L<\/p>/);
     expect(markup).toContain("Standard delivery — $5.00");
     expect(markup).toContain("$26.23");
     expect(markup).toContain("Leave at the door");

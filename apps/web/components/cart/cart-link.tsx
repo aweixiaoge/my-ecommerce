@@ -48,7 +48,7 @@ export function CartLink({
         there the wordmark has to hold one line in the 126px it needs, and the
         amount would push "Smart Mall" over two.
       */}
-      <span className="hidden text-[13px] font-semibold leading-[21.45px] tracking-[-0.076px] text-ink wide:inline">
+      <span className="hidden text-[13px] font-medium leading-[21.45px] tracking-[0.02em] text-ink tabular-nums wide:inline">
         {amount}
       </span>
 
@@ -62,7 +62,7 @@ export function CartLink({
         {count > 0 && (
           <span
             aria-hidden
-            className="absolute -top-2 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-ink px-1 text-[10px] leading-none font-bold text-paper"
+            className="absolute -top-2 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[10px] leading-none font-medium text-paper tabular-nums"
           >
             {count > 99 ? "99+" : count}
           </span>

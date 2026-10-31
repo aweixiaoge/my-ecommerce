@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { toBlogPost, type BlogRow } from "./blog-rows";
+import { IMAGES_ONLY } from "@/lib/media";
+import { blogSelect, toBlogPost, toBlogPostDetail, type BlogDetailRow, type BlogRow } from "./blog-rows";
 
 /**
  * What a journal card is made of, with no database anywhere near it.
@@ -128,5 +129,48 @@ describe("toBlogPost", () => {
     } as Partial<BlogRow>);
 
     expect(toBlogPost(post, "de")?.category).toBe("Engineer");
+  });
+});
+
+describe("the cover", () => {
+  it("is asked for as a photograph, so a video placed first is passed over", () => {
+    // The card draws its cover with `next/image`, which cannot draw a video.
+    expect(blogSelect("en").media).toMatchObject({ where: IMAGES_ONLY, take: 1 });
+  });
+});
+
+describe("toBlogPostDetail", () => {
+  function detail(media: { id: string; mimeType: string | null }[]): BlogDetailRow {
+    const card = row();
+
+    return {
+      ...card,
+      translations: card.translations.map((translation) => ({
+        ...translation,
+        description: "## The basics",
+        metaTitle: "",
+        metaDescription: "",
+      })),
+      media,
+    } as BlogDetailRow;
+  }
+
+  it("keeps every medium in order, and says which are videos", () => {
+    const post = toBlogPostDetail(
+      detail([
+        { id: "media_clip", mimeType: "video/mp4" },
+        { id: "media_photo", mimeType: "image/jpeg" },
+      ]),
+      "en",
+    );
+
+    expect(post?.imageIds).toEqual(["media_clip", "media_photo"]);
+    expect(post?.videoIds).toEqual(["media_clip"]);
+    // The cover is the first photograph, not the clip in front of it.
+    expect(post?.coverId).toBe("media_photo");
+  });
+
+  it("has no cover when every medium is a video", () => {
+    expect(toBlogPostDetail(detail([{ id: "media_clip", mimeType: "video/webm" }]), "en")?.coverId).toBeNull();
   });
 });

@@ -84,13 +84,12 @@ describe("CartMenu", () => {
     expect(markup).toMatch(/href="\/en\/checkout"[^>]*>Checkout</);
   });
 
-  it("spaces the lines after the first, as the design does", () => {
+  it("rules off and spaces the lines after the first", () => {
     const markup = render(cart(line({ id: "a" }), line({ id: "b" })));
 
-    expect(markup.match(/<li class="[^"]*"/g)?.map((tag) => tag.includes("pt-[15px]"))).toEqual([
-      false,
-      true,
-    ]);
+    expect(
+      markup.match(/<li class="[^"]*"/g)?.map((tag) => tag.includes("border-t") && tag.includes("pt-4")),
+    ).toEqual([false, true]);
   });
 
   it("goes nowhere when nothing in the cart can be bought", () => {

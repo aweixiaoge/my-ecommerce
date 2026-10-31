@@ -52,12 +52,12 @@ export function LoginForm({ locale, messages }: { locale: Locale; messages: Mess
       </div>
 
       <div className="pt-[24px]">
-        <label className="flex w-fit cursor-pointer items-center gap-[15px] pb-[21px] text-[14px] leading-[23.1px] font-medium tracking-[-0.15px] text-ink">
+        <label className="flex w-fit cursor-pointer items-center gap-[12px] pb-[24px] text-[14px] leading-[23.1px] text-ink-62">
           <span className="relative flex size-[16px] shrink-0">
             <input
               type="checkbox"
               name="remember"
-              className="peer size-[16px] cursor-pointer appearance-none rounded-[3px] border-[0.91px] border-line bg-paper checked:border-ink checked:bg-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              className="peer size-[16px] cursor-pointer appearance-none border border-line bg-paper checked:border-ink checked:bg-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             />
             <svg
               aria-hidden

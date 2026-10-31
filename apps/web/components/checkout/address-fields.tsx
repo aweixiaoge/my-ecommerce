@@ -150,7 +150,7 @@ export function AddressFields({
         <button
           type="button"
           onClick={() => setShowLine2(true)}
-          className="w-fit text-left text-[13px] leading-[18.2px] tracking-[-0.08px] text-ink sm:col-span-2"
+          className="w-fit text-left text-[12px] leading-5 font-medium tracking-[0.14em] text-ink uppercase underline decoration-gold underline-offset-4 hover:decoration-ink sm:col-span-2"
         >
           {messages.addLine2}
         </button>

@@ -38,9 +38,41 @@ describe("MarkdownBody", () => {
     expect(render("*Memory foam*")).toContain("<em");
   });
 
+  it("renders emphasis and strong nested in each other", () => {
+    expect(render("***both***")).toContain(
+      '<em class="italic"><strong class="font-bold"><span>both</span></strong></em>',
+    );
+    expect(render("**bold *italic***")).toContain(
+      '<strong class="font-bold"><span>bold </span><em class="italic"><span>italic</span></em></strong>',
+    );
+  });
+
+  it("renders a rule as an hr", () => {
+    expect(render("Above\n\n---\n\nBelow")).toMatch(
+      /<p><span>Above<\/span><\/p><hr[^>]*\/><p><span>Below<\/span><\/p>/,
+    );
+  });
+
   it("renders inline code and a fenced block", () => {
     expect(render("A `tip` that fits")).toContain("<code");
     expect(render("```\nnpm install\n```")).toContain("<pre");
+  });
+
+  it("renders a table with column headers and its alignment", () => {
+    const html = render("| Size | Weight |\n|:--|--:|\n| S | 210 g |");
+
+    expect(html).toContain("<table");
+    expect(html).toContain('<th scope="col"');
+    expect(html).toContain("<td");
+    expect(html).toContain("text-right");
+    expect(html).toMatch(/<td[^>]*><span>210 g<\/span><\/td>/);
+  });
+
+  it("escapes markup typed into a table cell", () => {
+    const html = render("|a|\n|-|\n|<img src=x onerror=alert(1)>|");
+
+    expect(html).not.toContain("<img");
+    expect(html).toContain("&lt;img");
   });
 
   it("renders a link so it leaves the site safely", () => {

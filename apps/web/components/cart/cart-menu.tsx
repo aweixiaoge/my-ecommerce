@@ -55,9 +55,9 @@ export function CartMenu({
         messages={messages.header}
       />
 
-      <div className="invisible absolute top-full right-0 z-50 hidden w-[310px] rounded-[2px] bg-paper px-[20px] py-[22px] opacity-0 shadow-[0_10px_20px_rgba(41,51,61,0.1)] transition-opacity group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100 bar:block">
+      <div className="invisible absolute top-full right-0 z-50 hidden w-[340px] border border-line border-t-gold/60 bg-paper px-6 py-6 opacity-0 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.18)] transition-opacity duration-300 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100 bar:block">
         {items.length === 0 ? (
-          <p className="text-[13px] leading-[21.45px] text-ink-62">{messages.cart.empty}</p>
+          <p className="py-2 text-center font-display text-[17px] leading-[26px] text-ink-55 italic">{messages.cart.empty}</p>
         ) : (
           <>
             {/* The design's list is two lines tall; a longer cart scrolls
@@ -80,22 +80,26 @@ export function CartMenu({
               #FFFFFF on the white panel — invisible, and plainly not meant: a
               subtotal nobody can read is not a subtotal.
             */}
-            <p className="flex justify-between pt-[15px] text-[13px] leading-[21.45px] font-bold tracking-[-0.076px] text-ink">
-              <span>{messages.cart.menu.subtotal}</span>
-              <span>{amount}</span>
+            <p className="flex items-baseline justify-between border-t border-line pt-4 text-ink">
+              <span className="text-[11px] leading-4 font-medium tracking-[0.18em] text-ink-55 uppercase">
+                {messages.cart.menu.subtotal}
+              </span>
+              <span className="font-display text-[19px] leading-7 tabular-nums">{amount}</span>
             </p>
 
-            <div className="grid grid-cols-2 gap-[15px] pt-[30px]">
+            {/* View cart as the outline, Checkout as the solid — the way on
+                is the one the panel wants taken. */}
+            <div className="grid grid-cols-2 gap-[12px] pt-6">
               <Link
                 href={href}
-                className="flex h-[45px] items-center justify-center rounded-[3px] bg-ink px-[10px] text-[13px] leading-[21.45px] font-semibold tracking-[-0.076px] text-paper uppercase"
+                className="flex h-11 items-center justify-center border border-ink px-[10px] text-[12px] leading-5 font-medium tracking-[0.14em] uppercase transition-colors duration-300 text-ink hover:bg-ink hover:text-paper"
               >
                 {messages.cart.menu.view}
               </Link>
               <CheckoutLink
                 href={localePath(locale, "/checkout")}
                 enabled={count > 0}
-                className="flex h-[45px] items-center justify-center rounded-[3px] bg-ink px-[10px] text-[13px] leading-[21.45px] font-semibold tracking-[-0.076px] text-paper uppercase"
+                className="flex h-11 items-center justify-center border border-ink px-[10px] text-[12px] leading-5 font-medium tracking-[0.14em] uppercase transition-colors duration-300 bg-ink text-paper hover:bg-paper hover:text-ink"
               >
                 {messages.cart.menu.checkout}
               </CheckoutLink>
@@ -135,13 +139,13 @@ function MenuLine({
 
   return (
     <li
-      className={`grid grid-cols-[54px_1fr_27px] items-center gap-x-[15px] pb-[15px] ${
-        first ? "" : "pt-[15px]"
+      className={`grid grid-cols-[60px_1fr_27px] items-center gap-x-[15px] pb-4 ${
+        first ? "" : "border-t border-line pt-4"
       }`}
     >
       <Link
         href={href}
-        className="relative block size-[54px] overflow-hidden rounded-[3px] bg-mist"
+        className="relative block size-[60px] overflow-hidden bg-ivory"
       >
         {item.product.image && (
           <Image
@@ -157,17 +161,17 @@ function MenuLine({
       <div className="min-w-0">
         <Link
           href={href}
-          className="block text-[15px] leading-[19.5px] font-medium tracking-[-0.23px] text-ink"
+          className="block font-display text-[16px] leading-[21px] [overflow-wrap:anywhere] text-ink underline-offset-4 hover:underline"
         >
           {title}
         </Link>
         <p
-          className={`text-[13px] leading-[21.45px] tracking-[-0.076px] ${
-            item.unavailableReason ? "text-ink-55 line-through" : "text-ink"
+          className={`pt-1 text-[12px] leading-[18px] tracking-[0.06em] tabular-nums ${
+            item.unavailableReason ? "text-ink-55 line-through" : "text-ink-60"
           }`}
         >
           {item.quantity} ×{" "}
-          <span className="font-medium">
+          <span className="text-ink">
             {formatPrice(item.variant.price, currency, locale)}
           </span>
         </p>
@@ -180,7 +184,7 @@ function MenuLine({
           name="quantity"
           value={0}
           aria-label={fill(messages.line.removeLabel, { name: item.product.name })}
-          className="flex size-[27px] items-center justify-center"
+          className="flex size-[27px] items-center justify-center opacity-45 transition-opacity duration-300 hover:opacity-100"
         >
           <Image src="/icons/trash.svg" alt="" width={11} height={11} />
         </button>

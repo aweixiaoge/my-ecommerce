@@ -145,7 +145,7 @@ export function CheckoutForm({
     <form
       action={formAction}
       noValidate
-      className="grid grid-cols-1 gap-[48px] pt-[24px] lg:grid-cols-[1fr_360px]"
+      className="grid grid-cols-1 gap-[56px] pt-[24px] lg:grid-cols-[1fr_400px]"
     >
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
@@ -157,20 +157,20 @@ export function CheckoutForm({
             {state?.message && (
               <p
                 role="alert"
-                className="rounded-[3px] border-[0.91px] border-danger px-[16px] py-[12px] text-[13px] leading-[18.2px] text-danger"
+                className="border border-danger px-[16px] py-[12px] text-[13px] leading-[18.2px] text-danger"
               >
                 {state.message}{" "}
                 {state.reviewCart && (
-                  <Link href={cartHref} className="font-semibold underline">
+                  <Link href={cartHref} className="font-medium underline underline-offset-4">
                     {messages.errors.reviewCart}
                   </Link>
                 )}
               </p>
             )}
             {hasUnavailable && (
-              <p className="rounded-[3px] border-[0.91px] border-line px-[16px] py-[12px] text-[13px] leading-[18.2px] text-ink">
+              <p className="border border-line border-l-2 border-l-gold bg-ivory px-[16px] py-[12px] text-[13px] leading-[18.2px] text-ink">
                 {messages.unavailableNote}{" "}
-                <Link href={cartHref} className="font-semibold underline">
+                <Link href={cartHref} className="font-medium underline decoration-gold underline-offset-4">
                   {messages.errors.reviewCart}
                 </Link>
               </p>
@@ -232,13 +232,13 @@ export function CheckoutForm({
                 <Radio name="shippingMethod" value="standard" checked onChange={() => {}} />
                 <span className="flex-1">
                   {messages.standard}
-                  <span className="block text-ink-62">{messages.standardTime}</span>
+                  <span className="block pt-0.5 text-ink-62">{messages.standardTime}</span>
                 </span>
-                <span className="font-medium">{deliveryLabel(delivery)}</span>
+                <span className="font-display text-[16px] tabular-nums">{deliveryLabel(delivery)}</span>
               </label>
             </OptionBox>
           ) : (
-            <p className="rounded-[4px] p-[24px] text-center text-[13px] leading-[18.2px] tracking-[-0.08px] text-ink">
+            <p className="border border-dashed border-line p-[24px] text-center text-[13px] leading-[20px] text-ink-62">
               {messages.shippingPending}
             </p>
           )}
@@ -256,7 +256,7 @@ export function CheckoutForm({
               />
               {messages.cod}
             </label>
-            <p className="px-[16px] pb-[16px]">{messages.codBody}</p>
+            <p className="px-[16px] pb-[16px] pl-[48px] text-ink-62">{messages.codBody}</p>
           </OptionBox>
           <FieldError id="checkout-paymentMethod" error={errors.paymentMethod} />
         </Section>
@@ -275,7 +275,7 @@ export function CheckoutForm({
                 rows={3}
                 aria-label={messages.addNote}
                 placeholder={messages.note}
-                className="w-full rounded-[3px] border-[0.91px] border-line bg-transparent px-[15px] py-[12px] text-[16px] leading-[22px] tracking-[-0.31px] text-ink outline-none placeholder:text-ink-55 focus:border-ink"
+                className="w-full border border-line bg-paper px-[15px] py-[12px] text-[16px] leading-[22px] text-ink outline-none transition-colors placeholder:text-ink-55 focus:border-ink"
               />
               <FieldError id="checkout-note" error={errors.note} />
             </div>
@@ -287,7 +287,7 @@ export function CheckoutForm({
           and a link to a 404 is worse than none. They become links when the
           pages exist.
         */}
-        <p className="mt-[24px] border-t border-line pt-[24px] text-[13px] leading-[18.2px] tracking-[-0.08px] text-ink">
+        <p className="mt-[32px] border-t border-line pt-[24px] text-[13px] leading-[20px] text-ink-62">
           {messages.terms}
         </p>
 
@@ -296,7 +296,7 @@ export function CheckoutForm({
             type="submit"
             disabled={pending}
             aria-busy={pending}
-            className="flex h-[57px] w-full items-center justify-center rounded-[3px] bg-ink px-[30px] text-[15px] leading-[21px] font-medium tracking-[-0.23px] text-paper disabled:cursor-progress disabled:opacity-60"
+            className="flex h-[57px] w-full items-center justify-center px-[30px] uppercase border border-ink bg-ink text-[13px] leading-5 font-medium tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-paper hover:text-ink disabled:cursor-progress disabled:opacity-60 disabled:hover:bg-ink disabled:hover:text-paper"
           >
             {pending ? messages.placing : messages.placeOrder}
           </button>
@@ -329,7 +329,7 @@ export function CheckoutForm({
   );
 }
 
-/** A fieldset: the design's 20/28 heading over 16px of space and its fields. */
+/** A fieldset: a serif heading over 18px of space and its fields, ruled off from the one before. */
 function Section({
   title,
   first = false,
@@ -340,23 +340,23 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <fieldset className={first ? "" : "pt-[24px]"}>
-      <legend className="float-left w-full text-[20px] leading-[28px] font-medium tracking-[-0.45px] text-ink">
+    <fieldset className={first ? "" : "mt-[32px] border-t border-line pt-[28px]"}>
+      <legend className="float-left w-full font-display text-[24px] leading-[32px] font-normal text-ink">
         {title}
       </legend>
-      <div className="clear-left pt-[16px] text-[13px] leading-[18.2px] tracking-[-0.08px] text-ink">
+      <div className="clear-left pt-[18px] text-[14px] leading-[20px] text-ink">
         {children}
       </div>
     </fieldset>
   );
 }
 
-/** A bordered choice — a shipping method, a payment method — inked when chosen. */
+/** A bordered choice — a shipping method, a payment method — inked, on ivory, when chosen. */
 function OptionBox({ checked, children }: { checked: boolean; children: ReactNode }) {
   return (
     <div
-      className={`rounded-[4px] border-[1.5px] text-[13px] leading-[18.2px] tracking-[-0.08px] ${
-        checked ? "border-ink" : "border-line"
+      className={`border text-[14px] leading-[20px] transition-colors ${
+        checked ? "border-ink bg-ivory" : "border-line"
       }`}
     >
       {children}
@@ -396,51 +396,51 @@ function OrderSummary({
   return (
     <aside
       aria-labelledby="checkout-summary"
-      className="order-first self-start rounded-[5px] border-[0.91px] border-line text-[13px] leading-[18.2px] tracking-[-0.08px] text-ink lg:order-none"
+      className="order-first self-start bg-ivory text-[14px] leading-[20px] text-ink lg:order-none"
     >
       <h2
         id="checkout-summary"
-        className="px-[16px] pt-[16px] pb-[8px] text-[20px] leading-[28px] font-medium tracking-[-0.45px]"
+        className="px-7 pt-8 pb-3 font-display text-[26px] leading-[34px] font-normal"
       >
         {messages.summary}
       </h2>
 
-      <ul className="px-[16px] pt-[8px] pb-[16px]">
+      <ul className="px-7 pt-[8px] pb-[16px]">
         {items.map((item) => (
           <li key={item.id} className="flex">
-            <div className="relative w-[48px] shrink-0 pt-[8px] pb-[16px]">
-              <div className="relative size-[48px] overflow-hidden bg-mist">
+            <div className="relative w-[56px] shrink-0 pt-[8px] pb-[16px]">
+              <div className="relative size-[56px] overflow-hidden bg-paper">
                 {item.product.image && (
                   <Image
                     src={item.product.image.url}
                     alt={item.product.image.alt ?? item.product.name}
                     fill
-                    sizes="48px"
+                    sizes="56px"
                     className="object-cover"
                   />
                 )}
               </div>
               <span
                 aria-label={fill(messages.quantity, { count: item.quantity })}
-                className="absolute top-[-2px] left-[38px] flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-ink px-[4px] text-[13px] leading-[13px] font-semibold text-paper"
+                className="absolute top-[-2px] left-[46px] flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-gold px-[4px] text-[11px] leading-[13px] font-medium text-paper tabular-nums"
               >
                 {item.quantity}
               </span>
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-[4px] pt-[4px] pr-[12px] pb-[12px] pl-[24px]">
-              <h3 className="font-medium">{item.product.name}</h3>
-              <p>{price(item.variant.price)}</p>
+            <div className="flex min-w-0 flex-1 flex-col gap-[2px] pt-[4px] pr-[12px] pb-[12px] pl-[20px]">
+              <h3 className="font-display text-[16px] leading-[22px] font-normal [overflow-wrap:anywhere]">{item.product.name}</h3>
+              <p className="text-[13px] text-ink-60 tabular-nums">{price(item.variant.price)}</p>
               {item.optionValues
                 .filter((value) => value.name !== "")
                 .map((value) => (
-                  <p key={value.id}>
+                  <p key={value.id} className="text-[13px] text-ink-62">
                     {value.option
                       ? fill(cartMessages.optionLabel, { option: value.option, value: value.name })
                       : value.name}
                   </p>
                 ))}
             </div>
-            <p className="pt-[4px] text-right">{price(item.lineTotal)}</p>
+            <p className="pt-[4px] text-right font-display text-[16px] tabular-nums">{price(item.lineTotal)}</p>
           </li>
         ))}
       </ul>
@@ -449,7 +449,7 @@ function OrderSummary({
         Uncontrolled: a coupon is only ever applied from inside the open box,
         and tying `open` to it would fold the box shut on "Remove".
       */}
-      <details className="group border-t border-line px-[16px] py-[16px]">
+      <details className="group mx-7 border-t border-ink/15 py-[18px]">
         <summary className="flex cursor-pointer list-none items-center justify-between [&::-webkit-details-marker]:hidden">
           {cartMessages.coupons}
           <Image
@@ -463,28 +463,28 @@ function OrderSummary({
         <div className="pt-[12px]">{couponBox}</div>
       </details>
 
-      <dl className="border-t border-line px-[16px] pb-[16px]">
-        <div className="flex justify-between gap-4 pt-[16px]">
+      <dl className="mx-7 border-t border-ink/15 pb-[18px] text-ink-62">
+        <div className="flex justify-between gap-4 pt-[18px]">
           <dt>{messages.subtotal}</dt>
-          <dd>{price(subtotal)}</dd>
+          <dd className="text-ink tabular-nums">{price(subtotal)}</dd>
         </div>
         {coupon && (
-          <div className="flex justify-between gap-4 pt-[16px]">
+          <div className="flex justify-between gap-4 pt-[12px]">
             <dt>{fill(messages.coupon.discount, { code: coupon.code })}</dt>
-            <dd>−{price(coupon.discount)}</dd>
+            <dd className="text-gold tabular-nums">−{price(coupon.discount)}</dd>
           </div>
         )}
-        <div className="flex justify-between gap-4 pt-[16px]">
+        <div className="flex justify-between gap-4 pt-[12px]">
           <dt>{messages.delivery}</dt>
-          <dd className="text-right">
+          <dd className="text-right text-ink tabular-nums">
             {delivery ? deliveryLabel(delivery) : messages.deliveryPending}
           </dd>
         </div>
       </dl>
 
-      <p className="flex justify-between gap-4 border-t border-line px-[16px] py-[16px] text-[24px] leading-[33.6px] font-medium tracking-[0.07px]">
-        <span>{messages.total}</span>
-        <span>{price(total)}</span>
+      <p className="mx-7 flex items-baseline justify-between gap-4 border-t border-ink pt-[20px] pb-8">
+        <span className="text-[11px] leading-4 font-medium tracking-[0.18em] text-ink uppercase">{messages.total}</span>
+        <span className="font-display text-[28px] leading-[36px] tabular-nums">{price(total)}</span>
       </p>
     </aside>
   );
@@ -547,7 +547,7 @@ function CouponBox({
         <button
           type="button"
           onClick={() => onApplied(null)}
-          className="font-semibold underline"
+          className="text-[12px] font-medium tracking-[0.14em] uppercase underline decoration-gold underline-offset-4"
         >
           {messages.remove}
         </button>
@@ -575,7 +575,7 @@ function CouponBox({
         onClick={apply}
         disabled={applying}
         aria-busy={applying}
-        className="h-[50px] shrink-0 rounded-[3px] border-[0.91px] border-ink px-[20px] text-[15px] leading-[21px] font-medium tracking-[-0.23px] text-ink disabled:cursor-progress disabled:opacity-60"
+        className="h-[52px] shrink-0 px-[20px] uppercase border border-ink text-[13px] leading-5 font-medium tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-ink hover:text-paper disabled:cursor-progress disabled:opacity-60"
       >
         {applying ? messages.applying : messages.apply}
       </button>

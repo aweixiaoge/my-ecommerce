@@ -26,7 +26,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 type ShopSearchParams = Awaited<PageProps<"/[lang]/shop">["searchParams"]>;
 
-const PRODUCT_CARD_HEIGHT = "h-[425.186px]";
+/** The restyled card with a one-line title, measured at the 1290 column. */
+const PRODUCT_CARD_HEIGHT = "h-[418px]";
 
 /**
  * The Shop listing (Figma node 178:8286).
@@ -46,7 +47,7 @@ export default async function ShopPage(props: PageProps<"/[lang]/shop">) {
   const locale = await requestLocale();
 
   return (
-    <section className="pt-[60px] pb-[29px]">
+    <section className="pt-[72px] pb-[60px]">
       <div className="container-content">
         <ShopBanner messages={getMessages(locale).shop} locale={locale} />
 
@@ -116,18 +117,18 @@ async function ShopResults({ searchParams }: { searchParams: ShopSearchParams })
 function ShopResultsFallback() {
   return (
     <div aria-hidden className="animate-pulse">
-      <div className="flex items-center justify-between gap-[13px] pt-10">
-        <div className="h-[21.45px] w-[209px] bg-mist" />
-        <div className="h-10 w-[202.727px] rounded-[3px] border-[0.909px] border-line" />
+      <div className="flex items-center justify-between gap-[13px] border-b border-line pt-[56px] pb-5">
+        <div className="h-4 w-[209px] bg-mist" />
+        <div className="h-11 w-[202.727px] border border-line" />
       </div>
 
       <div className="grid grid-cols-1 gap-[30px] pt-[25px] sm:grid-cols-2 bar:grid-cols-4">
         {Array.from({ length: 12 }, (_, index) => (
-          <div key={index} className={`${PRODUCT_CARD_HEIGHT} rounded-[3px] bg-mist`} />
+          <div key={index} className={`${PRODUCT_CARD_HEIGHT} bg-mist`} />
         ))}
       </div>
 
-      <div className="h-[100px]" />
+      <div className="h-[116px]" />
     </div>
   );
 }

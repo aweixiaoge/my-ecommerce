@@ -333,7 +333,10 @@ describe("getBlogForEdit", () => {
           description: "## The basics",
         },
       ],
-      media: [{ id: "media_a" }, { id: "media_b" }],
+      media: [
+        { id: "media_a", mimeType: "image/png" },
+        { id: "media_b", mimeType: "video/webm" },
+      ],
     });
 
     expect(await getBlogForEdit("blog_1")).toEqual({
@@ -344,6 +347,7 @@ describe("getBlogForEdit", () => {
       description: "## The basics",
       categoryId: "cat_1",
       mediaIds: ["media_a", "media_b"],
+      videoIds: ["media_b"],
     });
   });
 

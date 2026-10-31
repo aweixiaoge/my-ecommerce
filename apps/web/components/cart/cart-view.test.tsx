@@ -62,7 +62,7 @@ describe("CartView", () => {
     expect(markup).toContain("Earbuds");
     // The colour and the size the shopper chose, each under its option's name,
     // in the product page's order.
-    expect(markup).toMatch(/<p>Color: red<\/p><p>Size: M<\/p>/);
+    expect(markup).toMatch(/<p[^>]*>Color: red<\/p><p[^>]*>Size: M<\/p>/);
     expect(markup).toContain("$24.45");
     expect(markup).toContain("$48.90");
     // Linked where the shop card links it: under its first category.
@@ -120,7 +120,7 @@ describe("CartView", () => {
     const markup = render(cart(line({ id: "a" })));
 
     expect(markup).toContain("Cart totals");
-    expect(markup).toMatch(/Estimated total<\/span><span>\$48\.90</);
+    expect(markup).toMatch(/Estimated total<\/span><span[^>]*>\$48\.90</);
     expect(markup).toMatch(/href="\/en\/checkout"[^>]*>Proceed to Checkout</);
   });
 
@@ -145,7 +145,7 @@ describe("CartView", () => {
   it("ships free at the trust bar's threshold, and defers below it", () => {
     const over = { ...cart(line({ id: "a" })), subtotal: usd("50.00"), grandTotal: usd("50.00") };
 
-    expect(render(over)).toMatch(/Free shipping<\/span><span class="font-bold uppercase">Free</);
+    expect(render(over)).toMatch(/Free shipping<\/span><span class="[^"]*uppercase[^"]*">Free</);
     // The fixture's $48.90 is under $50.00.
     expect(render(cart(line({ id: "a" })))).toMatch(
       /Shipping<\/span><span class="text-ink-62">Calculated at checkout</,
@@ -188,7 +188,7 @@ describe("CartView", () => {
     const markup = render(cart({ ...base, optionValues: [] }));
 
     // The price is followed straight by the quantity form.
-    expect(markup).toMatch(/<p>\$24\.45<\/p><form/);
+    expect(markup).toMatch(/<p[^>]*>\$24\.45<\/p><form/);
   });
 
   it("writes a value whose option has no name on its own, and skips a blank one", () => {
@@ -203,7 +203,7 @@ describe("CartView", () => {
       }),
     );
 
-    expect(markup).toContain("<p>red</p>");
+    expect(markup).toMatch(/<p[^>]*>red<\/p>/);
     expect(markup).not.toContain("Size:");
   });
 });

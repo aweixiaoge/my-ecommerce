@@ -56,7 +56,11 @@ beforeEach(() => {
   actions.uploadMedia.mockReset();
   actions.uploadMedia.mockImplementation(async (file: File) => ({
     ok: true,
-    media: { id: `media_${file.name}`, url: `/admin/media/media_${file.name}` },
+    media: {
+      id: `media_${file.name}`,
+      url: `/admin/media/media_${file.name}`,
+      kind: file.type.startsWith("video/") ? "video" : "image",
+    },
   }));
 
   container = document.createElement("div");
@@ -248,6 +252,19 @@ describe("BlogForm", () => {
     expect(submittedMediaIds()).toEqual(["media_b.png"]);
   });
 
+  it("takes a video, and draws it as one", async () => {
+    await pickFiles([file("a.png"), file("clip.mp4", "video/mp4")]);
+
+    expect(actions.uploadMedia).toHaveBeenCalledTimes(2);
+    expect(submittedMediaIds()).toEqual(["media_a.png", "media_clip.mp4"]);
+    expect(container.querySelector('video[src^="/admin/media/media_clip.mp4"]')).not.toBeNull();
+    expect(container.querySelector('img[src="/admin/media/media_clip.mp4"]')).toBeNull();
+  });
+
+  it("offers videos in the file picker", () => {
+    expect(field<HTMLInputElement>("#images").accept).toContain("video/mp4");
+  });
+
   it("refuses a file the browser checks refuse, without uploading it", async () => {
     // Feedback, not enforcement — the action checks again — but a PDF should
     // cost the person a sentence, not a request.
@@ -316,7 +333,7 @@ describe("BlogForm", () => {
 
     expect(field<HTMLInputElement>("#images").disabled).toBe(true);
     expect(container.textContent).toContain(
-      `${IMAGES_PER_BLOG_MAX} images is the limit`,
+      `${IMAGES_PER_BLOG_MAX} images and videos is the limit`,
     );
   });
 
@@ -437,6 +454,7 @@ describe("BlogForm, editing a post", () => {
     description: "## The basics",
     categoryId: "cat_2",
     mediaIds: ["media_a", "media_b"],
+    videoIds: ["media_b"],
   };
 
   beforeEach(() => {
@@ -462,6 +480,12 @@ describe("BlogForm, editing a post", () => {
     expect(formData.get("id")).toBe("blog_1");
     expect(formData.get("title")).toBe("A better title");
     expect(formData.get("mediaIds")).toBe(JSON.stringify(["media_a", "media_b"]));
+  });
+
+  it("draws a saved video as a video and a photograph as an image", () => {
+    expect(container.querySelector('video[src^="/admin/media/media_b"]')).not.toBeNull();
+    expect(container.querySelector('img[src="/admin/media/media_a"]')).not.toBeNull();
+    expect(container.querySelector('img[src="/admin/media/media_b"]')).toBeNull();
   });
 
   it("says Save changes rather than Create blog", () => {

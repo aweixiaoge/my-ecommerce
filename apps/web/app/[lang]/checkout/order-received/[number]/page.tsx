@@ -33,14 +33,18 @@ export default async function OrderReceivedRoute(
   const messages = getMessages(locale).checkout;
 
   return (
-    <div className="bg-wash">
-      <div className="container-content pt-[60px] pb-[100px]">
-        <h1 className="text-[30px] leading-[45px] font-bold tracking-[0.396px] text-ink">
-          {messages.received.title}
-        </h1>
+    <div>
+      <div className="container-content pt-[72px] pb-[100px]">
+        {/* The centred serif masthead every storefront page opens with. */}
+        <div className="text-center">
+          <h1 className="font-display text-[40px] leading-[48px] font-normal text-ink sm:text-[48px] sm:leading-[56px]">
+            {messages.received.title}
+          </h1>
+          <div aria-hidden className="mx-auto mt-5 h-px w-8 bg-gold/50" />
+        </div>
 
-        <div className="pt-[24px]">
-          <Suspense fallback={<div aria-hidden className="h-[480px] animate-pulse bg-mist" />}>
+        <div className="pt-[32px]">
+          <Suspense fallback={<div aria-hidden className="h-[480px] animate-pulse bg-ivory" />}>
             {Promise.all([props.params, props.searchParams]).then(async ([params, searchParams]) => {
               const key = Array.isArray(searchParams.key) ? searchParams.key[0] : searchParams.key;
               const order = /^\d+$/.test(params.number)

@@ -11,9 +11,10 @@ import { SORT_OPTIONS } from "@/lib/shop";
  *
  * In Figma this is a 202.727×40 box with an IMAGE fill — the chevron is painted
  * into a raster, not drawn as a node, so there is no vector to reuse from the
- * file. It is rebuilt here as a real control: a native `<select>` with the
- * design's 0.909px rule at 3px radius, and the app's own chevron-down glyph —
- * the same one the header uses — placed at the left, where the design draws it.
+ * file. It is rebuilt here as a real control: a native `<select>`, square on a
+ * hairline in the storefront's luxury register, with the app's own chevron-down
+ * glyph — the same one the header uses — at the right, where a select's
+ * chevron is looked for.
  *
  * Ordering is a query parameter, so the control is a GET form rather than
  * component state: the sort survives a refresh, a share, and the back button,
@@ -48,7 +49,7 @@ export function SortSelect({
         alt=""
         width={9}
         height={6}
-        className="pointer-events-none absolute top-1/2 left-[1px] -translate-y-1/2"
+        className="pointer-events-none absolute top-1/2 right-[15px] -translate-y-1/2"
       />
 
       <select
@@ -57,7 +58,7 @@ export function SortSelect({
         defaultValue={value}
         aria-label={messages.sortLabel}
         onChange={(event) => event.currentTarget.form?.requestSubmit()}
-        className="h-10 w-full cursor-pointer appearance-none rounded-[3px] border-[0.909px] border-line bg-paper pl-[15.9px] text-[14px] leading-[23.1px] tracking-[-0.1504px] text-ink"
+        className="h-11 w-full cursor-pointer appearance-none border border-line bg-paper pr-[36px] pl-4 text-[13px] leading-5 tracking-[0.04em] text-ink outline-none transition-colors duration-300 hover:border-ink focus-visible:border-ink"
       >
         {SORT_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
@@ -69,7 +70,7 @@ export function SortSelect({
       <noscript>
         <button
           type="submit"
-          className="mt-2 h-10 w-full cursor-pointer rounded-[3px] border-[0.909px] border-line bg-paper text-[14px] text-ink"
+          className="mt-2 h-11 w-full cursor-pointer border border-ink bg-paper text-[12px] tracking-[0.14em] text-ink uppercase"
         >
           {messages.sortApply}
         </button>

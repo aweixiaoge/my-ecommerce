@@ -218,19 +218,25 @@ function Breadcrumb({
   return (
     <nav
       aria-label={messages.breadcrumb}
-      className="flex flex-wrap items-center text-[13px] leading-[22px] font-semibold tracking-[-0.076px] text-ink uppercase"
+      className="flex flex-wrap items-center text-[11px] leading-[22px] font-medium tracking-[0.18em] text-ink-55 uppercase"
     >
-      <Link href={localePath(locale, "/")}>{messages.home}</Link>
+      <Link href={localePath(locale, "/")} className="hover:text-ink">
+        {messages.home}
+      </Link>
 
       {category && (
         <>
           <Separator />
-          <Link href={categoryPath(category, locale)}>{category.name}</Link>
+          <Link href={categoryPath(category, locale)} className="hover:text-ink">
+            {category.name}
+          </Link>
         </>
       )}
 
       <Separator />
-      <span aria-current="page">{product.name}</span>
+      <span aria-current="page" className="text-ink">
+        {product.name}
+      </span>
     </nav>
   );
 }
@@ -242,7 +248,7 @@ function Separator() {
   return (
     <span
       aria-hidden
-      className="mx-[8px] inline-block h-[8px] w-[8px] rotate-45 border-t border-r border-ink"
+      className="mx-[10px] inline-block h-[5px] w-[5px] rotate-45 border-t border-r border-current"
     />
   );
 }
@@ -270,17 +276,20 @@ function Tabs({
   };
 
   return (
-    <div className="flex gap-[18px] overflow-x-auto border-b border-line pt-[50px]">
+    // The hairline is an inset shadow rather than a border, so the open tab's
+    // gold rule can sit on it without a negative margin — which, inside a
+    // scrolling strip, overflows and draws a vertical scrollbar.
+    <div className="flex justify-center gap-[18px] overflow-x-auto pt-[72px] shadow-[inset_0_-1px_0_var(--color-line)]">
       {TABS.map((tab) => (
         <Link
           key={tab}
           href={tab === "description" ? "?" : `?tab=${tab}`}
           scroll={false}
           aria-current={tab === active ? "true" : undefined}
-          className={`px-[18px] pt-[15px] pb-[15px] text-[13px] leading-[13px] font-semibold tracking-[-0.076px] uppercase ${
+          className={`border-b px-[18px] pt-[15px] pb-[15px] text-[11px] leading-[13px] font-medium tracking-[0.2em] uppercase transition-colors duration-300 ${
             tab === active
-              ? "border-b-[3px] border-ink text-ink"
-              : "text-ink-55"
+              ? "border-gold text-ink"
+              : "border-transparent text-ink-55 hover:text-ink"
           }`}
         >
           {labels[tab]}
@@ -304,7 +313,9 @@ function Description({ source }: { source: string }) {
   return (
     <MarkdownBody
       blocks={blocks}
-      className="flex max-w-[790px] flex-col gap-4 text-[16px] leading-[26.4px] tracking-[-0.3125px] text-ink"
+      // Headings in the page's serif, set here rather than in `MarkdownBody`,
+      // which the journal, about and FAQ pages share.
+      className="mx-auto flex max-w-[720px] flex-col gap-5 text-[16px] leading-[28px] text-ink-62 [&_strong]:font-medium [&_strong]:text-ink [&_:is(h2,h3,h4)]:font-display [&_:is(h2,h3,h4)]:font-normal [&_:is(h2,h3,h4)]:text-ink [&_h2]:text-[24px] [&_h2]:leading-8"
     />
   );
 }
@@ -357,12 +368,13 @@ function Related({
   currency: Parameters<typeof ShopProductCard>[0]["currency"];
 }) {
   return (
-    <section className="pt-[50px]">
-      <h2 className="text-[20px] leading-[30px] font-bold tracking-[-0.449px] text-ink">
+    <section className="pt-[96px]">
+      <h2 className="text-center font-display text-[28px] leading-9 font-normal text-ink">
         {messages.product.related}
       </h2>
+      <div aria-hidden className="mx-auto mt-4 h-px w-8 bg-gold/50" />
 
-      <div className="grid grid-cols-1 gap-[20px] pt-[30px] sm:grid-cols-2 bar:grid-cols-4">
+      <div className="grid grid-cols-1 gap-[30px] pt-[40px] sm:grid-cols-2 bar:grid-cols-4">
         {products.map((product) => (
           <ShopProductCard
             key={product.id}

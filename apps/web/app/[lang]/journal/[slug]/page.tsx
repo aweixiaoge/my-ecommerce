@@ -5,7 +5,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { ImageGallery } from "@/components/image-gallery";
 import { JournalCard } from "@/components/journal-card";
 import { MarkdownBody } from "@/components/markdown";
-import { SectionHeading } from "@/components/section-heading";
+import { EditorialHeading } from "@/components/section-heading";
 import { foreignBlogPostSlug, getBlogPostBySlug, listOtherBlogPosts } from "@/lib/blog/blog-repo";
 import { publicMediaUrl } from "@/lib/catalog/media-repo";
 import { formatDate } from "@/lib/format";
@@ -18,12 +18,12 @@ import { parseMarkdown } from "@/lib/markdown";
 /**
  * One journal post at `/journal/<slug>`.
  *
- * The design has no frame for it, so it is made of the site's own pieces: the
- * Journal card's 13px uppercase category and date, the 30/45 page title every
- * other page uses, the Shop banner's 17px body for the excerpt as a lead, the
- * product page's markdown renderer at the product page's 790px measure, and
- * the home page's "From the journal" row — with the Journal page's cards —
- * underneath, so a reader who finishes a post has somewhere to go.
+ * The design has no frame for it, so it is set in the storefront's luxury
+ * register: a centred header — the category as a gold eyebrow, a large serif
+ * title, the short gold rule, the date, and the excerpt as an italic serif
+ * standfirst — then the gallery, the body at a 680px reading measure, and a
+ * "From the journal" row of the Journal page's cards underneath, so a reader
+ * who finishes a post has somewhere to go.
  *
  * Shaped like the product route for the same reasons: `params` is read inside
  * `<Suspense>` so the chrome prerenders, there is no `generateStaticParams`
@@ -77,32 +77,44 @@ async function JournalPost({ slug, locale, messages }: { slug: string; locale: L
 
   return (
     <>
-      <article className="container-content pt-[60px] pb-[72px]">
+      <article className="container-content pt-[48px] pb-[96px]">
         <Link
           href={localePath(locale, "/journal")}
-          className={`inline-flex items-center gap-2 hover:opacity-70 ${META}`}
+          className="inline-flex items-center gap-2 text-[11px] leading-4 tracking-[0.18em] text-ink-55 uppercase transition-colors hover:text-ink"
         >
           <span aria-hidden>←</span> {messages.journalPost.back}
         </Link>
 
-        <header className="max-w-[790px] pt-[40px]">
-          {post.category && <p className={`pb-[20px] ${META}`}>{post.category}</p>}
+        <header className="mx-auto max-w-[760px] pt-[48px] text-center">
+          {post.category && (
+            <p className="pb-4 text-[11px] leading-4 font-medium tracking-[0.22em] text-gold uppercase">
+              {post.category}
+            </p>
+          )}
 
-          <h1 className="text-[30px] leading-[45px] font-bold tracking-[0.3955px] text-ink">{post.title}</h1>
+          <h1 className="font-display text-[36px] leading-[44px] font-normal [overflow-wrap:anywhere] text-ink sm:text-[48px] sm:leading-[58px]">
+            {post.title}
+          </h1>
 
-          <p className={`pt-[20px] ${META}`}>
+          <div aria-hidden className="mx-auto mt-6 h-px w-8 bg-gold/50" />
+
+          <p className="pt-5 text-[11px] leading-4 tracking-[0.16em] text-ink-55 uppercase">
             <time dateTime={post.publishedAt}>{formatDate(post.publishedAt, locale)}</time>
           </p>
 
           {post.excerpt && (
-            <p className="pt-[24px] text-[17px] leading-[28.05px] tracking-[-0.4316px] text-ink">{post.excerpt}</p>
+            <p className="pt-8 font-display text-[20px] leading-[32px] text-ink-62 italic">{post.excerpt}</p>
           )}
         </header>
 
         {post.imageIds.length > 0 && (
-          <div className="pt-[40px]">
+          <div className="pt-[56px]">
             <ImageGallery
-              images={post.imageIds.map((id) => ({ id, url: publicMediaUrl(id) }))}
+              images={post.imageIds.map((id) => ({
+                id,
+                url: publicMediaUrl(id),
+                kind: post.videoIds.includes(id) ? "video" : "image",
+              }))}
               title={post.title}
               messages={messages.gallery}
             />
@@ -112,22 +124,23 @@ async function JournalPost({ slug, locale, messages }: { slug: string; locale: L
         {blocks.length > 0 && (
           <MarkdownBody
             blocks={blocks}
-            className="flex max-w-[790px] flex-col gap-4 pt-[40px] text-[16px] leading-[26.4px] tracking-[-0.3125px] text-ink"
+            // Headings in the serif, set here rather than in `MarkdownBody`,
+            // which the product, about and FAQ pages share.
+            className="mx-auto flex max-w-[680px] flex-col gap-6 pt-[56px] text-[17px] leading-[30px] text-ink-62 [&_strong]:font-medium [&_strong]:text-ink [&_:is(h2,h3,h4)]:pt-4 [&_:is(h2,h3,h4)]:font-display [&_:is(h2,h3,h4)]:font-normal [&_:is(h2,h3,h4)]:text-ink [&_h2]:text-[26px] [&_h2]:leading-9 [&_h3]:text-[21px] [&_h3]:leading-8"
           />
         )}
-
       </article>
 
       {others.length > 0 && (
-        <section className="bg-wash py-[72px]">
+        <section className="border-t border-line bg-wash py-[88px]">
           <div className="container-content">
-            <SectionHeading
+            <EditorialHeading
               title={messages.journal.title}
               linkLabel={messages.journal.link}
               linkHref={localePath(locale, "/journal")}
             />
 
-            <div className="mt-8 grid grid-cols-1 gap-[30px] sm:grid-cols-2 bar:grid-cols-3">
+            <div className="mt-[48px] grid grid-cols-1 gap-x-[30px] gap-y-[56px] sm:grid-cols-2 bar:grid-cols-3">
               {others.map((other) => (
                 <JournalCard key={other.id} post={other} locale={locale} />
               ))}
@@ -138,8 +151,6 @@ async function JournalPost({ slug, locale, messages }: { slug: string; locale: L
     </>
   );
 }
-
-const META = "text-[13px] leading-[21.45px] font-semibold tracking-[-0.076px] text-ink uppercase";
 
 /**
  * The slug as the post was saved with it. Next hands a segment over still
@@ -156,11 +167,11 @@ function decodeSlug(slug: string): string {
 
 function JournalPostFallback() {
   return (
-    <div aria-hidden className="container-content animate-pulse pt-[60px] pb-[72px]">
-      <div className="h-[21px] w-[160px] bg-mist" />
-      <div className="mt-[40px] h-[45px] w-full max-w-[600px] bg-mist" />
-      <div className="mt-[20px] h-[21px] w-[140px] bg-mist" />
-      <div className="mt-[40px] aspect-[4/3] w-full bg-mist bar:aspect-[1290/640]" />
+    <div aria-hidden className="container-content animate-pulse pt-[48px] pb-[96px]">
+      <div className="h-4 w-[160px] bg-mist" />
+      <div className="mx-auto mt-[64px] h-[58px] w-full max-w-[600px] bg-mist" />
+      <div className="mx-auto mt-[44px] h-4 w-[140px] bg-mist" />
+      <div className="mt-[56px] aspect-[4/3] w-full bg-mist bar:aspect-[1290/640]" />
     </div>
   );
 }

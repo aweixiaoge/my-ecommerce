@@ -21,12 +21,17 @@ vi.mock("@my-ecommerce/db", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  db.media.findMany.mockResolvedValue([{ id: "img_main" }, { id: "img_2" }]);
+  // One photograph and one clip: which is which comes from the stored type,
+  // and an untyped row — written before the column was filled — is a photo.
+  db.media.findMany.mockResolvedValue([
+    { id: "img_main", mimeType: null },
+    { id: "img_2", mimeType: "video/mp4" },
+  ]);
   db.tx.media.updateMany.mockResolvedValue({ count: 1 });
 });
 
 describe("getAboutPage", () => {
-  it("shows the reader's language, and the images in their order", async () => {
+  it("shows the reader's language, and the images and videos in their order", async () => {
     db.aboutTranslation.findMany.mockResolvedValue([
       { locale: "en", description: "English" },
       { locale: "de", description: "Deutsch" },
@@ -35,6 +40,7 @@ describe("getAboutPage", () => {
     expect(await getAboutPage("de")).toEqual({
       description: "Deutsch",
       imageIds: ["img_main", "img_2"],
+      videoIds: ["img_2"],
     });
     expect(db.aboutTranslation.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { locale: { in: ["de", "en"] } } }),
@@ -63,6 +69,7 @@ describe("getAboutForEdit", () => {
     expect(await getAboutForEdit()).toEqual({
       description: "## Who we are",
       mediaIds: ["img_main", "img_2"],
+      videoIds: ["img_2"],
     });
     expect(db.aboutTranslation.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({ where: { locale: "en" } }),
@@ -73,7 +80,7 @@ describe("getAboutForEdit", () => {
     db.aboutTranslation.findUnique.mockResolvedValue(null);
     db.media.findMany.mockResolvedValue([]);
 
-    expect(await getAboutForEdit()).toEqual({ description: "", mediaIds: [] });
+    expect(await getAboutForEdit()).toEqual({ description: "", mediaIds: [], videoIds: [] });
   });
 });
 

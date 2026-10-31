@@ -15,12 +15,14 @@ export function RegisterForm({ locale, messages }: { locale: Locale; messages: M
   const [state, formAction, pending] = useActionState(registerAction, undefined);
 
   return (
-    <form action={formAction} noValidate>
+    <form action={formAction} noValidate className="pt-[20px]">
       <input type="hidden" name="locale" value={locale} />
 
       <FormMessage message={state?.message} />
 
-      <div className="flex flex-col gap-[5px]">
+      {/* The Login column's rhythm — 20px under the heading, 24px between
+          fields — so the two columns read as a pair. */}
+      <div className="flex flex-col gap-[24px]">
         <AccountField
           id="account-register-email"
           name="email"
@@ -55,7 +57,7 @@ export function RegisterForm({ locale, messages }: { locale: Locale; messages: M
         />
       </div>
 
-      <div className="pt-[50px]">
+      <div className="pt-[32px]">
         <AccountButton pending={pending}>
           {pending ? messages.registering : messages.registerButton}
         </AccountButton>

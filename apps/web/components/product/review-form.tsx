@@ -12,8 +12,9 @@ import type { Locale } from "@/lib/languages";
 import { StarPicker } from "./star-picker";
 
 /**
- * The design's "Add a review" panel (Figma 178:3132): the note, the star row,
- * name and email side by side, the review box, and the button.
+ * The design's "Add a review" panel (Figma 178:3132), in the storefront's
+ * luxury register — dressed as the contact and account forms are: the note,
+ * the star row, name and email side by side, the review box, and the button.
  *
  * ## Why every field is controlled
  *
@@ -64,7 +65,7 @@ export function ReviewForm({
     return (
       <p
         role="status"
-        className="text-[16px] leading-[26.4px] tracking-[-0.3125px] text-ink"
+        className="border border-line border-l-2 border-l-gold bg-ivory px-[20px] py-[16px] font-display text-[18px] leading-[28px] text-ink"
       >
         {messages.thanks}
       </p>
@@ -78,14 +79,14 @@ export function ReviewForm({
       <input type="hidden" name="productId" value={productId} />
       <input type="hidden" name="locale" value={locale} />
 
-      <h2 className="text-[16px] leading-[26.4px] font-bold tracking-[-0.3125px] text-ink">
+      <h2 className="font-display text-[26px] leading-9 font-normal text-ink">
         {messages.title}
       </h2>
 
-      <div className="grid grid-cols-1 gap-x-[20px] gap-y-[24px] pt-[10px] bar:grid-cols-2">
-        <p className="text-[13px] leading-[21.45px] tracking-[-0.076px] text-ink bar:col-span-2">
+      <div className="grid grid-cols-1 gap-x-[20px] gap-y-[24px] pt-[12px] bar:grid-cols-2">
+        <p className="text-[14px] leading-[22px] text-ink-55 bar:col-span-2">
           {messages.note}{" "}
-          <span aria-hidden className="text-[#cc0000]">
+          <span aria-hidden className="text-gold">
             *
           </span>
         </p>
@@ -103,7 +104,7 @@ export function ReviewForm({
         <div>
           <label htmlFor="authorName" className={LABEL}>
             {messages.name}
-            <span aria-hidden className="text-[#cc0000]">
+            <span aria-hidden className="pl-1 text-gold">
               *
             </span>
           </label>
@@ -125,7 +126,7 @@ export function ReviewForm({
         <div>
           <label htmlFor="authorEmail" className={LABEL}>
             {messages.email}
-            <span aria-hidden className="text-[#cc0000]">
+            <span aria-hidden className="pl-1 text-gold">
               *
             </span>
           </label>
@@ -148,7 +149,7 @@ export function ReviewForm({
         <div className="bar:col-span-2">
           <label htmlFor="body" className={LABEL}>
             {messages.body}
-            <span aria-hidden className="text-[#cc0000]">
+            <span aria-hidden className="pl-1 text-gold">
               *
             </span>
           </label>
@@ -161,19 +162,19 @@ export function ReviewForm({
             maxLength={REVIEW_BODY_MAX}
             aria-invalid={Boolean(errors?.body)}
             aria-describedby={errors?.body ? "body-error" : undefined}
-            className={`${fieldClass(Boolean(errors?.body))} h-[170px] resize-y py-2`}
+            className={`${fieldClass(Boolean(errors?.body))} h-[170px] resize-y py-3`}
           />
           <FieldErrors id="body-error" messages={errors?.body} />
         </div>
 
         {/* The design leaves a blank row above the button; the padding is that
             row plus the grid's own gap, without an empty grid item. */}
-        <div className="bar:col-span-2 pt-[26px]">
+        <div className="bar:col-span-2 pt-[32px]">
           {state?.message && (
             <p
               role="alert"
               aria-live="polite"
-              className="mb-[12px] rounded-control border border-red-200 bg-red-50 px-3 py-2.5 text-[13px] text-red-700"
+              className="mb-[20px] border border-danger px-[15px] py-[8px] text-[14px] leading-[23.1px] text-danger"
             >
               {state.message}
             </p>
@@ -182,7 +183,7 @@ export function ReviewForm({
           <button
             type="submit"
             disabled={pending}
-            className="h-10 w-[90px] rounded-control bg-ink text-[15px] leading-[24.75px] font-medium tracking-[-0.234375px] text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-[46px] items-center justify-center border border-ink bg-ink px-8 text-[13px] leading-5 font-medium tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-ink disabled:hover:text-paper"
           >
             {pending ? messages.sending : messages.submit}
           </button>
@@ -192,19 +193,17 @@ export function ReviewForm({
   );
 }
 
-/** The design's field label: 15px, with its asterisk in the required red. */
+/** The contact form's label: small tracked capitals, with a gold asterisk. */
 const LABEL =
-  "block pb-[7.5px] text-[15px] leading-[24.75px] tracking-[-0.234375px] text-ink";
+  "block pb-2 text-[11px] leading-4 font-medium tracking-[0.18em] text-ink-55 uppercase";
 
 /**
- * The design's input: 40px tall, 3px radius, one hairline border — with the
- * same red-on-invalid treatment the admin's fields use and a different type
- * scale, which is why `form-controls`' `inputClass` is not the one here.
+ * The contact form's box: square, 46px tall, one hairline border that turns
+ * to ink on focus and to the danger red when the field was refused — which is
+ * why `form-controls`' `inputClass` is not the one here.
  */
 function fieldClass(invalid: boolean): string {
-  return `w-full rounded-control border bg-paper px-3 text-[15px] leading-[24.75px] tracking-[-0.234375px] text-ink transition-colors outline-none focus:ring-2 ${
-    invalid
-      ? "border-red-500 focus:border-red-500 focus:ring-red-500/15"
-      : "border-line focus:border-ink focus:ring-ink/15"
+  return `h-[46px] w-full border bg-paper px-[15px] text-[16px] text-ink outline-none transition-colors focus:border-ink ${
+    invalid ? "border-danger" : "border-line"
   }`;
 }

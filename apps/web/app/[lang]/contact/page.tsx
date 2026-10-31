@@ -16,10 +16,11 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * The Contact page (Figma 178:7601).
  *
- * The design's article: a 30/45 title, the intro 40px below it, and 24px below
- * that two equal columns with 24px between them — the form, then "Get in
- * Touch". Under `bar` the columns stack, form first, since writing to the shop
- * is what the page is for.
+ * The design's article — a title, the intro, then two equal columns: the form,
+ * then "Get in Touch" — set in the storefront's luxury register: a centred
+ * serif masthead with the intro as its standfirst, and the details beside the
+ * form behind a hairline. Under `bar` the columns stack, form first,
+ * since writing to the shop is what the page is for.
  *
  * Only "Get in Touch" reads the database — the details the admin edits under
  * Contact → Info — so only it sits behind a `<Suspense>` boundary. The title,
@@ -30,13 +31,15 @@ export default async function ContactPage() {
   const messages = getMessages(locale).contactPage;
 
   return (
-    <section className="bg-wash py-[60px]">
+    <section className="pt-[72px] pb-[96px]">
       <div className="container-content">
-        <h1 className="text-[30px] leading-[45px] font-bold tracking-[0.3955px] text-ink">{messages.title}</h1>
+        <header className="mx-auto max-w-[620px] text-center">
+          <h1 className="font-display text-[40px] leading-[48px] font-normal text-ink sm:text-[48px] sm:leading-[56px]">{messages.title}</h1>
+          <div aria-hidden className="mx-auto mt-5 h-px w-8 bg-gold/50" />
+          <p className="pt-5 text-[15px] leading-[26px] text-ink-62">{messages.intro}</p>
+        </header>
 
-        <p className="pt-[40px] text-[16px] leading-[26.4px] tracking-[-0.3125px] text-ink">{messages.intro}</p>
-
-        <div className="grid grid-cols-1 gap-[24px] pt-[24px] bar:grid-cols-2">
+        <div className="grid grid-cols-1 gap-[48px] pt-[64px] bar:grid-cols-2 bar:gap-[56px]">
           <ContactForm locale={locale} messages={messages} />
           <Suspense fallback={<ContactDetailsFallback messages={messages} />}>
             <ContactDetailsSection messages={messages} />

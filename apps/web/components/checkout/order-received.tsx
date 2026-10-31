@@ -14,8 +14,9 @@ import type { Locale } from "@/lib/languages";
  * where it is going.
  *
  * The Figma file has no frame for this page, so it is built from the
- * checkout's own vocabulary — its wash, its 20/28 headings, its hairlines and
- * its 13px rows — rather than inventing a new one.
+ * checkout's own vocabulary in the storefront's luxury register: the thanks as
+ * an italic serif line under a gold tick, the facts on an ivory band in small
+ * tracked capitals, serif headings and totals, and the addresses on ivory.
  *
  * Every figure is the order's own, written in the currency and at the rate it
  * was placed at (`OrderView.display`), never the reader's current choice: this
@@ -37,12 +38,19 @@ export function OrderReceived({
     compareMoney(order.shippingTotal, { amount: "0", currency: order.shippingTotal.currency }) === 0;
 
   return (
-    <div className="text-[13px] leading-[18.2px] tracking-[-0.08px] text-ink">
-      <p className="text-[20px] leading-[28px] font-medium tracking-[-0.45px]">
-        {received.thanks}
-      </p>
+    <div className="text-[14px] leading-[22px] text-ink">
+      <div className="flex flex-col items-center text-center">
+        <span aria-hidden className="flex size-[52px] items-center justify-center rounded-full border border-gold text-gold">
+          <svg viewBox="0 0 20 20" className="size-[22px]" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m4.5 10.5 3.5 3.5 7.5-8" />
+          </svg>
+        </span>
+        <p className="max-w-[560px] pt-5 font-display text-[22px] leading-[32px] text-ink-62 italic">
+          {received.thanks}
+        </p>
+      </div>
 
-      <dl className="mt-[24px] grid grid-cols-2 gap-y-[16px] border-y border-line py-[16px] sm:grid-cols-3 lg:grid-cols-5">
+      <dl className="mt-[40px] grid grid-cols-2 gap-y-[20px] bg-ivory px-6 py-6 sm:grid-cols-3 sm:px-8 lg:grid-cols-5">
         <Fact label={received.number} value={`#${order.orderNumber}`} />
         <Fact label={received.date} value={formatDate(order.createdAt, locale)} />
         <Fact label={received.email} value={order.email} />
@@ -53,40 +61,41 @@ export function OrderReceived({
         />
       </dl>
 
-      <div className="grid grid-cols-1 gap-[48px] pt-[40px] lg:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 gap-[56px] pt-[56px] lg:grid-cols-[1fr_380px]">
         <section aria-labelledby="order-details">
           <h2
             id="order-details"
-            className="pb-[16px] text-[20px] leading-[28px] font-medium tracking-[-0.45px]"
+            className="pb-5 font-display text-[26px] leading-[34px] font-normal"
           >
             {received.details}
           </h2>
 
-          <ul className="border-t border-line">
+          <ul className="border-t border-ink">
             {order.items.map((item) => (
-              <li key={item.id} className="flex gap-[16px] border-b border-line py-[16px]">
-                <div className="relative size-[48px] shrink-0 overflow-hidden bg-mist">
+              <li key={item.id} className="flex gap-[20px] border-b border-line py-[20px]">
+                <div className="relative size-[72px] shrink-0 overflow-hidden bg-ivory">
                   {item.image && (
-                    <Image src={item.image.url} alt={item.name} fill sizes="48px" className="object-cover" />
+                    <Image src={item.image.url} alt={item.name} fill sizes="72px" className="object-cover" />
                   )}
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col gap-[4px]">
-                  <p className="font-medium">
-                    {item.name} <span className="font-normal text-ink-62">× {item.quantity}</span>
+                  <p className="font-display text-[17px] leading-[24px] [overflow-wrap:anywhere]">
+                    {item.name}{" "}
+                    <span className="font-sans text-[13px] text-ink-55 tabular-nums">× {item.quantity}</span>
                   </p>
-                  <p>{price(item.unitPrice)}</p>
+                  <p className="text-[13px] text-ink-60 tabular-nums">{price(item.unitPrice)}</p>
                   {item.options.map((option) => (
-                    <p key={`${option.option}:${option.value}`}>
+                    <p key={`${option.option}:${option.value}`} className="text-[13px] text-ink-62">
                       {option.option ? `${option.option}: ${option.value}` : option.value}
                     </p>
                   ))}
                 </div>
-                <p className="text-right">{price(item.lineTotal)}</p>
+                <p className="text-right font-display text-[17px] leading-[24px] tabular-nums">{price(item.lineTotal)}</p>
               </li>
             ))}
           </ul>
 
-          <dl className="flex flex-col gap-[12px] pt-[16px]">
+          <dl className="flex flex-col gap-[12px] pt-[20px] text-ink-62">
             <Row label={received.subtotal} value={price(order.subtotal)} />
             {order.couponCode && (
               <Row
@@ -98,21 +107,21 @@ export function OrderReceived({
               label={received.shipping}
               value={`${messages.standard} — ${free ? messages.free : price(order.shippingTotal)}`}
             />
-            <div className="flex justify-between gap-4 border-t border-line pt-[16px] text-[24px] leading-[33.6px] font-medium tracking-[0.07px]">
-              <dt>{received.total}</dt>
-              <dd>{price(order.grandTotal)}</dd>
+            <div className="mt-2 flex items-baseline justify-between gap-4 border-t border-ink pt-[20px] text-ink">
+              <dt className="text-[11px] leading-4 font-medium tracking-[0.18em] text-ink uppercase">{received.total}</dt>
+              <dd className="font-display text-[28px] leading-[36px] tabular-nums">{price(order.grandTotal)}</dd>
             </div>
           </dl>
 
           {order.note && (
-            <div className="pt-[24px]">
-              <h3 className="font-medium">{received.note}</h3>
-              <p className="pt-[4px] whitespace-pre-line">{order.note}</p>
+            <div className="mt-[32px] border-l-2 border-gold bg-ivory px-5 py-4">
+              <h3 className="text-[11px] leading-4 font-medium tracking-[0.18em] text-ink-55 uppercase">{received.note}</h3>
+              <p className="pt-2 font-display text-[17px] leading-[26px] whitespace-pre-line text-ink-62 italic">{order.note}</p>
             </div>
           )}
         </section>
 
-        <aside className="flex flex-col gap-[24px] self-start">
+        <aside className="flex flex-col gap-[20px] self-start">
           {order.shipping && (
             <AddressBlock title={received.shippingAddress} address={order.shipping} locale={locale} />
           )}
@@ -121,7 +130,7 @@ export function OrderReceived({
           )}
           <Link
             href={localePath(locale, "/shop")}
-            className="flex h-[45px] items-center justify-center rounded-[3px] bg-ink px-[20px] text-[15px] leading-[24.75px] font-medium tracking-[-0.23px] text-paper"
+            className="flex h-[52px] items-center justify-center border border-ink bg-ink px-[20px] text-[13px] leading-5 font-medium tracking-[0.14em] text-paper uppercase transition-colors duration-300 hover:bg-paper hover:text-ink"
           >
             {received.continue}
           </Link>
@@ -134,8 +143,8 @@ export function OrderReceived({
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 pr-[16px]">
-      <dt className="text-ink-62 uppercase">{label}</dt>
-      <dd className="truncate pt-[4px] font-semibold">{value}</dd>
+      <dt className="text-[11px] leading-4 font-medium tracking-[0.18em] text-ink-55 uppercase">{label}</dt>
+      <dd className="truncate pt-[6px] font-display text-[17px] leading-[24px] text-ink">{value}</dd>
     </div>
   );
 }
@@ -144,7 +153,7 @@ function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-4">
       <dt>{label}</dt>
-      <dd className="text-right">{value}</dd>
+      <dd className="text-right text-ink tabular-nums">{value}</dd>
     </div>
   );
 }
@@ -162,9 +171,9 @@ function AddressBlock({
   const place = [address.city, address.region, address.postalCode].filter(Boolean).join(", ");
 
   return (
-    <section className="rounded-[5px] border-[0.91px] border-line p-[16px]">
-      <h2 className="pb-[8px] text-[20px] leading-[28px] font-medium tracking-[-0.45px]">{title}</h2>
-      <address className="flex flex-col gap-[2px] not-italic">
+    <section className="bg-ivory px-7 py-6">
+      <h2 className="pb-3 font-display text-[22px] leading-[30px] font-normal">{title}</h2>
+      <address className="flex flex-col gap-[2px] border-t border-ink/15 pt-3 text-ink-62 not-italic">
         <span>
           {address.firstName} {address.lastName}
         </span>

@@ -13,32 +13,32 @@ export function ContactCta({
 }) {
   return (
     <section className="bg-ink">
-      <div className="container-content flex flex-col items-center py-[72px] text-center">
-        <h2 className="max-w-[720px] text-[26px] leading-[1.3] font-bold tracking-[0.380px] text-paper sm:text-[35px] sm:leading-[52.5px]">
+      <div className="container-content flex flex-col items-center py-[96px] text-center">
+        <h2 className="max-w-[720px] font-display text-[32px] leading-[40px] font-normal text-paper sm:text-[42px] sm:leading-[52px]">
           {messages.title}
         </h2>
+        <div aria-hidden className="mt-5 h-px w-8 bg-gold" />
 
-        <p className="mt-4 max-w-[720px] text-[17px] leading-[28.05px] tracking-[-0.431px] text-paper/72">
+        <p className="mt-5 max-w-[620px] text-[16px] leading-[28px] text-paper/72">
           {messages.body}
         </p>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-6">
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-8">
           <Link
             href={localePath(locale, "/contact")}
-            className="rounded-[3px] bg-paper px-5 py-[5px] text-[15px] font-medium leading-[24.75px] tracking-[-0.234px] text-ink"
+            className="inline-flex h-11 items-center justify-center border border-paper px-7 text-[13px] leading-5 font-medium tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-paper hover:text-ink"
           >
             {messages.contact}
           </Link>
 
           {/*
             The design fills this button with color/ink — black on a black
-            band, so it renders as plain text with no visible affordance. That
-            is what the comp shows, and it is reproduced rather than corrected;
-            see the note in the handover about it reading as a non-button.
+            band, so it read as plain text with no affordance. Here it is an
+            honest text link instead: tracked, underlined on hover.
           */}
           <Link
             href={localePath(locale, "/faq")}
-            className="rounded-[3px] px-5 py-[5px] text-[15px] font-medium leading-[24.75px] tracking-[-0.234px] text-paper"
+            className="text-[13px] leading-5 font-medium tracking-[0.14em] text-paper/80 underline-offset-[6px] transition-colors hover:text-paper hover:underline"
           >
             {messages.faq}
           </Link>

@@ -15,7 +15,11 @@ import type { Locale } from "@/lib/languages";
  *
  * The design's copy here is template filler ("What's the problem?" over a
  * paragraph about trees yielding chemicals, beside a photo of cracked soil).
- * The layout is reproduced exactly; the words are ours. See the handover note.
+ * The layout is reproduced; the words are ours. See the handover note.
+ *
+ * Dressed in the storefront's luxury register: the title as the Journal's
+ * centred serif masthead, and the banner's text column on ivory, so image and
+ * copy read as one panel rather than a picture beside loose text.
  */
 export function ShopBanner({
   messages,
@@ -27,15 +31,18 @@ export function ShopBanner({
 }) {
   return (
     <header>
-      <h1 className="text-[30px] leading-[45px] font-bold tracking-[0.3955px] text-ink">
-        {messages.title}
-      </h1>
+      <div className="text-center">
+        <h1 className="font-display text-[40px] leading-[48px] font-normal text-ink sm:text-[48px] sm:leading-[56px]">
+          {messages.title}
+        </h1>
+        <div aria-hidden className="mx-auto mt-5 h-px w-8 bg-gold/50" />
+      </div>
 
       {/*
         The 300.675px is the design's own container height, and the 20px is
         where the grid sits inside it — not a margin that adds to it.
       */}
-      <div className="h-auto pt-5 bar:min-h-[300.675px]">
+      <div className="h-auto pt-[48px] bar:min-h-[300.675px]">
         {/*
           The design's columns are FIXED at 722.393 and 567.607 — but they only
           add up to 1290, so pinning them means the text column is crushed to
@@ -45,13 +52,13 @@ export function ShopBanner({
           design's own split is what renders at the design's own width, and it
           degrades arithmetically below that rather than collapsing.
         */}
-        <div className="grid grid-cols-1 gap-6 bar:grid-cols-[56fr_44fr] bar:gap-0">
+        <div className="grid grid-cols-1 bar:grid-cols-[56fr_44fr]">
           {/*
             `aspect-auto` at lg hands the height to the grid row, which the
             text column sizes — that is what keeps the image flush with the
             copy beside it when the copy needs an extra line.
           */}
-          <div className="relative aspect-[722.393/273.366] overflow-hidden bg-mist bar:aspect-auto bar:min-h-[273.366px]">
+          <div className="relative aspect-[722.393/273.366] overflow-hidden bg-ivory bar:aspect-auto bar:min-h-[320px]">
             <Image
               src="/images/why-buy.jpg"
               alt={messages.bannerImageAlt}
@@ -68,20 +75,20 @@ export function ShopBanner({
             design's width *and* the right number at `bar`, where a fixed
             45.405 each side would eat a quarter of the column.
           */}
-          <div className="bar:px-[8%]">
-            <h2 className="text-[32px] leading-[48px] font-bold tracking-[0.40625px] text-ink">
+          <div className="flex flex-col justify-center bg-ivory px-6 py-10 bar:px-[8%] bar:py-12">
+            <h2 className="font-display text-[30px] leading-[38px] font-normal text-ink sm:text-[34px] sm:leading-[42px]">
               {messages.bannerTitle}
             </h2>
 
-            <p className="mt-[19.6px] text-[17px] leading-[28.05px] tracking-[-0.4316px] text-ink">
+            <p className="mt-5 text-[15px] leading-[27px] text-ink-62">
               {messages.bannerBody}
             </p>
 
-            <div className="mt-[25.5px] flex items-center gap-6">
+            <div className="mt-8 flex items-center gap-6">
               <Link
                 href={localePath(locale, "/about")}
                 prefetch={false}
-                className="inline-flex h-10 items-center justify-center rounded-[3px] bg-ink px-5 text-[15px] leading-[24.75px] font-medium tracking-[-0.2344px] text-paper"
+                className="inline-flex h-11 items-center justify-center border border-ink px-7 text-[13px] leading-5 font-medium tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-ink hover:text-paper"
               >
                 {messages.bannerCta}
               </Link>

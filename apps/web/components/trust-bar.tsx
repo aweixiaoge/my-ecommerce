@@ -13,12 +13,12 @@ export function TrustBar({
   locale: Locale;
 }) {
   return (
-    <section className="border-y-[0.909px] border-line">
+    <section className="border-b border-line">
       {/* Four equal columns on the design's 1290 column with a 40px gap. */}
-      <div className="container-content grid grid-cols-1 gap-8 py-10 sm:grid-cols-2 bar:grid-cols-4 bar:gap-10">
+      <div className="container-content grid grid-cols-1 gap-8 py-12 text-center sm:grid-cols-2 bar:grid-cols-4 bar:gap-0 bar:divide-x bar:divide-line">
         {messages.map((item) => (
-          <div key={item.title}>
-            <p className="text-[15px] font-semibold leading-[24.75px] tracking-[-0.234px] text-ink">
+          <div key={item.title} className="bar:px-6">
+            <p className="font-display text-[18px] leading-[26px] text-ink">
               {/*
                 The free-shipping threshold is money, so it is formatted for the
                 language rather than written into the sentence: `50,00 $` under
@@ -30,7 +30,7 @@ export function TrustBar({
                 amount: formatMoney(FREE_SHIPPING_THRESHOLD, locale),
               })}
             </p>
-            <p className="mt-1.5 text-[14px] leading-[23.1px] tracking-[-0.150px] text-ink-60">
+            <p className="mt-2 text-[13px] leading-[22px] text-ink-60">
               {item.body}
             </p>
           </div>

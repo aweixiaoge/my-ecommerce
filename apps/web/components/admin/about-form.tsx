@@ -19,9 +19,12 @@ import { ImageListField, useImageList } from "./image-list-field";
 export function AboutForm({
   description: initialDescription,
   mediaIds: initialMediaIds,
+  videoIds = [],
 }: {
   description: string;
   mediaIds: readonly string[];
+  /** Which of `mediaIds` are videos. */
+  videoIds?: readonly string[];
 }) {
   const [state, formAction, pending] = useActionState<AboutFormState | undefined, FormData>(
     saveAboutAction,
@@ -30,6 +33,7 @@ export function AboutForm({
   const [description, setDescription] = useState(initialDescription);
   const images = useImageList({
     initial: initialMediaIds,
+    initialVideoIds: videoIds,
     limit: IMAGES_PER_ABOUT_MAX,
     holder: "the About page",
   });

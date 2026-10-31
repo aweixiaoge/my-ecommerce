@@ -29,7 +29,7 @@ export default async function AdminContactAboutPage() {
         </p>
       </div>
 
-      <AboutForm description={about.description} mediaIds={about.mediaIds} />
+      <AboutForm description={about.description} mediaIds={about.mediaIds} videoIds={about.videoIds} />
     </div>
   );
 }

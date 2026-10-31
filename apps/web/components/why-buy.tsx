@@ -13,7 +13,7 @@ export function WhyBuy({
   locale: Locale;
 }) {
   return (
-    <section className="bg-mist">
+    <section className="bg-ivory">
       {/*
         The hero's mirror — its image on the left, text on the right — and it
         switches at the same width for the same reason. Both columns carry the
@@ -21,8 +21,8 @@ export function WhyBuy({
         same 1290 the container holds, so below a ~1338px viewport the two
         give way in proportion rather than squeezing one of them to nothing.
       */}
-      <div className="container-content flex flex-col gap-10 py-[72px] bar:flex-row bar:items-center bar:gap-16">
-        <div className="relative aspect-[889/500] w-full overflow-hidden rounded-card bar:w-[588.48px]">
+      <div className="container-content flex flex-col gap-10 py-[96px] bar:flex-row bar:items-center bar:gap-16">
+        <div className="relative aspect-[889/500] w-full overflow-hidden bar:w-[588.48px]">
           <Image
             src="/images/why-buy.jpg"
             alt={messages.imageAlt}
@@ -33,21 +33,21 @@ export function WhyBuy({
         </div>
 
         <div className="bar:w-[637.52px]">
-          <p className="text-[13px] font-semibold tracking-[1.744px] uppercase leading-[21.45px] text-ink-55">
+          <p className="text-[11px] leading-4 font-medium tracking-[0.22em] text-gold uppercase">
             {messages.eyebrow}
           </p>
 
-          <h2 className="mt-[18px] text-[26px] leading-[1.3] font-bold tracking-[0.380px] text-ink sm:text-[35px] sm:leading-[52.5px]">
+          <h2 className="mt-5 font-display text-[32px] leading-[40px] font-normal text-ink sm:text-[42px] sm:leading-[52px]">
             {messages.title}
           </h2>
 
-          <p className="mt-5 text-[17px] leading-[28.05px] tracking-[-0.431px] text-ink-62">
+          <p className="mt-6 max-w-[540px] text-[16px] leading-[28px] text-ink-62">
             {messages.body}
           </p>
 
           <Link
             href={localePath(locale, "/about")}
-            className="mt-7 inline-block rounded-[3px] bg-ink px-5 py-[5px] text-[15px] font-medium leading-[24.75px] tracking-[-0.234px] text-paper"
+            className="mt-10 inline-flex h-11 items-center justify-center border border-ink px-7 text-[13px] leading-5 font-medium tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-ink hover:text-paper"
           >
             {messages.cta}
           </Link>

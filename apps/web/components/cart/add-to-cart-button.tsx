@@ -151,7 +151,7 @@ function QuantityCounter({
   const step = (by: number) => setValue(String(clamp(current + by, max)));
 
   return (
-    <div className="relative h-[50px] w-[120px] shrink-0 rounded-[3px] border-[0.909px] border-ink">
+    <div className="relative h-[50px] w-[120px] shrink-0 border border-line">
       <button
         type="button"
         aria-label={messages.decrease}

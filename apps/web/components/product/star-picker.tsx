@@ -57,15 +57,15 @@ export function StarPicker({
     >
       <span
         id={labelId}
-        className="text-[13px] leading-[21.45px] font-medium tracking-[-0.076px] text-ink uppercase"
+        className="text-[11px] leading-4 font-medium tracking-[0.18em] text-ink-55 uppercase"
       >
         {messages.rating}{" "}
-        <span aria-hidden className="text-[#cc0000]">
+        <span aria-hidden className="text-gold">
           *
         </span>
       </span>
 
-      <div className="flex items-center gap-1.5 pl-[6px]">
+      <div className="flex items-center gap-1.5 pl-[12px]">
         {STARS.map((star) => (
           <label
             key={star}

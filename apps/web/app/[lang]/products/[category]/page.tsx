@@ -156,10 +156,10 @@ async function Segment({
  * first, which is the thing `getShopProducts` exists to prevent on the data
  * side.
  *
- * The heading is the design's `Shop` heading (node 178:8357, 30px) with the
- * category's name in it. There is no frame for this page in the Figma file —
- * the storefront designs are Home, Shop and Product Detail — so the block is
- * the shop's, less the banner it has no artwork for.
+ * The heading is the shop banner's masthead — the centred serif and its gold
+ * hairline — with the category's name in it. There is no frame for this page
+ * in the Figma file — the storefront designs are Home, Shop and Product
+ * Detail — so the block is the shop's, less the banner it has no artwork for.
  */
 async function CategoryListing({
   category,
@@ -183,23 +183,26 @@ async function CategoryListing({
   const path = categoryPath(category, locale);
 
   return (
-    <section className="pt-[60px] pb-[29px]">
+    <section className="pt-[72px] pb-[60px]">
       <div className="container-content">
-        <h1 className="text-[30px] leading-[45px] font-bold tracking-[0.3955px] text-ink">
-          {category.name}
-        </h1>
+        <header className="mx-auto max-w-[620px] text-center">
+          <h1 className="font-display text-[40px] leading-[48px] font-normal [overflow-wrap:anywhere] text-ink sm:text-[48px] sm:leading-[56px]">
+            {category.name}
+          </h1>
+          <div aria-hidden className="mx-auto mt-5 h-px w-8 bg-gold/50" />
 
-        {category.description && (
-          <p className="max-w-[790px] pt-[10px] text-[16px] leading-[26.4px] tracking-[-0.3125px] text-ink-60">
-            {category.description}
-          </p>
-        )}
+          {category.description && (
+            <p className="pt-6 text-[15px] leading-[27px] text-ink-62">
+              {category.description}
+            </p>
+          )}
+        </header>
 
         {items.length === 0 ? (
           /* No toolbar over an empty grid: the "no results" line and a sort
              control above nothing is a page that looks broken rather than
              empty. */
-          <p className="pt-[40px] text-[16px] leading-[26.4px] tracking-[-0.3125px] text-ink-60">
+          <p className="mx-auto max-w-[620px] pt-[56px] text-center font-display text-[18px] leading-7 text-ink-55 italic">
             {messages.listing.emptyCategory}
           </p>
         ) : (
@@ -246,14 +249,15 @@ async function CategoryListing({
  */
 function SegmentFallback() {
   return (
-    <section className="pt-[60px] pb-[29px]">
+    <section className="pt-[72px] pb-[60px]">
       <div className="container-content" aria-hidden>
-        <div className="h-[45px] w-[280px] animate-pulse bg-mist" />
-        <div className="grid grid-cols-1 gap-[30px] pt-[45px] sm:grid-cols-2 bar:grid-cols-4">
+        <div className="mx-auto h-[48px] w-[280px] max-w-full animate-pulse bg-mist sm:h-[56px]" />
+        <div className="mx-auto mt-5 h-px w-8 bg-gold/50" />
+        <div className="grid grid-cols-1 gap-[30px] pt-[56px] sm:grid-cols-2 bar:grid-cols-4">
           {Array.from({ length: 4 }, (_, index) => (
             <div
               key={index}
-              className="h-[425.186px] animate-pulse rounded-[3px] bg-mist"
+              className="h-[425.186px] animate-pulse bg-mist"
             />
           ))}
         </div>

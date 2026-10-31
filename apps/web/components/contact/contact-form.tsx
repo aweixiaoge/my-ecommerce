@@ -12,13 +12,14 @@ import type { Messages } from "@/lib/i18n/messages";
 import type { Locale } from "@/lib/languages";
 
 /**
- * The Contact page's form (Figma 178:7686): a 15px label above a 40px box with
- * a hairline #E1E8ED border and 3px corners, a coral asterisk on the required
- * ones, 20px between fields, and the 170px message box.
+ * The Contact page's form (Figma 178:7686), in the storefront's luxury
+ * register — the same as the account's fields: a label in small tracked
+ * capitals above a square 46px box on a hairline, a gold asterisk on the
+ * required ones, 24px between fields, and the 170px message box.
  *
- * Not the account's `AccountField`: that label is 14px medium with a bold
- * #FF0000 asterisk, and this one is 15px regular with #F56C6C — the two
- * designs disagree, and each page is drawn as its own frame says.
+ * Not the account's `AccountField` itself: that one is built around a
+ * password's eye button and an email's autocomplete, and this form has a
+ * textarea and optional fields. The two now dress alike rather than share.
  *
  * The design sets the placeholders in full ink, which reads as text already
  * typed. They are drawn at the site's secondary-copy alpha instead, so an
@@ -49,13 +50,13 @@ function ContactFormRound({
   if (state?.status === "sent") {
     return (
       <div role="status" className="pb-[24px]">
-        <p className="rounded-[3px] border-[0.91px] border-line bg-paper px-[15px] py-[12px] text-[16px] leading-[26.4px] tracking-[-0.3125px] text-ink">
+        <p className="border border-line border-l-2 border-l-gold bg-ivory px-[20px] py-[16px] font-display text-[18px] leading-[28px] text-ink">
           {messages.sent}
         </p>
         <button
           type="button"
           onClick={onAnother}
-          className="mt-[20px] text-[15px] leading-[24.75px] font-medium tracking-[-0.234px] text-ink underline underline-offset-2"
+          className="mt-[20px] text-[12px] leading-5 font-medium tracking-[0.14em] text-ink uppercase underline decoration-gold underline-offset-4"
         >
           {messages.sendAnother}
         </button>
@@ -73,7 +74,7 @@ function ContactFormRound({
       {state?.message && (
         <p
           role="alert"
-          className="mb-[20px] rounded-[3px] border-[0.91px] border-danger px-[15px] py-[8px] text-[14px] leading-[23.1px] tracking-[-0.15px] text-danger"
+          className="mb-[20px] border border-danger px-[15px] py-[8px] text-[14px] leading-[23.1px] tracking-[-0.15px] text-danger"
         >
           {state.message}
         </p>
@@ -90,7 +91,7 @@ function ContactFormRound({
           placeholder={messages.namePlaceholder}
           defaultValue={values?.name}
           {...describedBy("contact-name", errors.name)}
-          className={`${BOX} h-[40px] ${errors.name ? "border-danger" : "border-line"}`}
+          className={`${BOX} h-[46px] ${errors.name ? "border-danger" : "border-line"}`}
         />
       </Field>
 
@@ -105,7 +106,7 @@ function ContactFormRound({
           placeholder={messages.emailPlaceholder}
           defaultValue={values?.email}
           {...describedBy("contact-email", errors.email)}
-          className={`${BOX} h-[40px] ${errors.email ? "border-danger" : "border-line"}`}
+          className={`${BOX} h-[46px] ${errors.email ? "border-danger" : "border-line"}`}
         />
       </Field>
 
@@ -118,7 +119,7 @@ function ContactFormRound({
           placeholder={messages.subjectPlaceholder}
           defaultValue={values?.subject}
           {...describedBy("contact-subject", errors.subject)}
-          className={`${BOX} h-[40px] ${errors.subject ? "border-danger" : "border-line"}`}
+          className={`${BOX} h-[46px] ${errors.subject ? "border-danger" : "border-line"}`}
         />
       </Field>
 
@@ -135,11 +136,11 @@ function ContactFormRound({
         />
       </Field>
 
-      <div className="pt-[20px]">
+      <div className="pt-[32px]">
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex h-[40px] items-center justify-center rounded-[3px] bg-ink px-[20px] text-[15px] leading-[24.75px] font-medium tracking-[-0.234px] text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-[46px] items-center justify-center border border-ink bg-ink px-8 text-[13px] leading-5 font-medium tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-ink disabled:hover:text-paper"
         >
           {pending ? messages.sending : messages.submit}
         </button>
@@ -149,11 +150,10 @@ function ContactFormRound({
 }
 
 const BOX =
-  "w-full rounded-[3px] border-[0.91px] bg-transparent px-[15px] text-[16px] tracking-[-0.3125px] text-ink outline-none placeholder:text-ink-55 focus:border-ink";
+  "w-full border bg-paper px-[15px] text-[16px] text-ink outline-none transition-colors placeholder:text-ink-55 focus:border-ink";
 
 /**
- * A label row and its control. The design's row is 31.4px — the 25px label
- * line and 6.4px to the box — and each field after the first sits 20px below
+ * A label row and its control; each field after the first sits 24px below
  * the one before it.
  */
 function Field({
@@ -171,16 +171,16 @@ function Field({
   children: ReactNode;
 }) {
   return (
-    <div className="not-first-of-type:pt-[20px]">
+    <div className="not-first-of-type:pt-[24px]">
       <label
         htmlFor={id}
-        className="block pb-[6.4px] text-[15px] leading-[24.75px] tracking-[-0.234px] text-ink"
+        className="block pb-2 text-[11px] leading-4 font-medium tracking-[0.18em] text-ink-55 uppercase"
       >
         {label}
         {required && (
           <>
             {" "}
-            <span aria-hidden className="text-[#f56c6c]">
+            <span aria-hidden className="text-gold">
               *
             </span>
             <span className="sr-only">({required})</span>

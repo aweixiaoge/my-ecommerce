@@ -81,23 +81,25 @@ describe("Journal", () => {
     const markup = render([post({ category: "" })]);
 
     expect(markup).toContain("How to judge earphone sound quality");
-    // The label is the only semibold line in the card.
-    expect(markup).not.toContain("font-semibold");
+    // The label is the only gold line in the card.
+    expect(markup).not.toContain("text-gold");
   });
 
-  it("shows the category as it was written, not in capitals", () => {
+  it("keeps the category as it was written, leaving the capitals to CSS", () => {
+    // Set in caps with text-transform, so the DOM — and a screen reader —
+    // still has the name the admin typed.
     const markup = render([post()]);
 
     expect(markup).toContain(">Engineer<");
-    expect(markup).not.toContain("uppercase");
+    expect(markup).toContain("uppercase");
   });
 
-  it("draws the cover under the label, linking to the post", () => {
+  it("draws the cover above the label, linking to the post", () => {
     const markup = render([post({ coverId: "media_cover" })]);
 
     expect(markup).toContain('src="/media/media_cover"');
-    expect(markup.indexOf("Engineer")).toBeLessThan(markup.indexOf('src="/media/media_cover"'));
-    expect(markup.indexOf('src="/media/media_cover"')).toBeLessThan(markup.indexOf("<h3"));
+    expect(markup.indexOf('src="/media/media_cover"')).toBeLessThan(markup.indexOf("Engineer"));
+    expect(markup.indexOf("Engineer")).toBeLessThan(markup.indexOf("<h3"));
   });
 
   it("draws no image for a post without one", () => {

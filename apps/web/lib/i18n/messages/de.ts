@@ -117,8 +117,6 @@ export const de = {
   },
 
   gallery: {
-    previous: "Vorheriges Bild",
-    next: "Nächstes Bild",
     show: "Bild {n} von {total} anzeigen",
   },
 

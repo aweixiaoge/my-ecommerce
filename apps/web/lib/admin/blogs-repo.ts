@@ -1,5 +1,5 @@
 import { prisma } from "@my-ecommerce/db";
-import type { AdminBlogCreate } from "@my-ecommerce/shared";
+import { isVideoType, type AdminBlogCreate } from "@my-ecommerce/shared";
 import { DEFAULT_LOCALE } from "../locale";
 import { SLUG_ATTEMPTS, SlugExhaustedError, slugAttempt, slugify } from "./slug";
 
@@ -124,6 +124,8 @@ export interface BlogForEdit {
   categoryId: string | null;
   /** In the order the form showed them, the first being the Main image. */
   mediaIds: string[];
+  /** Which of `mediaIds` are videos, so the form draws them as videos. */
+  videoIds: string[];
 }
 
 /**
@@ -135,7 +137,7 @@ export async function getBlogForEdit(id: string): Promise<BlogForEdit | null> {
     where: { id },
     include: {
       translations: { where: { locale: DEFAULT_LOCALE } },
-      media: { orderBy: [{ position: "asc" }, { id: "asc" }], select: { id: true } },
+      media: { orderBy: [{ position: "asc" }, { id: "asc" }], select: { id: true, mimeType: true } },
     },
   });
 
@@ -153,6 +155,7 @@ export async function getBlogForEdit(id: string): Promise<BlogForEdit | null> {
     description: translation?.description ?? "",
     categoryId: blog.categoryId,
     mediaIds: blog.media.map((media) => media.id),
+    videoIds: blog.media.filter((media) => isVideoType(media.mimeType)).map((media) => media.id),
   };
 }
 

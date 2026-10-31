@@ -30,6 +30,14 @@
   --color-wash: #fafbfc;
   --color-danger: #b3261e;
 
+  /*
+   * The shop card's luxury register: a warm ivory to set product shots on, and
+   * a muted gold for its small caps. The gold is dark enough to clear 4.5:1 on
+   * `paper` at the 11px it is set at.
+   */
+  --color-ivory: #f6f3ee;
+  --color-gold: #8a6d3b;
+
   --radius-card: 12px;
   --radius-control: 3px;
 
@@ -79,6 +87,15 @@
   --font-sans:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
     "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /*
+   * A serif for display lines such as the shop card's title. System faces
+   * only, for the same zero-download reason as the sans: Iowan Old Style and
+   * Palatino ship with macOS and iOS, Georgia nearly everywhere else.
+   */
+  --font-display:
+    "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia,
+    serif;
 }
 
 body {

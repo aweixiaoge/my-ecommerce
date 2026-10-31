@@ -1,6 +1,7 @@
 import type { Prisma } from "@my-ecommerce/db";
 import { isVideoType, type CategoryRef, type Media, type ProductSummary } from "@my-ecommerce/shared";
 import type { Locale } from "@/lib/languages";
+import { IMAGES_ONLY } from "@/lib/media";
 import { publicMediaUrl } from "./media-repo";
 import { priceOf, variantPriceSpan } from "./pricing";
 import type { RatingLookup } from "./review-rows";
@@ -187,15 +188,6 @@ export function mediaRef(media: {
   };
 }
 
-/**
- * Media that is not a video. Untyped rows count as images: rows written before
- * the type column was filled have no type, and every one of those is a
- * photograph — and a bare `NOT startsWith` would drop them, since SQL's answer
- * for NULL is neither.
- */
-export const IMAGES_ONLY = {
-  OR: [{ mimeType: null }, { NOT: { mimeType: { startsWith: "video/" } } }],
-} as const satisfies Prisma.MediaWhereInput;
 
 /**
  * A product's link to a category, as a card reads it — or nothing when the

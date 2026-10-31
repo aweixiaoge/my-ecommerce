@@ -29,14 +29,14 @@ export function AccountDashboard({
   messages: Messages["account"];
 }) {
   return (
-    <div className="text-[16px] leading-[26.4px] tracking-[-0.3125px] text-ink">
-      <form action={logoutAction} className="pt-[48px]">
+    <div className="max-w-[640px] text-[16px] leading-[28px] text-ink-62">
+      <form action={logoutAction} className="bar:pt-[8px]">
         <input type="hidden" name="locale" value={locale} />
         <p>
           {fillParts(messages.hello, {
-            email: <strong className="font-bold">{email}</strong>,
+            email: <strong className="font-medium text-ink">{email}</strong>,
             logOut: (
-              <button type="submit" className="underline underline-offset-2">
+              <button type="submit" className="text-ink underline decoration-gold underline-offset-4">
                 {messages.logOut}
               </button>
             ),
@@ -49,12 +49,12 @@ export function AccountDashboard({
       <p className="py-[24px]">
         {fillParts(messages.intro, {
           orders: (
-            <Link href={localePath(locale, "/account/orders")} className="underline underline-offset-2">
+            <Link href={localePath(locale, "/account/orders")} className="text-ink underline decoration-gold underline-offset-4">
               {messages.introOrders}
             </Link>
           ),
           addresses: (
-            <Link href={localePath(locale, "/account/addresses")} className="underline underline-offset-2">
+            <Link href={localePath(locale, "/account/addresses")} className="text-ink underline decoration-gold underline-offset-4">
               {messages.introAddresses}
             </Link>
           ),

@@ -32,3 +32,33 @@ export function SectionHeading({
     </div>
   );
 }
+
+/**
+ * The storefront's centred heading: a serif title, the short gold rule under
+ * it, and the link as small tracked capitals. `SectionHeading` above stays as
+ * it was for the admin, which shares it.
+ */
+export function EditorialHeading({
+  title,
+  linkLabel,
+  linkHref,
+}: {
+  title: string;
+  linkLabel: string;
+  linkHref: string;
+}) {
+  return (
+    <div className="text-center">
+      <h2 className="font-display text-[30px] leading-[38px] font-normal text-ink sm:text-[36px] sm:leading-[44px]">
+        {title}
+      </h2>
+      <div aria-hidden className="mx-auto mt-4 h-px w-8 bg-gold/50" />
+      <Link
+        href={linkHref}
+        className="mt-4 inline-block text-[11px] leading-4 tracking-[0.18em] text-ink-55 uppercase underline-offset-4 hover:text-ink hover:underline"
+      >
+        {linkLabel}
+      </Link>
+    </div>
+  );
+}

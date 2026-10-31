@@ -36,7 +36,7 @@ export function Hero({
   locale: Locale;
 }) {
   return (
-    <section className="bg-mist">
+    <section className="bg-ivory">
       {/*
         Side by side from `bar` — the width at which the header puts its own
         nav back in the bar, so the two decide together what counts as a
@@ -51,13 +51,13 @@ export function Hero({
         The image keeps its aspect ratio as it narrows, and at a full 1290 the
         two of them are back at the design's exact pixels.
       */}
-      <div className="container-content flex flex-col gap-10 py-[72px] bar:flex-row bar:items-center bar:gap-16">
+      <div className="container-content flex flex-col gap-10 py-[88px] bar:flex-row bar:items-center bar:gap-16">
         <div className="bar:w-[637.52px]">
-          <p className="text-[13px] font-semibold tracking-[1.744px] uppercase leading-[21.45px] text-ink-55">
+          <p className="text-[11px] leading-4 font-medium tracking-[0.22em] text-gold uppercase">
             {messages.eyebrow}
           </p>
 
-          <h1 className="mt-[18px] text-[38px] leading-[1.1] font-bold tracking-[-0.658px] text-ink sm:text-[50px] sm:leading-[55px]">
+          <h1 className="mt-5 font-display text-[40px] leading-[1.12] font-normal text-ink sm:text-[56px] sm:leading-[64px]">
             {product ? product.name : messages.fallbackTitle}
           </h1>
 
@@ -68,38 +68,38 @@ export function Hero({
           */}
           {product ? (
             product.shortDescription && (
-              <p className="mt-5 text-[18px] leading-[29.7px] tracking-[-0.439px] text-ink-62">
+              <p className="mt-6 max-w-[520px] text-[17px] leading-[29px] text-ink-62">
                 {product.shortDescription}
               </p>
             )
           ) : (
-            <p className="mt-5 text-[18px] leading-[29.7px] tracking-[-0.439px] text-ink-62">
+            <p className="mt-6 max-w-[520px] text-[17px] leading-[29px] text-ink-62">
               {messages.fallbackBody}
             </p>
           )}
 
-          <div className="mt-8 flex flex-wrap items-center gap-6">
+          <div className="mt-10 flex flex-wrap items-center gap-4">
             <Link
               href={product ? product.href : localePath(locale, "/shop")}
               // A product page is built and so is `/shop`, but the link here is
               // the one the whole page exists to show, and a prefetch of it
               // would race the read that decides where it points.
               prefetch={false}
-              className="rounded-[3px] bg-ink px-5 py-[5px] text-[15px] font-medium leading-[24.75px] tracking-[-0.234px] text-paper"
+              className="inline-flex h-11 items-center justify-center border border-ink bg-ink px-7 text-[13px] leading-5 font-medium tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-paper hover:text-ink"
             >
               {product ? messages.ctaProduct : messages.ctaFallback}
             </Link>
             <Link
               href={localePath(locale, "/about")}
               prefetch={false}
-              className="rounded-[3px] border-[1.818px] border-ink px-5 py-[5px] text-[15px] font-medium leading-[24.75px] tracking-[-0.234px] text-ink"
+              className="inline-flex h-11 items-center justify-center border border-ink px-7 text-[13px] leading-5 font-medium tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-ink hover:text-paper"
             >
               {messages.story}
             </Link>
           </div>
         </div>
 
-        <div className="relative aspect-[889/500] w-full overflow-hidden rounded-card bar:w-[588.48px]">
+        <div className="relative aspect-[889/500] w-full overflow-hidden bar:w-[588.48px]">
           {product ? (
             product.image ? (
               <Image
@@ -143,8 +143,8 @@ export function Hero({
  */
 export function HeroFallback() {
   return (
-    <section aria-hidden className="bg-mist">
-      <div className="container-content flex animate-pulse flex-col gap-10 py-[72px] bar:flex-row bar:items-center bar:gap-16">
+    <section aria-hidden className="bg-ivory">
+      <div className="container-content flex animate-pulse flex-col gap-10 py-[88px] bar:flex-row bar:items-center bar:gap-16">
         <div className="bar:w-[637.52px]">
           <div className="h-[21.45px] w-[190px] bg-paper/60" />
           <div className="mt-[18px] h-[55px] w-full bg-paper/60 sm:h-[110px]" />
@@ -152,7 +152,7 @@ export function HeroFallback() {
           <div className="mt-8 h-[34.75px] w-[163px] bg-paper/60" />
         </div>
 
-        <div className="aspect-[889/500] w-full overflow-hidden rounded-card bg-paper/60 bar:w-[588.48px]" />
+        <div className="aspect-[889/500] w-full overflow-hidden bg-paper/60 bar:w-[588.48px]" />
       </div>
     </section>
   );

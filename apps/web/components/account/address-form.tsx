@@ -50,7 +50,7 @@ export function AddressForm({
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="kind" value={kind} />
 
-      <h2 className="pb-[20px] text-[18px] leading-[27px] font-bold tracking-[-0.44px]">{title}</h2>
+      <h2 className="pb-[24px] font-display text-[24px] leading-[32px] font-normal">{title}</h2>
 
       <FormMessage message={state?.message} />
 

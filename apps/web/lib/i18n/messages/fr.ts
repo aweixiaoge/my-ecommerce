@@ -112,8 +112,6 @@ export const fr = {
   },
 
   gallery: {
-    previous: "Image précédente",
-    next: "Image suivante",
     show: "Afficher l’image {n} sur {total}",
   },
 

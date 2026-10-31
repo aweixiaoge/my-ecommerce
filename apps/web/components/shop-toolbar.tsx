@@ -24,8 +24,8 @@ export function ShopToolbar({
   messages: Messages["listing"];
 }) {
   return (
-    <div className="flex flex-col gap-3 pt-10 sm:flex-row sm:items-center sm:justify-between sm:gap-[13px]">
-      <p className="text-[13px] leading-[21.45px] font-medium tracking-[0.4738px] text-ink uppercase">
+    <div className="flex flex-col gap-3 border-b border-line pt-[56px] pb-5 sm:flex-row sm:items-center sm:justify-between sm:gap-[13px]">
+      <p className="text-[11px] leading-4 font-medium tracking-[0.18em] text-ink-55 uppercase">
         {resultsLabel(pagination, messages)}
       </p>
 

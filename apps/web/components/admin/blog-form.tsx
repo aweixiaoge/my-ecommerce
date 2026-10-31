@@ -65,6 +65,7 @@ export function BlogForm({
   const [categoryId, setCategoryId] = useState(blog?.categoryId ?? "");
   const images = useImageList({
     initial: blog?.mediaIds ?? [],
+    initialVideoIds: blog?.videoIds ?? [],
     limit: IMAGES_PER_BLOG_MAX,
     holder: "a blog post",
   });

@@ -1,3 +1,5 @@
+import type { Prisma } from "@my-ecommerce/db";
+
 /**
  * An image's bytes, and what to serve them as.
  *
@@ -56,3 +58,13 @@ export function toStoredMedia(row: MediaBytes): StoredMedia | null {
 export function publicMediaUrl(id: string): string {
   return `/media/${id}`;
 }
+
+/**
+ * Media that is not a video. Untyped rows count as images: rows written before
+ * the type column was filled have no type, and every one of those is a
+ * photograph — and a bare `NOT startsWith` would drop them, since SQL's answer
+ * for NULL is neither.
+ */
+export const IMAGES_ONLY = {
+  OR: [{ mimeType: null }, { NOT: { mimeType: { startsWith: "video/" } } }],
+} as const satisfies Prisma.MediaWhereInput;

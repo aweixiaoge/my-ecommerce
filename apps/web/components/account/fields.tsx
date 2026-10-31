@@ -17,7 +17,7 @@ import { useState, type ReactNode } from "react";
  */
 
 const BOX =
-  "h-[40px] w-full rounded-[3px] border-[0.91px] bg-transparent px-[15px] text-[16px] leading-[26.4px] tracking-[-0.31px] text-ink outline-none focus:border-ink";
+  "h-[46px] w-full border bg-paper px-[15px] text-[16px] leading-[26.4px] text-ink outline-none transition-colors focus:border-ink";
 
 export function AccountField({
   id,
@@ -102,11 +102,11 @@ export function FieldLabel({
   return (
     <label
       htmlFor={htmlFor}
-      className="block pb-[7px] text-[14px] leading-[23.1px] font-medium tracking-[-0.15px] text-ink"
+      className="block pb-2 text-[11px] leading-4 font-medium tracking-[0.18em] text-ink-55 uppercase"
     >
       {children}{" "}
-      {/* #FF0000 is the design's, and the only place it is used. */}
-      <span aria-hidden className="font-bold text-[#ff0000]">
+      {/* Gold rather than the design's #FF0000; the sr-only text says it. */}
+      <span aria-hidden className="text-gold">
         *
       </span>
       <span className="sr-only">({requiredLabel})</span>
@@ -114,13 +114,13 @@ export function FieldLabel({
   );
 }
 
-/** The design's 40px ink button with 20px of padding a side. */
+/** A 46px ink button in tracked type, which turns to an outline on hover. */
 export function AccountButton({ pending, children }: { pending?: boolean; children: ReactNode }) {
   return (
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex h-[40px] items-center justify-center rounded-[3px] bg-ink px-[20px] text-[15px] leading-[24.75px] font-medium tracking-[-0.234px] text-paper transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex h-[46px] items-center justify-center border border-ink bg-ink px-8 text-[13px] leading-5 font-medium tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-ink disabled:hover:text-paper"
     >
       {children}
     </button>
@@ -134,7 +134,7 @@ export function FormMessage({ message }: { message?: string }) {
   return (
     <p
       role="alert"
-      className="mb-[20px] rounded-[3px] border-[0.91px] border-danger px-[15px] py-[8px] text-[14px] leading-[23.1px] tracking-[-0.15px] text-danger"
+      className="mb-[20px] border border-danger px-[15px] py-[8px] text-[14px] leading-[23.1px] tracking-[-0.15px] text-danger"
     >
       {message}
     </p>

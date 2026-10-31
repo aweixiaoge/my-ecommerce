@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { ACCEPTED_IMAGE_TYPES } from "@my-ecommerce/shared";
+import { ACCEPTED_IMAGE_TYPES, ACCEPTED_VIDEO_TYPES } from "@my-ecommerce/shared";
 import { uploadMedia } from "@/lib/admin/upload-media";
 import { mediaUrl, planUploads } from "@/lib/admin/product-media";
 import { addMediaId, moveMediaId, removeMediaId } from "@/lib/admin/product-variants";
 import { FieldErrors, LABEL } from "./form-controls";
+import { VideoThumbnail } from "./video-thumbnail";
 
 /**
- * One ordered list of images, uploaded the moment they are chosen — the
- * product form's picker with the colour row taken out from around it, as the
- * blog form and the About screen use it.
+ * One ordered list of images and videos, uploaded the moment they are chosen —
+ * the product form's picker with the colour row taken out from around it, as
+ * the blog form and the About screen use it. Videos are held to the product
+ * gallery's types and size cap, and count against the same limit as images.
  *
  * Split in two: `useImageList` holds the ids and the uploads in flight, so the
  * form above can wait for them before it submits; `ImageListField` draws the
@@ -28,6 +30,12 @@ const NO_UPLOADS: UploadState = { pending: 0, problems: [] };
 
 export interface ImageList {
   mediaIds: readonly string[];
+  /**
+   * Which of the ids are videos: the thumbnail is a `<video>` for those, and
+   * an `<img>` pointed at a video draws nothing. The saved ones arrive from the
+   * page; an upload adds its own from what the server says it was.
+   */
+  videoIds: ReadonlySet<string>;
   setMediaIds: (update: (current: readonly string[]) => readonly string[]) => void;
   uploads: UploadState;
   /**
@@ -45,15 +53,19 @@ export interface ImageList {
 
 export function useImageList({
   initial,
+  initialVideoIds = [],
   limit,
   holder,
 }: {
   initial: readonly string[];
+  /** Which of `initial` are videos. */
+  initialVideoIds?: readonly string[];
   limit: number;
   /** What holds the images, for the refusal copy: "a blog post", "the About page". */
   holder: string;
 }): ImageList {
   const [mediaIds, setMediaIds] = useState<readonly string[]>(initial);
+  const [videoIds, setVideoIds] = useState<ReadonlySet<string>>(() => new Set(initialVideoIds));
   const [uploads, setUploads] = useState<UploadState>(NO_UPLOADS);
 
   /** Counts an upload in or out, so the field can say how many are still going. */
@@ -86,7 +98,7 @@ export function useImageList({
     // second selection take the list past the limit, and the refusal then lands
     // on the submit button rather than on the file that was one too many.
     const room = limit - mediaIds.length - uploads.pending;
-    const { accepted, problems } = planUploads(files, room, { holder, limit });
+    const { accepted, problems } = planUploads(files, room, { holder, limit, video: true });
 
     // Replaced, not appended: what is shown is about the selection just made,
     // and yesterday's rejection is not news.
@@ -101,6 +113,9 @@ export function useImageList({
         const result = await uploadMedia(file);
 
         if (result.ok) {
+          if (result.media.kind === "video") {
+            setVideoIds((current) => new Set(current).add(result.media.id));
+          }
           setMediaIds((current) => addMediaId(current, result.media.id));
         } else {
           addUploadProblem(result.message);
@@ -120,6 +135,7 @@ export function useImageList({
 
   return {
     mediaIds,
+    videoIds,
     setMediaIds,
     uploads,
     uploading: uploads.pending > 0,
@@ -131,14 +147,14 @@ export function useImageList({
 export function ImageListField({
   list,
   errors,
-  heading = "Images",
+  heading = "Images and videos",
 }: {
   list: ImageList;
   /** The action's refusals for the `mediaIds` field. */
   errors?: string[];
   heading?: string;
 }) {
-  const { mediaIds, setMediaIds, uploads, limit, addImages } = list;
+  const { mediaIds, videoIds, setMediaIds, uploads, limit, addImages } = list;
   const full = mediaIds.length >= limit;
 
   return (
@@ -149,15 +165,19 @@ export function ImageListField({
         <ul className="flex flex-wrap gap-2">
           {mediaIds.map((id, index) => (
             <li key={id} className="w-[104px]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={mediaUrl(id)}
-                // Empty and decorative: the buttons below name what each
-                // image is in the order, and describing the same photograph
-                // six times helps nobody.
-                alt=""
-                className="h-[72px] w-[104px] rounded-control border border-line object-cover"
-              />
+              {videoIds.has(id) ? (
+                <VideoThumbnail src={mediaUrl(id)} />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={mediaUrl(id)}
+                  // Empty and decorative: the buttons below name what each
+                  // image is in the order, and describing the same photograph
+                  // six times helps nobody.
+                  alt=""
+                  className="h-[72px] w-[104px] rounded-control border border-line object-cover"
+                />
+              )}
 
               <div className="mt-1 flex items-center gap-1">
                 <ImageButton
@@ -191,13 +211,13 @@ export function ImageListField({
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="images" className="text-[12px] leading-[19.8px] text-ink-62">
-          Add images
+          Add images or videos
         </label>
         <input
           id="images"
           type="file"
           multiple
-          accept={ACCEPTED_IMAGE_TYPES.join(",")}
+          accept={[...ACCEPTED_IMAGE_TYPES, ...ACCEPTED_VIDEO_TYPES].join(",")}
           disabled={full}
           // Deliberately nameless: a named file input would have React copy
           // the chosen Files into the submitted form *as well as* the ids
@@ -215,7 +235,7 @@ export function ImageListField({
 
         {full && (
           <p className="text-[12px] leading-[19.8px] text-ink-55">
-            {limit} images is the limit — remove one to add another.
+            {limit} images and videos is the limit — remove one to add another.
           </p>
         )}
         {uploads.pending > 0 && (

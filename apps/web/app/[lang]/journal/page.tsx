@@ -22,9 +22,8 @@ type JournalSearchParams = Awaited<PageProps<"/[lang]/journal">["searchParams"]>
  * newest first, as a grid of cards — three across from `bar`, two from `sm`,
  * one below that, 30px apart.
  *
- * The design has no visible title, so the page's `<h1>` is for screen readers
- * and the document outline only; the cards start 60px under the header, as
- * drawn.
+ * The design has no visible title; the page sets one anyway, as a centred
+ * masthead over the grid, in the same serif-and-gold register as the shop.
  *
  * `?page=` is read on the server, as on the Shop page, so every page of the
  * journal is a real, linkable address. Reading it is request-time data, so the
@@ -35,9 +34,17 @@ export default async function JournalPage(props: PageProps<"/[lang]/journal">) {
   const messages = getMessages(locale);
 
   return (
-    <section className="py-[60px]">
+    <section className="pt-[72px] pb-[60px]">
       <div className="container-content">
-        <h1 className="sr-only">{messages.journalPage.title}</h1>
+        {/* The design draws no title; this one is the storefront's luxury
+            masthead — serif title, the short gold rule, a grey standfirst. */}
+        <header className="mx-auto max-w-[620px] pb-[64px] text-center">
+          <h1 className="font-display text-[40px] leading-[48px] font-normal text-ink sm:text-[48px] sm:leading-[56px]">
+            {messages.journalPage.title}
+          </h1>
+          <div aria-hidden className="mx-auto mt-5 h-px w-8 bg-gold/50" />
+          <p className="pt-5 text-[15px] leading-[26px] text-ink-62">{messages.journalPage.description}</p>
+        </header>
 
         <Suspense fallback={<JournalGridFallback />}>
           {props.searchParams.then((searchParams) => (
@@ -64,7 +71,7 @@ async function JournalResults({
 
   if (items.length === 0) {
     return (
-      <p className="text-[16px] leading-[26.4px] tracking-[-0.3125px] text-ink">{messages.journalPage.empty}</p>
+      <p className="text-center font-display text-[18px] leading-7 text-ink-55 italic">{messages.journalPage.empty}</p>
     );
   }
 
@@ -85,13 +92,13 @@ async function JournalResults({
  * `sm`, not `md`, for the step to two columns — the home page's journal gives
  * the reason: `bar` is 768, and a `md:` step would land on the same query.
  */
-const GRID = "grid grid-cols-1 gap-[30px] sm:grid-cols-2 bar:grid-cols-3";
+const GRID = "grid grid-cols-1 gap-x-[30px] gap-y-[56px] sm:grid-cols-2 bar:grid-cols-3";
 
 function JournalGridFallback() {
   return (
     <div aria-hidden className={`${GRID} animate-pulse`}>
       {Array.from({ length: Math.min(JOURNAL_PAGE_SIZE, 3) }, (_, index) => (
-        <div key={index} className="h-[373px] bg-mist" />
+        <div key={index} className="h-[532px] bg-mist" />
       ))}
     </div>
   );

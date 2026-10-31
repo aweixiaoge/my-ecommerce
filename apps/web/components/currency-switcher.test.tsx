@@ -170,21 +170,15 @@ describe("CurrencySwitcher — the open menu", () => {
     expect(isOpen()).toBe(false);
   });
 
-  it("draws the language menu's box, because the design draws them as a pair", () => {
+  it("draws the language menu's box, because the two are drawn as a pair", () => {
     expect(classesOf(panel())).toEqual(
-      expect.arrayContaining(["w-[180px]", "p-2", "rounded-[3px]", "border-[#d4d4d4]", "bg-paper"]),
+      expect.arrayContaining(["w-[200px]", "py-2", "border-line", "border-t-gold/60", "bg-paper"]),
     );
+    expect(classesOf(panel())).not.toContain("rounded-[3px]");
 
     for (const row of rows()) {
       expect(classesOf(row)).toEqual(
-        expect.arrayContaining([
-          "h-9",
-          "pl-3",
-          "pr-2.5",
-          "gap-2",
-          "rounded-[3px]",
-          "text-[13px]",
-        ]),
+        expect.arrayContaining(["h-10", "pl-[18px]", "pr-4", "gap-2", "border-l-2", "text-[12px]", "uppercase"]),
       );
     }
   });
@@ -224,9 +218,11 @@ describe("CurrencySwitcher — the open menu", () => {
     );
     expect(current?.textContent).toBe("EUR");
 
-    // The design marks it three ways: bold, the grey fill, and the check.
-    expect(classesOf(current!)).toContain("font-bold");
-    expect(classesOf(current!)).toContain("bg-[#f2f2f2]");
+    // Marked three ways, so it never rests on colour alone: medium against
+    // the others' regular, the ivory fill with its gold rule, and the check.
+    expect(classesOf(current!)).toContain("font-medium");
+    expect(classesOf(current!)).toContain("bg-ivory");
+    expect(classesOf(current!)).toContain("border-gold");
     expect(current!.querySelector('img[src*="check"]')).not.toBeNull();
 
     for (const row of rows().filter((candidate) => candidate !== current)) {

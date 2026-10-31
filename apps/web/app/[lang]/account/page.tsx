@@ -73,18 +73,18 @@ async function AccountContents({ locale }: { locale: Locale }) {
     <AccountFrame title={messages.title} wash>
       <div className="grid grid-cols-1 gap-y-[48px] bar:grid-cols-2">
         {/*
-          The design's divider is the Login column's own right edge — dashed,
-          2px on and 1px off, in the line colour — so it runs exactly as tall
+          The divider is the Login column's own right edge — a solid hairline
+          rather than the design's dash — so it runs exactly as tall
           as the taller of the two columns. Stacked, it would be a vertical
           rule beside nothing, so it only appears once the columns sit side by
           side.
         */}
-        <section className="bar:border-r-[0.91px] bar:border-dashed bar:border-line bar:pr-[40px]">
+        <section className="bar:border-r bar:border-line bar:pr-[56px]">
           <h2 className={HEADING}>{messages.login}</h2>
           <LoginForm locale={locale} messages={messages} />
         </section>
 
-        <section className="bar:pl-[40px]">
+        <section className="bar:pl-[56px]">
           <h2 className={HEADING}>{messages.register}</h2>
           <RegisterForm locale={locale} messages={messages} />
         </section>
@@ -93,4 +93,4 @@ async function AccountContents({ locale }: { locale: Locale }) {
   );
 }
 
-const HEADING = "text-[20px] leading-[30px] font-bold tracking-[-0.449px] text-ink";
+const HEADING = "font-display text-[26px] leading-[34px] font-normal text-ink";

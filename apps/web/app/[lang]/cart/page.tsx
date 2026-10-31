@@ -31,10 +31,13 @@ export default async function CartPage() {
   const messages = getMessages(locale).cart;
 
   return (
-    <div className="container-content pt-[60px] pb-[60px]">
-      <h1 className="text-[30px] leading-[45px] font-bold tracking-[0.396px] text-ink">
-        {messages.heading}
-      </h1>
+    <div className="container-content pt-[72px] pb-[96px]">
+      <div className="text-center">
+        <h1 className="font-display text-[40px] leading-[48px] font-normal text-ink sm:text-[48px] sm:leading-[56px]">
+          {messages.heading}
+        </h1>
+        <div aria-hidden className="mx-auto mt-5 h-px w-8 bg-gold/50" />
+      </div>
 
       <Suspense fallback={<CartFallback />}>
         <CartContents locale={locale} />
@@ -53,11 +56,11 @@ async function CartContents({ locale }: { locale: Locale }) {
   // No cart and an emptied one are the same page: nothing to buy yet.
   if (!cart || cart.items.length === 0) {
     return (
-      <div className="mt-[30px] rounded-[3px] border border-dashed border-line px-6 py-16 text-center">
-        <p className="text-[15px] leading-[24.75px] text-ink-62">{messages.empty}</p>
+      <div className="mt-[48px] border border-line bg-ivory px-6 py-16 text-center">
+        <p className="font-display text-[20px] leading-8 text-ink-62 italic">{messages.empty}</p>
         <Link
           href={localePath(locale, "/shop")}
-          className="mt-6 inline-flex h-10 items-center justify-center rounded-[3px] bg-ink px-5 text-[15px] leading-[24.75px] font-medium tracking-[-0.2344px] text-paper"
+          className="mt-8 inline-flex h-11 items-center justify-center px-7 border border-ink bg-ink text-[13px] leading-5 font-medium tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-paper hover:text-ink"
         >
           {messages.continue}
         </Link>
@@ -76,7 +79,7 @@ function CartFallback() {
   return (
     <div
       aria-hidden
-      className="grid animate-pulse grid-cols-1 gap-[48px] pt-[40px] lg:grid-cols-[1fr_360px]"
+      className="grid animate-pulse grid-cols-1 gap-[56px] pt-[56px] lg:grid-cols-[1fr_380px]"
     >
       <div className="flex flex-col gap-px">
         <div className="h-[38px]" />

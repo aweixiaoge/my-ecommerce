@@ -30,20 +30,22 @@ export async function generateMetadata(): Promise<Metadata> {
  * cart page splits the same way.
  *
  * The design sets the title on the storefront's 1290 column and the form on a
- * wider 1550 one, on the #FAFBFC wash — both kept.
+ * wider 1550 one — both kept — on the page's own white rather than its #FAFBFC
+ * wash, under the centred serif masthead every other storefront page opens with.
  */
 export default async function CheckoutPage() {
   const locale = await requestLocale();
 
   return (
-    <div className="bg-wash">
-      <div className="container-content pt-[60px]">
-        <h1 className="text-[30px] leading-[45px] font-bold tracking-[0.396px] text-ink">
+    <div>
+      <div className="container-content pt-[72px] text-center">
+        <h1 className="font-display text-[40px] leading-[48px] font-normal text-ink sm:text-[48px] sm:leading-[56px]">
           {getMessages(locale).checkout.title}
         </h1>
+        <div aria-hidden className="mx-auto mt-5 h-px w-8 bg-gold/50" />
       </div>
 
-      <div className="mx-auto w-full max-w-[1598px] px-6 pt-[40px] pb-[100px]">
+      <div className="mx-auto w-full max-w-[1598px] px-6 pt-[32px] pb-[100px]">
         <Suspense fallback={<CheckoutFallback />}>
           <CheckoutContents locale={locale} />
         </Suspense>
@@ -68,11 +70,11 @@ async function CheckoutContents({ locale }: { locale: Locale }) {
 
   if (!cart || items.length === 0) {
     return (
-      <div className="mt-[24px] rounded-[3px] border border-dashed border-line px-6 py-16 text-center">
-        <p className="text-[15px] leading-[24.75px] text-ink-62">{messages.checkout.empty}</p>
+      <div className="mt-[24px] border border-line bg-ivory px-6 py-16 text-center">
+        <p className="font-display text-[20px] leading-8 text-ink-62 italic">{messages.checkout.empty}</p>
         <Link
           href={localePath(locale, "/shop")}
-          className="mt-6 inline-flex h-10 items-center justify-center rounded-[3px] bg-ink px-5 text-[15px] leading-[24.75px] font-medium tracking-[-0.2344px] text-paper"
+          className="mt-8 inline-flex h-11 items-center justify-center px-7 border border-ink bg-ink text-[13px] leading-5 font-medium tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-paper hover:text-ink"
         >
           {messages.cart.continue}
         </Link>
@@ -119,7 +121,7 @@ function CheckoutFallback() {
   return (
     <div
       aria-hidden
-      className="grid animate-pulse grid-cols-1 gap-[48px] pt-[24px] lg:grid-cols-[1fr_360px]"
+      className="grid animate-pulse grid-cols-1 gap-[56px] pt-[24px] lg:grid-cols-[1fr_400px]"
     >
       <div className="flex flex-col gap-[24px]">
         <div className="h-[94px] bg-mist" />

@@ -14,11 +14,10 @@ import type { Locale } from "@/lib/languages";
  * The design's `Product Card:Shop` (node 178:9202) — the home card's sibling
  * with three extra rows: a star rating, the category, and a call to action.
  *
- * Geometry from the component's own layout objects, 300 wide and 425.186 tall:
- * a 4:3 image at 3px radius, 25px, a 17/25.5 bold title, 9.5px, the 15/24.75
- * price, 11px, the 23px star row, 10.5px, the uppercase 13px category, 9.5px,
- * and the 40px button. The gaps are the design's own paddings, not eyeballed
- * from the raster.
+ * Restyled away from the comp toward a quieter, luxury register: centred, the
+ * category as a gold eyebrow over a serif title, a short gold rule, a light
+ * tracked price, small stars, and an outlined button that fills on hover. The
+ * content and its order of importance are the design's; only the dress is not.
  *
  * The button adds to the cart from here, as its label says. The design's layer
  * name reads "Link - Select options for ...", which is what a card does when a
@@ -64,31 +63,50 @@ export function ShopProductCard({
   const href = productPath(product, locale);
 
   return (
-    <article className="flex flex-col">
-      <Link href={href} className="group block">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-[3px] bg-mist">
+    <article className="group/card flex min-w-0 flex-col text-center">
+      {/*
+        Sharp corners, an ivory ground and a hairline that only firms up on
+        hover: the image is the product, so the frame stays quiet. The zoom is
+        slow and slight on purpose — a fast, large one reads as a sale banner.
+      */}
+      <Link href={href} className="block">
+        <div className="relative aspect-[4/3] overflow-hidden bg-ivory ring-1 ring-ink/[0.04] transition-shadow duration-500 ring-inset group-hover/card:ring-ink/10">
           {product.image ? (
             <Image
               src={product.image.url}
               alt={product.image.alt ?? product.name}
               fill
               sizes="(min-width: 768px) 25vw, (min-width: 640px) 50vw, 100vw"
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              className="object-cover transition-transform duration-[900ms] ease-out group-hover/card:scale-[1.04]"
               loading={eager ? "eager" : "lazy"}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center p-6 text-center text-xs font-medium tracking-wide text-ink-55 uppercase">
+            <div className="flex h-full w-full items-center justify-center p-6 text-center font-display text-sm text-ink-55 italic">
               {product.name}
             </div>
           )}
         </div>
       </Link>
 
-      <h3 className="mt-[25px] text-[17px] leading-[25.5px] font-semibold tracking-[-0.4316px] text-ink">
-        <Link href={href}>{product.name}</Link>
+      {/* The category leads, as an eyebrow, rather than trailing the price. */}
+      {product.categories[0] && (
+        <p className="mt-6 text-[11px] leading-4 font-medium tracking-[0.22em] text-gold uppercase">
+          {product.categories[0].name}
+        </p>
+      )}
+
+      <h3 className="mt-2 font-display text-[19px] leading-[26px] font-normal [overflow-wrap:anywhere] text-ink">
+        <Link
+          href={href}
+          className="bg-[linear-gradient(currentColor,currentColor)] bg-[length:0_1px] bg-bottom bg-no-repeat transition-[background-size] duration-500 group-hover/card:bg-[length:100%_1px]"
+        >
+          {product.name}
+        </Link>
       </h3>
 
-      <p className="mt-[9.5px] text-[15px] leading-[24.75px] font-semibold tracking-[-0.2344px] text-ink">
+      <div aria-hidden className="mx-auto mt-3 h-px w-8 bg-gold/50" />
+
+      <p className="mt-3 text-[14px] leading-[22px] font-normal tracking-[0.06em] text-ink-60 tabular-nums">
         {hasRange && product.priceMax ? (
           <>
             {formatPrice(product.price, currency, locale)}
@@ -103,24 +121,14 @@ export function ShopProductCard({
       <StarRating
         rating={product.rating}
         messages={messages.reviews}
-        className="mt-[11px]"
+        className="mt-2 justify-center gap-1 [&_img]:size-3 [&_img]:opacity-80"
       />
 
-      {product.categories[0] && (
-        <p className="mt-[10.5px] text-[13px] leading-[21.45px] font-semibold tracking-[-0.0762px] text-ink uppercase">
-          {product.categories[0].name}
-        </p>
-      )}
-
       {/*
-        The 9.5px is padding, not a margin, so it is always there: `mt-auto`
-        absorbs any slack but collapses to nothing when there is none. At the
-        design's 300px column every title fits on one line and the slack is
-        zero, which is the design exactly. Narrower, a long name wraps and the
-        cards in a row grow unevenly — the auto margin takes that up, so a row
-        of buttons stays on one line instead of stepping with the longest title.
+        `mt-auto` absorbs the slack a wrapped title leaves, so a row of buttons
+        stays on one line; the padding keeps a gap when there is none.
       */}
-      <div className="mt-auto pt-[9.5px]">
+      <div className="mt-auto pt-5">
         <AddToCartButton
           target={{ productId: product.id }}
           label={product.inStock ? messages.listing.addToCart : messages.cart.add.soldOut}
@@ -128,7 +136,7 @@ export function ShopProductCard({
           messages={messages.cart.add}
           cartHref={localePath(locale, "/cart")}
           placement="card"
-          className="inline-flex h-10 items-center justify-center rounded-[3px] bg-ink px-5 text-[15px] leading-[24.75px] font-medium tracking-[-0.2344px] text-paper disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex h-10 w-full items-center justify-center border border-ink bg-transparent px-5 text-[13px] leading-5 font-medium tracking-[0.14em] text-ink transition-colors duration-300 hover:bg-ink hover:text-paper disabled:cursor-not-allowed disabled:border-ink/30 disabled:text-ink-55 disabled:hover:bg-transparent"
         />
       </div>
     </article>

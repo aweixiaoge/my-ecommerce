@@ -112,8 +112,6 @@ export const pt = {
   },
 
   gallery: {
-    previous: "Imagem anterior",
-    next: "Imagem seguinte",
     show: "Mostrar imagem {n} de {total}",
   },
 

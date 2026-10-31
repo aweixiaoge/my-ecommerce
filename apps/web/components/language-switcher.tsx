@@ -65,12 +65,12 @@ const PLACEMENT = {
   nav: {
     wrapper: "hidden h-full items-center lg:flex",
     trigger:
-      "flex items-center gap-1.5 px-[12.5px] text-[13px] font-bold leading-[16.9px] tracking-[-0.076px] text-ink",
+      "flex items-center gap-1.5 px-[12.5px] text-[13px] font-medium leading-[16.9px] tracking-[0.02em] text-ink",
   },
   bar: {
     wrapper: "flex h-full items-center lg:hidden",
     trigger:
-      "flex items-center gap-1 py-2 pr-2 text-[12px] font-bold leading-[16.9px] tracking-[-0.076px] whitespace-nowrap text-ink sm:gap-1.5 sm:pr-3 sm:text-[13px]",
+      "flex items-center gap-1 py-2 pr-2 text-[12px] font-medium leading-[16.9px] tracking-[0.02em] whitespace-nowrap text-ink sm:gap-1.5 sm:pr-3 sm:text-[13px]",
   },
 } as const;
 
@@ -130,16 +130,15 @@ export function LanguageSwitcher({
       </button>
 
       {/*
-        The panel's 180px and its 162px rows are the design's, and they are
-        arithmetically exact: the 1px border and the 8px of padding are
-        inside the width, which is what leaves 162 for the row. The border is
-        the menu's own #D4D4D4 rather than `line` — the design draws this
-        component in a neutral grey, not the blue-tinted rule the rest of the
-        chrome uses.
+        Restyled from the design's grey, rounded menu into the storefront's
+        luxury register: square, a hairline with a gold top edge, rows of
+        small tracked capitals, and the language in use marked by an ivory
+        fill with a gold rule down its left — still three marks, with the
+        check, so it never rests on colour alone.
       */}
       <div
         id={panelId}
-        className={`absolute top-full right-0 z-50 w-[180px] rounded-[3px] border border-[#d4d4d4] bg-paper p-2 shadow-[0_8px_24px_rgba(0,0,0,0.1)] ${
+        className={`absolute top-full right-0 z-50 w-[200px] border border-line border-t-gold/60 bg-paper py-2 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.18)] ${
           open ? "block" : "hidden"
         }`}
       >
@@ -153,8 +152,10 @@ export function LanguageSwitcher({
                   href={swapLocale(pathname, language.code)}
                   aria-current={isActive ? "true" : undefined}
                   onClick={() => setOpen(false)}
-                  className={`flex h-9 items-center gap-2 rounded-[3px] pl-3 pr-2.5 text-[13px] leading-[16.9px] tracking-[-0.076px] text-ink ${
-                    isActive ? "bg-[#f2f2f2] font-bold" : "font-normal"
+                  className={`flex h-10 items-center gap-2 pr-4 pl-[18px] border-l-2 text-[12px] leading-[16.9px] tracking-[0.14em] uppercase transition-colors duration-300 ${
+                    isActive
+                      ? "border-gold bg-ivory font-medium text-ink"
+                      : "border-transparent font-normal text-ink-62 hover:bg-ivory hover:text-ink"
                   }`}
                 >
                   <span className="flex-1">{language.label}</span>

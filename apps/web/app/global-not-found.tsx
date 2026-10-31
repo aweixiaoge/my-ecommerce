@@ -28,19 +28,20 @@ export default function GlobalNotFound() {
   return (
     <html lang="en" className="h-full antialiased">
       <body className="flex min-h-full flex-col bg-paper text-ink">
-        <main className="container-content flex flex-1 flex-col justify-center py-24">
-          <p className="text-[13px] font-bold tracking-[-0.076px] text-ink-55">
+        <main className="container-content flex flex-1 flex-col items-center justify-center py-24 text-center">
+          <p className="text-[11px] leading-4 font-medium tracking-[0.22em] text-gold uppercase">
             404
           </p>
-          <h1 className="pt-3 text-[32px] font-bold leading-[1.2] tracking-[-0.4px] text-ink">
+          <h1 className="pt-4 font-display text-[36px] leading-[44px] font-normal text-ink sm:text-[44px] sm:leading-[52px]">
             This page could not be found.
           </h1>
-          <p className="pt-4 max-w-[560px] text-[15px] leading-[24px] text-ink-62">
+          <div aria-hidden className="mt-5 h-px w-8 bg-gold/50" />
+          <p className="max-w-[560px] pt-6 text-[15px] leading-[27px] text-ink-62">
             The address may be mistyped, or the page may have moved.
           </p>
           <Link
             href="/"
-            className="mt-8 inline-flex h-11 w-fit items-center rounded-[3px] bg-ink px-6 text-[14px] font-semibold text-paper"
+            className="mt-10 inline-flex h-[46px] w-fit items-center justify-center border border-ink bg-ink px-8 text-[13px] leading-5 font-medium tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-paper hover:text-ink"
           >
             Go to the storefront
           </Link>

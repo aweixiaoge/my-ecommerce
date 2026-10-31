@@ -102,7 +102,7 @@ export function ProductPurchase({
   const hasRange = product.priceMax !== null;
 
   return (
-    <div className="grid grid-cols-1 gap-[40px] pt-[30px] bar:grid-cols-[625fr_625fr]">
+    <div className="grid grid-cols-1 gap-[40px] pt-[30px] bar:grid-cols-[625fr_625fr] bar:gap-[56px]">
       <Figure
         product={product}
         images={images}
@@ -111,44 +111,58 @@ export function ProductPurchase({
         messages={messages}
       />
 
-      <div className="flex flex-col">
-        <h1 className="text-[30px] leading-[45px] font-bold tracking-[0.396px] text-ink">
+      <div className="flex min-w-0 flex-col bar:pt-[10px]">
+        {/* The category as a gold eyebrow, the shop card's own register. */}
+        {product.categories[0] && (
+          <Link
+            href={categoryPath(product.categories[0], locale)}
+            className="self-start text-[11px] leading-4 font-medium tracking-[0.22em] text-gold uppercase"
+          >
+            {product.categories[0].name}
+          </Link>
+        )}
+
+        <h1 className="pt-3 font-display text-[34px] leading-[42px] font-normal [overflow-wrap:anywhere] text-ink">
           {product.name}
         </h1>
 
-        <div className="flex items-center gap-3 pt-[10px]">
-          <StarRating rating={product.rating} messages={ratingMessages} />
+        <div className="flex items-center gap-3 pt-4">
+          <StarRating
+            rating={product.rating}
+            messages={ratingMessages}
+            className="gap-1 [&_img]:size-3.5 [&_img]:opacity-80"
+          />
           <Link
             href="?tab=reviews"
             scroll={false}
-            className="text-[20px] leading-[21.45px] tracking-[-0.076px] text-ink"
+            className="text-[12px] leading-5 tracking-[0.08em] text-ink-55 underline-offset-4 hover:text-ink hover:underline"
           >
             ({plural(product.rating?.count ?? 0, messages.reviewCount)})
           </Link>
         </div>
 
-        <p className="pt-[10px] text-[20px] leading-[33px] font-bold tracking-[-0.449px] text-ink">
+        <p className="pt-5 text-[18px] leading-7 tracking-[0.06em] text-ink-60 tabular-nums">
           {hasRange && product.priceMax
             ? `${formatPrice(product.price, currency, locale)}${messages.rangeSeparator}${formatPrice(product.priceMax, currency, locale)}`
             : formatPrice(product.price, currency, locale)}
         </p>
 
         {product.shortDescription && (
-          <p className="pt-[35px] text-[16px] leading-[26.4px] tracking-[-0.3125px] text-ink">
+          <p className="pt-7 text-[15px] leading-[26px] text-ink-62">
             {product.shortDescription}
           </p>
         )}
 
-        <hr className="mt-[35px] border-line" />
+        <hr className="mt-8 border-line" />
 
-        <div className="flex flex-col pt-[35px]">
+        <div className="flex flex-col pt-8">
           {product.options.map((option, index) => (
-            <div key={option.id} className={index === 0 ? "" : "pt-[33px]"}>
-              <p className="text-[16px] leading-[25px] tracking-[-0.076px] text-ink">
+            <div key={option.id} className={index === 0 ? "" : "pt-7"}>
+              <p className="text-[11px] leading-4 font-medium tracking-[0.2em] text-ink-55 uppercase">
                 {option.name}
               </p>
 
-              <div className="flex flex-wrap gap-[20px] pt-[10px]">
+              <div className="flex flex-wrap gap-[10px] pt-3">
                 {option.values.map((value) => {
                   // Every value of a free option can be chosen — that is what
                   // Size is: a pick the cart records beside the variant (see
@@ -177,11 +191,11 @@ export function ProductPurchase({
                           [option.id]: value.id,
                         }))
                       }
-                      className={`h-10 rounded-[8px] border px-[10px] text-[15px] leading-[24.75px] tracking-[-0.234px] ${
+                      className={`h-10 min-w-12 border px-4 text-[13px] leading-5 tracking-[0.06em] transition-colors duration-300 ${
                         isSelected
-                          ? "border-ink text-ink"
-                          : "border-line text-ink-62"
-                      } ${available ? "" : "line-through opacity-60"}`}
+                          ? "border-ink bg-ink text-paper"
+                          : "border-line text-ink-62 hover:border-ink hover:text-ink"
+                      } ${available ? "" : "line-through opacity-60 hover:border-line hover:text-ink-62"}`}
                     >
                       {value.name}
                     </button>
@@ -192,15 +206,15 @@ export function ProductPurchase({
           ))}
         </div>
 
-        <p className="pt-[50px] text-[20px] leading-[33px] font-bold tracking-[-0.449px] text-ink">
+        <p className="pt-10 font-display text-[26px] leading-9 text-ink tabular-nums">
           {variant ? (
             formatPrice(variant.price, currency, locale)
           ) : (
-            <span className="text-ink-55">{messages.unavailable}</span>
+            <span className="font-sans text-[15px] tracking-[0.06em] text-ink-55">{messages.unavailable}</span>
           )}
         </p>
 
-        <div className="pt-[20px]">
+        <div className="pt-4">
           {/*
             Keyed by the variant and the size, so choosing another colour or
             size starts the button and its counter over: "Added to your cart"
@@ -217,27 +231,27 @@ export function ProductPurchase({
             messages={cartMessages}
             cartHref={localePath(locale, "/cart")}
             placement="page"
-            className="flex h-[50px] w-full items-center justify-center rounded-control bg-ink text-[15px] leading-[24.75px] font-medium tracking-[-0.234px] text-paper disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex h-[50px] w-full items-center justify-center border border-ink bg-ink text-[13px] leading-5 font-medium tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-paper hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-ink disabled:hover:text-paper"
           />
         </div>
 
-        <hr className="mt-[35px] border-line" />
+        <hr className="mt-8 border-line" />
 
-        <dl className="flex flex-col pt-[35px] text-[13px] leading-[21.45px] tracking-[0.574px] uppercase">
+        <dl className="flex flex-col gap-1.5 pt-6 text-[11px] leading-[18px] tracking-[0.16em] uppercase">
           {variant && (
-            <div className="flex gap-1">
-              <dt className="font-bold text-ink">{messages.sku}</dt>
+            <div className="flex gap-2">
+              <dt className="text-ink-55">{messages.sku}</dt>
               <dd className="text-ink">{variant.sku}</dd>
             </div>
           )}
 
           {product.categories[0] && (
-            <div className="flex gap-1 pt-[5px]">
-              <dt className="font-bold text-ink">{messages.category}</dt>
+            <div className="flex gap-2">
+              <dt className="text-ink-55">{messages.category}</dt>
               <dd>
                 <Link
                   href={categoryPath(product.categories[0], locale)}
-                  className="text-ink"
+                  className="text-ink underline-offset-4 hover:underline"
                 >
                   {product.categories[0].name}
                 </Link>
@@ -275,8 +289,8 @@ function Figure({
   messages: Messages["product"];
 }) {
   return (
-    <div className="flex flex-col gap-[25px]">
-      <div className="relative aspect-[625/659] w-full overflow-hidden bg-mist">
+    <div className="flex flex-col gap-4">
+      <div className="relative aspect-[625/659] w-full overflow-hidden bg-ivory">
         {mainImage?.kind === "video" ? (
           <video
             // Keyed so choosing another video starts it from the top instead
@@ -307,14 +321,14 @@ function Figure({
             loading="eager"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center p-6 text-center text-[13px] font-medium tracking-wide text-ink-55 uppercase">
+          <div className="flex h-full w-full items-center justify-center p-6 text-center font-display text-lg text-ink-55 italic">
             {product.name}
           </div>
         )}
       </div>
 
       {images.length > 1 && (
-        <div className="flex gap-[16px]">
+        <div className="flex gap-4">
           {images.slice(0, 4).map((image) => (
             <button
               key={image.id}
@@ -322,8 +336,10 @@ function Figure({
               onClick={() => onSelect(image.id)}
               aria-pressed={image.id === mainImage?.id}
               aria-label={fill(messages.imageAlt, { name: product.name })}
-              className={`relative aspect-[144/149] flex-1 overflow-hidden rounded-card border ${
-                image.id === mainImage?.id ? "border-ink" : "border-transparent"
+              className={`relative aspect-[144/149] flex-1 overflow-hidden bg-ivory transition-opacity duration-300 ${
+                image.id === mainImage?.id
+                  ? "opacity-100 ring-1 ring-gold ring-offset-2"
+                  : "opacity-60 hover:opacity-100"
               }`}
             >
               {image.kind === "video" ? (

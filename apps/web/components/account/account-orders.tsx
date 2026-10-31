@@ -36,8 +36,8 @@ export function AccountOrders({
 
   if (orders.length === 0) {
     return (
-      <div className="flex flex-col items-start gap-[20px] rounded-[3px] border-[0.91px] border-line px-[20px] py-[20px] sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-[15px] leading-[24.75px] tracking-[-0.234px] text-ink">{table.empty}</p>
+      <div className="flex flex-col items-start gap-[20px] border border-line bg-ivory px-[24px] py-[24px] sm:flex-row sm:items-center sm:justify-between">
+        <p className="font-display text-[18px] leading-7 text-ink">{table.empty}</p>
         <Link href={localePath(locale, "/shop")} className={BUTTON}>
           {table.browse}
         </Link>
@@ -71,9 +71,9 @@ export function AccountOrders({
           <col className="xl:w-[20%]" />
         </colgroup>
         <thead>
-          <tr className="border-b-[1.82px] border-line">
+          <tr className="border-b border-ink">
             {[table.order, table.date, table.status, table.total, table.actions].map((label) => (
-              <th key={label} scope="col" className={`${CELL} font-semibold`}>
+              <th key={label} scope="col" className={`${CELL} text-[11px] leading-4 font-medium tracking-[0.18em] text-ink-55 uppercase`}>
                 {label}
               </th>
             ))}
@@ -81,7 +81,7 @@ export function AccountOrders({
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.order.orderNumber} className="border-b-[0.91px] border-line">
+            <tr key={row.order.orderNumber} className="border-b border-line">
               <th scope="row" className={`${CELL} font-medium`}>
                 {row.number}
               </th>
@@ -102,7 +102,7 @@ export function AccountOrders({
         {rows.map((row) => (
           <li
             key={row.order.orderNumber}
-            className="border-b-[0.91px] border-line py-[15px] text-[15px] leading-[24.75px] tracking-[-0.234px] text-ink first:border-t-[1.82px]"
+            className="border-b border-line py-[15px] text-[15px] leading-[24.75px] text-ink first:border-t first:border-t-ink"
           >
             <dl className="grid grid-cols-[auto_1fr] gap-x-[16px] gap-y-[4px]">
               <dt className="font-semibold">{table.order}</dt>
@@ -128,4 +128,4 @@ export function AccountOrders({
 const CELL = "px-[10.5px] py-[15px] align-middle first:pl-0 last:pr-0";
 
 const BUTTON =
-  "inline-flex h-[40px] items-center justify-center rounded-[3px] bg-ink px-[20px] text-[15px] leading-[24.75px] font-medium tracking-[-0.234px] whitespace-nowrap text-paper transition-opacity hover:opacity-90";
+  "inline-flex h-[40px] items-center justify-center border border-ink px-[20px] text-[12px] leading-5 font-medium tracking-[0.14em] whitespace-nowrap text-ink transition-colors duration-300 hover:bg-ink hover:text-paper";

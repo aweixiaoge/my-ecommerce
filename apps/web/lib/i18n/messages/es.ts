@@ -109,8 +109,6 @@ export const es = {
   },
 
   gallery: {
-    previous: "Imagen anterior",
-    next: "Imagen siguiente",
     show: "Mostrar imagen {n} de {total}",
   },
 

@@ -18,7 +18,9 @@ import { CheckoutLink } from "./checkout-link";
 
 /**
  * The cart's contents (Figma 178:4433): a table of lines, and the totals
- * column beside it.
+ * column beside it — in the storefront's luxury register: column heads in small
+ * tracked capitals, serif product names on ivory photographs, a square
+ * quantity stepper, and the totals on an ivory panel.
  *
  * A Server Component with no state of its own. Every control is a submit
  * button in a form posting to `updateCartLineAction`, carrying the quantity it
@@ -49,19 +51,19 @@ export function CartView({
     // The design's two columns — 1142 of table and 360 of totals on its 1550
     // column, 48 apart — from `lg`. Below it the totals sit under the table:
     // at 768–1023 a 360px column leaves the table too little room for a name.
-    <div className="grid grid-cols-1 gap-[48px] pt-[40px] lg:grid-cols-[1fr_360px]">
+    <div className="grid grid-cols-1 gap-[56px] pt-[56px] lg:grid-cols-[1fr_380px]">
       {/*
         A real table, as the design's layer names it: a line is a row of
         Product and Total, and a screen reader can say which column a figure
         is in.
       */}
-      <table className="w-full border-collapse text-[13px] leading-[18.2px] tracking-[-0.076px] text-ink">
+      <table className="w-full self-start border-collapse text-[14px] leading-[22px] text-ink">
         <thead>
-          <tr className="border-b border-line">
-            <th colSpan={2} scope="col" className="pt-2 pb-3 text-left font-medium uppercase">
+          <tr className="border-b border-ink">
+            <th colSpan={2} scope="col" className="pt-2 pb-4 text-left text-[11px] leading-4 font-medium tracking-[0.18em] text-ink-55 uppercase">
               {messages.columns.product}
             </th>
-            <th scope="col" className="pt-2 pb-3 text-right font-medium uppercase">
+            <th scope="col" className="pt-2 pb-4 text-right text-[11px] leading-4 font-medium tracking-[0.18em] text-ink-55 uppercase">
               {messages.columns.total}
             </th>
           </tr>
@@ -110,68 +112,72 @@ function Line({
 
   return (
     <tr className="border-b border-line align-top">
-      <td className="w-[80px] py-[20px] pr-[16px]">
-        <Link href={href} className="relative block size-[64px] overflow-hidden bg-mist">
+      {/* 64px on a phone, where 96 would leave the name a third of the row. */}
+      <td className="w-[80px] py-[28px] pr-[16px] sm:w-[116px] sm:pr-[20px]">
+        <Link href={href} className="relative block size-[64px] overflow-hidden bg-ivory sm:size-[96px]">
           {item.product.image && (
             <Image
               src={item.product.image.url}
               alt={item.product.image.alt ?? name}
               fill
-              sizes="64px"
+              sizes="96px"
               className="object-cover"
             />
           )}
         </Link>
       </td>
 
-      <td className="py-[20px]">
+      <td className="py-[28px]">
         <div className="flex flex-col gap-[4px]">
-          <Link href={href} className="font-medium">
+          <Link
+            href={href}
+            className="font-display text-[19px] leading-[26px] [overflow-wrap:anywhere] underline-offset-4 hover:underline"
+          >
             {name}
           </Link>
-          <p>{formatPrice(item.variant.price, currency, locale)}</p>
+          <p className="text-ink-60 tabular-nums">{formatPrice(item.variant.price, currency, locale)}</p>
           {item.optionValues
             .filter((value) => value.name !== "")
             .map((value) => (
-              <p key={value.id}>
+              <p key={value.id} className="text-[13px] text-ink-62">
                 {value.option
                   ? fill(messages.optionLabel, { option: value.option, value: value.name })
                   : value.name}
               </p>
             ))}
           {item.unavailableReason && (
-            <p className="font-semibold">
+            <p className="text-[13px] font-medium text-danger">
               {item.unavailableReason === "limitedStock"
                 ? plural(item.variant.stock, messages.line.limitedStock)
                 : messages.line[item.unavailableReason]}
             </p>
           )}
 
-          <form action={updateCartLineAction} className="flex items-center gap-[12px]">
+          <form action={updateCartLineAction} className="flex items-center gap-[16px] pt-3">
             <input type="hidden" name="itemId" value={item.id} />
 
             <div
               role="group"
               aria-label={messages.line.quantity}
-              className="flex h-[40px] items-center rounded-[4px]"
+              className="flex h-[40px] items-center border border-line"
             >
               <button
                 type="submit"
                 name="quantity"
                 value={item.quantity - 1}
                 aria-label={fill(messages.line.decrease, { name })}
-                className="flex h-full w-[30px] items-center justify-center text-[14.4px] leading-[23.76px]"
+                className="flex h-full w-[36px] items-center justify-center text-[15px] leading-[23.76px] text-ink-62 transition-colors hover:text-ink"
               >
                 −
               </button>
-              <output className="w-[65px] text-center leading-[13px]">{item.quantity}</output>
+              <output className="w-[44px] text-center leading-[13px] tabular-nums">{item.quantity}</output>
               <button
                 type="submit"
                 name="quantity"
                 value={item.quantity + 1}
                 aria-label={fill(messages.line.increase, { name })}
                 disabled={item.quantity >= ceiling}
-                className="flex h-full w-[30px] items-center justify-center text-[14.4px] leading-[23.76px] disabled:cursor-not-allowed disabled:opacity-30"
+                className="flex h-full w-[36px] items-center justify-center text-[15px] leading-[23.76px] text-ink-62 transition-colors hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
               >
                 +
               </button>
@@ -182,7 +188,7 @@ function Line({
               name="quantity"
               value={0}
               aria-label={fill(messages.line.removeLabel, { name })}
-              className="flex size-[24px] items-center justify-center"
+              className="flex size-[24px] items-center justify-center opacity-45 transition-opacity duration-300 hover:opacity-100"
             >
               <Image src="/icons/trash-outline.svg" alt="" width={24} height={24} />
             </button>
@@ -191,7 +197,7 @@ function Line({
       </td>
 
       <td
-        className={`w-[72px] py-[20px] text-right sm:w-[100px] ${
+        className={`w-[72px] py-[28px] text-right font-display text-[18px] leading-[26px] tabular-nums sm:w-[110px] ${
           item.unavailableReason ? "text-ink-55 line-through" : ""
         }`}
       >
@@ -230,12 +236,12 @@ function Totals({
   const free = shipsFree(cart.subtotal);
 
   return (
-    <aside aria-labelledby="cart-totals" className="self-start text-[13px] leading-[18.2px] tracking-[-0.076px] text-ink">
-      <h2 id="cart-totals" className="pt-2 pb-[10px] font-medium uppercase">
+    <aside aria-labelledby="cart-totals" className="self-start bg-ivory px-7 py-8 text-[14px] leading-[22px] text-ink">
+      <h2 id="cart-totals" className="pb-5 font-display text-[26px] leading-[34px] font-normal">
         {messages.totals}
       </h2>
 
-      <details className="group border-t border-line py-[16px]">
+      <details className="group border-t border-ink/15 py-[18px]">
         <summary className="flex cursor-pointer list-none items-center justify-between [&::-webkit-details-marker]:hidden">
           {messages.coupons}
           <Image
@@ -249,23 +255,23 @@ function Totals({
         <p className="pt-[12px] text-ink-62">{messages.couponsAtCheckout}</p>
       </details>
 
-      <p className="flex justify-between gap-4 border-t border-line py-[16px]">
+      <p className="flex justify-between gap-4 border-t border-ink/15 py-[18px]">
         <span>{free ? messages.freeShipping : messages.shipping}</span>
-        <span className={free ? "font-bold uppercase" : "text-ink-62"}>
+        <span className={free ? "text-[12px] font-medium tracking-[0.14em] text-gold uppercase" : "text-ink-62"}>
           {free ? messages.free : messages.shippingLater}
         </span>
       </p>
 
-      <p className="flex justify-between gap-4 border-t border-line py-[16px] text-[24px] leading-[33.6px] font-medium tracking-[0.07px]">
-        <span>{messages.estimatedTotal}</span>
-        <span>{formatPrice(cart.grandTotal, currency, locale)}</span>
+      <p className="flex items-baseline justify-between gap-4 border-t border-ink py-[20px]">
+        <span className="text-[11px] leading-4 font-medium tracking-[0.18em] text-ink uppercase">{messages.estimatedTotal}</span>
+        <span className="font-display text-[28px] leading-[36px] tabular-nums">{formatPrice(cart.grandTotal, currency, locale)}</span>
       </p>
 
-      <div className="pt-[16px]">
+      <div className="pt-[8px]">
         <CheckoutLink
           href={localePath(locale, "/checkout")}
           enabled={cart.itemCount > 0}
-          className="flex h-[45px] w-full items-center justify-center rounded-[3px] bg-ink px-[20px] text-[15px] leading-[24.75px] font-medium tracking-[-0.23px] text-paper"
+          className="flex h-[52px] w-full items-center justify-center px-[20px] uppercase border border-ink bg-ink text-[13px] leading-5 font-medium tracking-[0.14em] text-paper transition-colors duration-300 hover:bg-paper hover:text-ink"
         >
           {messages.checkout}
         </CheckoutLink>

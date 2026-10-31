@@ -1,6 +1,6 @@
 import type { ProductSummary } from "@my-ecommerce/shared";
 import { ProductCard } from "@/components/product-card";
-import { SectionHeading } from "@/components/section-heading";
+import { EditorialHeading } from "@/components/section-heading";
 import type { DisplayCurrency } from "@/lib/currency/display";
 import type { Messages } from "@/lib/i18n/messages";
 import { localePath } from "@/lib/i18n/paths";
@@ -41,15 +41,15 @@ export function NewArrivals({
   if (products.length === 0) return null;
 
   return (
-    <section className="pt-[72px] pb-[80px]">
+    <section className="pt-[96px] pb-[96px]">
       <div className="container-content">
-        <SectionHeading
+        <EditorialHeading
           title={messages.title}
           linkLabel={messages.link}
           linkHref={localePath(locale, "/shop")}
         />
 
-        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 bar:grid-cols-4">
+        <div className="mt-12 grid grid-cols-1 gap-x-[30px] gap-y-[48px] sm:grid-cols-2 bar:grid-cols-4">
           {products.map((product) => (
             <ProductCard
               key={product.id}
@@ -72,13 +72,13 @@ export function NewArrivals({
  */
 export function NewArrivalsFallback() {
   return (
-    <section aria-hidden className="pt-[72px] pb-[80px]">
+    <section aria-hidden className="pt-[96px] pb-[96px]">
       <div className="container-content animate-pulse">
-        <div className="h-[52.5px] w-[260px] bg-mist" />
+        <div className="mx-auto h-[108px] w-[260px] bg-mist" />
 
-        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 bar:grid-cols-4">
+        <div className="mt-12 grid grid-cols-1 gap-x-[30px] gap-y-[48px] sm:grid-cols-2 bar:grid-cols-4">
           {Array.from({ length: HOME_GRID_SIZE }, (_, index) => (
-            <div key={index} className="aspect-[4/3] rounded-[3px] bg-mist" />
+            <div key={index} className="aspect-[4/3] bg-mist" />
           ))}
         </div>
       </div>

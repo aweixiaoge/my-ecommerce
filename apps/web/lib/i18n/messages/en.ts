@@ -128,8 +128,6 @@ export const en = {
   },
 
   gallery: {
-    previous: "Previous image",
-    next: "Next image",
     show: "Show image {n} of {total}",
   },
 

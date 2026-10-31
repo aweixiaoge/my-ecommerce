@@ -176,26 +176,19 @@ describe("LanguageSwitcher — the open menu", () => {
     expect(isOpen()).toBe(false);
   });
 
-  it("draws the design's menu", () => {
-    // 180px with the 1px rule and the 8px of padding inside that width is what
-    // leaves the design's 162px rows; the rule is the menu's own neutral grey,
-    // not the blue-tinted `line` the rest of the chrome draws with.
+  it("draws the storefront's menu", () => {
+    // Square, 200px, a hairline with a gold top edge — the luxury restyle of
+    // the design's grey, rounded 180px box.
     expect(classesOf(panel())).toEqual(
-      expect.arrayContaining(["w-[180px]", "p-2", "rounded-[3px]", "border-[#d4d4d4]", "bg-paper"]),
+      expect.arrayContaining(["w-[200px]", "py-2", "border-line", "border-t-gold/60", "bg-paper"]),
     );
+    expect(classesOf(panel())).not.toContain("rounded-[3px]");
 
-    // The rows: 36px tall on the design's 12px and 10px of side padding, in
-    // the switcher's own type.
+    // The rows: 40px tall in small tracked capitals, each with the 2px left
+    // rule that marks the one in use.
     for (const row of rows()) {
       expect(classesOf(row)).toEqual(
-        expect.arrayContaining([
-          "h-9",
-          "pl-3",
-          "pr-2.5",
-          "gap-2",
-          "rounded-[3px]",
-          "text-[13px]",
-        ]),
+        expect.arrayContaining(["h-10", "pl-[18px]", "pr-4", "gap-2", "border-l-2", "text-[12px]", "uppercase"]),
       );
     }
   });
@@ -229,10 +222,11 @@ describe("LanguageSwitcher — the open menu", () => {
     );
     expect(current).toBeDefined();
 
-    // The design marks it three ways: bold against the others' regular, the
-    // grey fill, and the check in the 12px box its row is measured around.
-    expect(classesOf(current!)).toContain("font-bold");
-    expect(classesOf(current!)).toContain("bg-[#f2f2f2]");
+    // Marked three ways, so it never rests on colour alone: medium against
+    // the others' regular, the ivory fill with its gold rule, and the check.
+    expect(classesOf(current!)).toContain("font-medium");
+    expect(classesOf(current!)).toContain("bg-ivory");
+    expect(classesOf(current!)).toContain("border-gold");
     expect(current!.querySelector('img[src*="check"]')).not.toBeNull();
 
     const others = rows().filter((row) => row !== current);

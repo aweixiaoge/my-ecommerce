@@ -17,9 +17,12 @@ export function SiteFooter({
   messages: Messages["footer"];
 }) {
   return (
-    <footer className="bg-mist">
-      <div className="container-content grid grid-cols-1 gap-[50px] py-[70px] sm:grid-cols-3">
-        <p className="text-[15px] leading-[19.5px] tracking-[-0.234px] text-ink">
+    // Ivory under a hairline, in the storefront's luxury register: the links
+    // as small tracked capitals — the footer wraps, so unlike the header it
+    // can afford them — and the copyright as quiet grey print.
+    <footer className="border-t border-line bg-ivory">
+      <div className="container-content grid grid-cols-1 gap-[44px] py-[72px] sm:grid-cols-3">
+        <p className="text-[12px] leading-[19.5px] tracking-[0.06em] text-ink-55">
           {messages.copyright}
         </p>
 
@@ -28,13 +31,13 @@ export function SiteFooter({
           aligns with the column edge — the same trick the design uses by
           positioning these links at x = -12.5.
         */}
-        <nav className="-ml-[12.5px] flex flex-wrap items-start gap-y-3">
+        <nav className="-ml-[12.5px] flex flex-wrap items-start gap-y-4">
           {nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               prefetch={item.prefetch}
-              className="px-[12.5px] text-[13px] font-bold leading-[16.9px] tracking-[-0.076px] whitespace-nowrap text-ink"
+              className="px-[12.5px] text-[11px] font-medium leading-[16.9px] tracking-[0.18em] whitespace-nowrap text-ink-62 uppercase transition-colors duration-300 hover:text-ink"
             >
               {item.label}
             </Link>
@@ -59,5 +62,13 @@ export function SiteFooter({
 async function FooterSocials() {
   await connection();
 
-  return <SocialLinks links={socialLinks(await getStoreContact())} />;
+  // The Contact page's line icons at the Contact page's 30px, in the footer
+  // links' grey.
+  return (
+    <SocialLinks
+      links={socialLinks(await getStoreContact())}
+      size={30}
+      className="gap-[24px] [&_a]:text-ink-62 [&_a]:transition-colors [&_a]:duration-300 [&_a:hover]:text-ink"
+    />
+  );
 }

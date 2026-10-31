@@ -41,7 +41,7 @@ export function ReviewList({
   // unreviewed product is a state, not a count of nothing.
   if (reviews.length === 0) {
     return (
-      <p className="text-[16px] leading-[26.4px] tracking-[-0.3125px] text-ink-60">
+      <p className="font-display text-[18px] leading-7 text-ink-55 italic">
         {messages.empty}
       </p>
     );
@@ -52,7 +52,7 @@ export function ReviewList({
        a fragment's children would each become a grid item of their own — the
        heading in one cell and the list in another. */
     <div>
-      <h2 className="text-[16px] leading-[24px] font-bold tracking-[-0.3125px] text-ink">
+      <h2 className="font-display text-[26px] leading-9 font-normal [overflow-wrap:anywhere] text-ink">
         {plural(reviews.length, messages.listTitle, { product: productName })}
       </h2>
 
@@ -81,14 +81,16 @@ function ReviewItem({
   return (
     <li className="border-t border-line pt-[40px] pb-[40px]">
       <div className="flex gap-[25px]">
-        <span aria-hidden className="h-[45px] w-[45px] shrink-0 rounded-full bg-mist" />
+        <span aria-hidden className="h-[45px] w-[45px] shrink-0 rounded-full bg-ivory" />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-[16px]">
-            <p className="text-[16px] leading-[20px] font-bold tracking-[-0.3125px] text-ink">
-              {review.authorName}
-              <span className="pl-[7.7px] text-[13px] leading-[20px] font-medium tracking-[-0.076px] uppercase">
-                – {formatDate(review.createdAt, locale)}
+            <p className="flex min-w-0 flex-col gap-1">
+              <span className="font-display text-[18px] leading-6 break-words text-ink">
+                {review.authorName}
+              </span>
+              <span className="text-[11px] leading-4 tracking-[0.16em] text-ink-55 uppercase">
+                {formatDate(review.createdAt, locale)}
               </span>
             </p>
 
@@ -98,11 +100,11 @@ function ReviewItem({
               rating={{ average: review.rating, count: 1 }}
               messages={messages}
               label={fill(messages.singleRating, { rating: review.rating })}
-              className="shrink-0"
+              className="shrink-0 [&_img]:size-3.5 [&_img]:opacity-80"
             />
           </div>
 
-          <p className="pt-[24px] text-[16px] leading-[26.4px] tracking-[-0.3125px] whitespace-pre-line break-words text-ink">
+          <p className="pt-[20px] text-[16px] leading-[28px] whitespace-pre-line break-words text-ink-62">
             {review.body}
           </p>
         </div>

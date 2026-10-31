@@ -31,27 +31,27 @@ export function AccountAddresses({
 
   return (
     <div className="text-ink">
-      <p className="text-[16px] leading-[26.4px] tracking-[-0.3125px]">{copy.intro}</p>
+      <p className="max-w-[640px] text-[16px] leading-[28px] text-ink-62">{copy.intro}</p>
 
       <div className="grid grid-cols-1 gap-[30px] pt-[24px] lg:grid-cols-2">
         {cards.map((card) => {
           const address = book[card.kind];
 
           return (
-            <section key={card.kind} className="rounded-[5px] border-[0.91px] border-line p-[24px]">
-              <header className="flex flex-wrap items-center justify-between gap-x-[16px]">
-                <h2 className="pb-[15.4px] text-[18px] leading-[27px] font-bold tracking-[-0.44px]">
+            <section key={card.kind} className="border border-line p-[28px]">
+              <header className="flex flex-wrap items-baseline justify-between gap-x-[16px] border-b border-line pb-4">
+                <h2 className="font-display text-[22px] leading-[30px] font-normal">
                   {card.title}
                 </h2>
                 <Link
                   href={localePath(locale, `/account/addresses/${card.kind}`)}
-                  className="text-[16px] leading-[26.4px] tracking-[-0.3125px] hover:underline"
+                  className="text-[11px] leading-4 tracking-[0.18em] text-ink-55 uppercase underline-offset-4 hover:text-ink hover:underline"
                 >
                   {address ? card.edit : card.add}
                 </Link>
               </header>
 
-              <div className="pt-[20px] text-[15px] leading-[24.75px] tracking-[-0.234px]">
+              <div className="pt-[20px] text-[15px] leading-[26px] text-ink-62">
                 {address ? <AddressLines address={address} locale={locale} /> : <p>{copy.empty}</p>}
               </div>
             </section>

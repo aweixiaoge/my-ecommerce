@@ -1,4 +1,6 @@
 import type { Prisma } from "@my-ecommerce/db";
+import { isVideoType } from "@my-ecommerce/shared";
+import { IMAGES_ONLY } from "@/lib/media";
 import type { Locale } from "@/lib/languages";
 import {
   fallbackLocales,
@@ -38,8 +40,14 @@ export function blogSelect(locale: Locale) {
         },
       },
     },
-    // The admin's first image is the cover — the order the post's page uses.
-    media: { orderBy: [{ position: "asc" }, { id: "asc" }], take: 1, select: { id: true } },
+    // The admin's first photograph is the cover — the order the post's page
+    // uses, skipping videos, which the card's `next/image` cannot draw.
+    media: {
+      where: IMAGES_ONLY,
+      orderBy: [{ position: "asc" }, { id: "asc" }],
+      take: 1,
+      select: { id: true },
+    },
   } as const satisfies Prisma.BlogSelect;
 }
 
@@ -133,7 +141,7 @@ export function blogDetailSelect(locale: Locale) {
         metaDescription: true,
       },
     },
-    media: { orderBy: [{ position: "asc" }, { id: "asc" }], select: { id: true } },
+    media: { orderBy: [{ position: "asc" }, { id: "asc" }], select: { id: true, mimeType: true } },
   } as const satisfies Prisma.BlogSelect;
 }
 
@@ -148,8 +156,10 @@ export interface BlogPostDetail extends BlogPostSummary {
   /** What a search result shows; the title and excerpt when nobody wrote one. */
   metaTitle: string;
   metaDescription: string;
-  /** Media ids, the first one being the cover. */
+  /** Media ids in the admin's order, videos included. */
   imageIds: string[];
+  /** Which of `imageIds` are videos, which the gallery plays rather than shows. */
+  videoIds: string[];
 }
 
 /** The row as a page, or null for the reason `toBlogPost` gives. */
@@ -160,9 +170,13 @@ export function toBlogPostDetail(row: BlogDetailRow, locale: Locale): BlogPostDe
 
   return {
     ...summary,
+    // The detail read takes every medium, so the cover is found rather than
+    // taken: the first that is not a video, as the card's own read has it.
+    coverId: row.media.find((media) => !isVideoType(media.mimeType))?.id ?? null,
     description: translation.description,
     metaTitle: translation.metaTitle || summary.title,
     metaDescription: translation.metaDescription || summary.excerpt,
     imageIds: row.media.map((media) => media.id),
+    videoIds: row.media.filter((media) => isVideoType(media.mimeType)).map((media) => media.id),
   };
 }

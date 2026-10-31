@@ -1,4 +1,4 @@
-import type { InlineSpan, MarkdownBlock } from "@/lib/markdown";
+import type { InlineSpan, MarkdownBlock, TableAlign } from "@/lib/markdown";
 
 /**
  * Parsed markdown, as React.
@@ -78,14 +78,64 @@ function Block({ block }: { block: MarkdownBlock }) {
       );
     }
 
+    case "table":
+      return (
+        // Its own scroller, so a table wider than a phone scrolls inside the
+        // column instead of widening the page around it.
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left tabular-nums">
+            <thead>
+              <tr>
+                {block.header.map((cell, column) => (
+                  <th
+                    key={column}
+                    scope="col"
+                    className={`border-b border-ink/20 pr-6 pb-3 align-bottom text-[11px] leading-4 font-medium tracking-[0.16em] text-ink-55 uppercase last:pr-0 ${ALIGN[block.align[column] ?? "none"]}`}
+                  >
+                    <Spans spans={cell} />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {block.rows.map((row, index) => (
+                <tr key={index}>
+                  {row.map((cell, column) => (
+                    <td
+                      key={column}
+                      className={`border-b border-line py-3 pr-6 align-top last:pr-0 ${ALIGN[block.align[column] ?? "none"]}`}
+                    >
+                      <Spans spans={cell} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+
+    case "rule":
+      // A hairline in the page's rule colour, with room either side so it
+      // reads as a break between sections rather than an underline.
+      return <hr className="my-2 border-line" />;
+
     case "code":
       return (
-        <pre className="overflow-x-auto rounded-control border border-line bg-mist p-3 text-[12px] leading-[19.8px]">
+        <pre className="overflow-x-auto border border-line bg-mist p-3 text-[12px] leading-[19.8px]">
           <code>{block.text}</code>
         </pre>
       );
   }
 }
+
+/** A column's alignment as a class; a plain `---` column keeps the table's left. */
+const ALIGN: Record<NonNullable<TableAlign> | "none", string> = {
+  left: "text-left",
+  center: "text-center",
+  right: "text-right",
+  none: "",
+};
 
 function Spans({ spans }: { spans: InlineSpan[] }) {
   return spans.map((span, index) => {
@@ -96,14 +146,14 @@ function Spans({ spans }: { spans: InlineSpan[] }) {
       case "strong":
         return (
           <strong key={index} className="font-bold">
-            {span.text}
+            <Spans spans={span.spans} />
           </strong>
         );
 
       case "em":
         return (
           <em key={index} className="italic">
-            {span.text}
+            <Spans spans={span.spans} />
           </em>
         );
 
@@ -111,7 +161,7 @@ function Spans({ spans }: { spans: InlineSpan[] }) {
         return (
           <code
             key={index}
-            className="rounded-[3px] border border-line bg-mist px-1 py-0.5 text-[12px]"
+            className="border border-line bg-mist px-1 py-0.5 text-[12px]"
           >
             {span.text}
           </code>
@@ -127,7 +177,7 @@ function Spans({ spans }: { spans: InlineSpan[] }) {
             // on from reaching back through `window.opener`.
             target="_blank"
             rel="noopener noreferrer"
-            className="underline underline-offset-2"
+            className="underline decoration-gold underline-offset-4 hover:decoration-current"
           >
             {span.text}
           </a>
